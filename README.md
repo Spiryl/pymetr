@@ -1,7 +1,7 @@
 # PyInstrument
 
 PyInstrument is a Python library designed to provide an abstraction layer for the control of various instrumentation.
-It uses supports pyvisa, raw sockets, and future support for PXIe/PCIe.  It is in teh earliest of development stages so use with caution.
+It uses supports pyvisa, raw sockets, and future support for PXIe/PCIe.  It is in the earliest of development stages so use with caution.
 
 ## Features
 
