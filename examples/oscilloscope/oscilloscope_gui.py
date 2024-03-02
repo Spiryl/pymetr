@@ -9,8 +9,8 @@ from PySide6.QtGui import QPalette, QColor
 from vispy import scene
 
 from oscilloscope_controls import AcquireControl, WaveformControl, WaveGenControl, TriggerControl, TimebaseControl,  ChannelControl, ControlDock
-from pyinstrument.oscilloscope.core import Oscilloscope
-from pyinstrument.instruments import SCPIInstrument
+from Pymetr.oscilloscope.core import Oscilloscope
+from Pymetr.instruments import SCPIInstrument
 from utilities import debug, timeit
 
 class FetchThread(QThread):

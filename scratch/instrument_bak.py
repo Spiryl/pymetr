@@ -1,4 +1,4 @@
-# pyinstrument/instrument.py
+# Pymetr/instrument.py
 import pyvisa
 from abc import ABC, abstractmethod
 from utilities import debug, timeit

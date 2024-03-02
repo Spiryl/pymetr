@@ -7,8 +7,8 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QDockWidg
 from PySide6.QtGui import QPalette, QColor
 from vispy import scene, visuals
 import numpy as np
-from pyinstrument.oscilloscope.core import Oscilloscope 
-from pyinstrument.instruments import Instrument
+from Pymetr.oscilloscope.core import Oscilloscope 
+from Pymetr.instruments import Instrument
 from utilities import debug, timeit
 
 class FetchThread(QThread):

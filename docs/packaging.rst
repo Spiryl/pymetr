@@ -1,27 +1,27 @@
 ====================================
-Installing the PyInstrument Package
+Installing the Pymetr Package
 ====================================
 
-The PyInstrument package is designed to facilitate advanced instrumentation capabilities in Python, including oscilloscope controls and data acquisition tools. This document outlines how to install the PyInstrument package, either for development purposes or for use in other projects.
+The Pymetr package is designed to facilitate advanced instrumentation capabilities in Python, including oscilloscope controls and data acquisition tools. This document outlines how to install the Pymetr package, either for development purposes or for use in other projects.
 
 Setup.py File
 -------------
 
-The `setup.py` file is the build script for setuptools. It tells setuptools about your package (such as the name and version) as well as which code files to include. An example `setup.py` file for PyInstrument might look like this:
+The `setup.py` file is the build script for setuptools. It tells setuptools about your package (such as the name and version) as well as which code files to include. An example `setup.py` file for Pymetr might look like this:
 
 .. code-block:: python
 
    from setuptools import setup, find_packages
 
    setup(
-       name='pyinstrument',
+       name='Pymetr',
        version='0.1.0',
        packages=find_packages(),
        description='Python Instrumentation Package',
        long_description=open('README.md').read(),
        author='Your Name',
        author_email='your.email@example.com',
-       url='https://github.com/yourusername/pyinstrument',
+       url='https://github.com/yourusername/Pymetr',
        license='MIT',
        install_requires=[
            'numpy',
@@ -36,25 +36,25 @@ This script is executed to install your package. The `find_packages()` function 
 Installing the Package
 ----------------------
 
-There are two main scenarios for installing the PyInstrument package:
+There are two main scenarios for installing the Pymetr package:
 
-1. **Installing for Use in Projects**: If you wish to use PyInstrument as a dependency in other projects, you can install it from your local copy or from a Git repository.
+1. **Installing for Use in Projects**: If you wish to use Pymetr as a dependency in other projects, you can install it from your local copy or from a Git repository.
 
    To install a local copy directly:
 
    .. code-block:: bash
 
-      pip install path/to/pyinstrument
+      pip install path/to/Pymetr
 
    Or, if your project is hosted on a Git repository, you can install it using:
 
    .. code-block:: bash
 
-      pip install git+https://github.com/yourusername/pyinstrument.git
+      pip install git+https://github.com/yourusername/Pymetr.git
 
-2. **Development Installation**: If you're developing PyInstrument and want to test changes as you make them, you should install the package in "editable" mode. This allows you to modify the source code and see those changes reflected without having to reinstall the package.
+2. **Development Installation**: If you're developing Pymetr and want to test changes as you make them, you should install the package in "editable" mode. This allows you to modify the source code and see those changes reflected without having to reinstall the package.
 
-   Navigate to the root directory of your PyInstrument project and run:
+   Navigate to the root directory of your Pymetr project and run:
 
    .. code-block:: bash
 
@@ -65,6 +65,6 @@ There are two main scenarios for installing the PyInstrument package:
 Conclusion
 ----------
 
-Installing the PyInstrument package is straightforward, whether for use in other projects or for development. The `setup.py` file is crucial for defining package metadata, dependencies, and more. For development purposes, installing in editable mode is highly recommended to facilitate testing and iteration.
+Installing the Pymetr package is straightforward, whether for use in other projects or for development. The `setup.py` file is crucial for defining package metadata, dependencies, and more. For development purposes, installing in editable mode is highly recommended to facilitate testing and iteration.
 
 For more information on packaging Python projects, refer to the official Python Packaging User Guide: https://packaging.python.org/tutorials/packaging-projects/

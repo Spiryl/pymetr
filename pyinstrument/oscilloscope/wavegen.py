@@ -2,7 +2,7 @@
 
 import logging
 from enum import Enum
-from pyinstrument.instruments import InstrumentSubsystem
+from Pymetr.instruments import InstrumentSubsystem
 
 class WaveGen(InstrumentSubsystem):
     """

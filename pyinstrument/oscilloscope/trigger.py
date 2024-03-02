@@ -2,7 +2,7 @@
 
 import logging
 from enum import Enum
-from pyinstrument.instruments import InstrumentSubsystem
+from Pymetr.instruments import InstrumentSubsystem
 
 # Create a logger for each module. The logger will inherit the global configuration.
 logger = logging.getLogger(__name__)

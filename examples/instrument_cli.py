@@ -1,5 +1,5 @@
 import pyvisa
-from pyinstrument.instruments import SCPIInstrument
+from Pymetr.instruments import SCPIInstrument
 if __name__ == "__main__":
     import sys
 

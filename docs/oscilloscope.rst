@@ -5,7 +5,7 @@ The ``Oscilloscope`` class serves as an orchestrator for the complex interplay o
 
 This design philosophy allows for a high degree of modularity, enabling each subsystem to be developed, tested, and modified independently while the ``Oscilloscope`` class provides a cohesive and unified interface for the user. The result is a robust and scalable structure, where the complexity of the instrument's functionalities is managed with grace and precision.
 
-The ``pyinstrument`` package reflects this architecture, segregating related functionalities into dedicated subsystem classes. This not only enhances code organization but also fosters intuitive and object-oriented control over each aspect of the oscilloscope. Below is a visual representation of the ``Oscilloscope`` class composition:
+The ``Pymetr`` package reflects this architecture, segregating related functionalities into dedicated subsystem classes. This not only enhances code organization but also fosters intuitive and object-oriented control over each aspect of the oscilloscope. Below is a visual representation of the ``Oscilloscope`` class composition:
 
 .. graphviz::
 
@@ -42,7 +42,7 @@ The ``pyinstrument`` package reflects this architecture, segregating related fun
 Oscilloscope Core
 -----------------
 
-.. automodule:: pyinstrument.oscilloscope.core.Oscilloscope
+.. automodule:: Pymetr.oscilloscope.core.Oscilloscope
    :members:
    :undoc-members:
    :show-inheritance:
@@ -56,7 +56,7 @@ Each subsystem class focuses on a specific area of oscilloscope functionality, p
 Acquire Subsystem
 -----------------
 
-.. automodule:: pyinstrument.oscilloscope.acquire
+.. automodule:: Pymetr.oscilloscope.acquire
    :members:
    :undoc-members:
    :show-inheritance:
@@ -66,7 +66,7 @@ The ``Acquire`` subsystem manages data acquisition settings, offering control ov
 Channel Subsystem
 -----------------
 
-.. automodule:: pyinstrument.oscilloscope.channel
+.. automodule:: Pymetr.oscilloscope.channel
    :members:
    :undoc-members:
    :show-inheritance:
@@ -76,7 +76,7 @@ Each channel of the oscilloscope is represented by a ``Channel`` object, allowin
 Timebase Subsystem
 ------------------
 
-.. automodule:: pyinstrument.oscilloscope.timebase
+.. automodule:: Pymetr.oscilloscope.timebase
    :members:
    :undoc-members:
    :show-inheritance:
@@ -86,7 +86,7 @@ The ``Timebase`` subsystem governs the horizontal sweep of the oscilloscope, dic
 Trigger Subsystem
 -----------------
 
-.. automodule:: pyinstrument.oscilloscope.trigger
+.. automodule:: Pymetr.oscilloscope.trigger
    :members:
    :undoc-members:
    :show-inheritance:
@@ -96,7 +96,7 @@ Trigger settings are crucial for accurate waveform capture. The ``Trigger`` subs
 Waveform Subsystem
 ------------------
 
-.. automodule:: pyinstrument.oscilloscope.waveform
+.. automodule:: Pymetr.oscilloscope.waveform
    :members:
    :undoc-members:
    :show-inheritance:
@@ -106,7 +106,7 @@ After acquisition, the ``Waveform`` subsystem takes over, dealing with waveform 
 WaveGen Subsystem
 -----------------
 
-.. automodule:: pyinstrument.oscilloscope.wavegen
+.. automodule:: Pymetr.oscilloscope.wavegen
    :members:
    :undoc-members:
    :show-inheritance:
@@ -128,7 +128,7 @@ To begin using the ``Oscilloscope`` class, first ensure that PyVISA is installed
 
 .. code-block:: python
 
-   from pyinstrument.oscilloscope.core import Oscilloscope
+   from Pymetr.oscilloscope.core import Oscilloscope
 
    # Replace with your oscilloscope's VISA resource string
    resource_string = 'TCPIP0::192.168.1.111::hislip0::INSTR'

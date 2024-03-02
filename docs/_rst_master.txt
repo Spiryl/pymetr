@@ -1,4 +1,4 @@
-# Start of c:\Users\Ryan\Documents\GitHub\pyinstrument\docs\bible.rst
+# Start of c:\Users\Ryan\Documents\GitHub\Pymetr\docs\bible.rst
 Style Rules
 ==================
 
@@ -70,9 +70,9 @@ Directory Names
 - Keep directory names lowercase and avoid using underscores unless it improves readability.
 - Directories that are packages (i.e., contain an `__init__.py` file) should follow package naming conventions: `mypackage`.
 - Non-package directories, like those for documentation, static files, or configuration, can use hyphens to improve readability: `config-files`, `static-assets`.
-# End of c:\Users\Ryan\Documents\GitHub\pyinstrument\docs\bible.rst
+# End of c:\Users\Ryan\Documents\GitHub\Pymetr\docs\bible.rst
 
-# Start of c:\Users\Ryan\Documents\GitHub\pyinstrument\docs\doc-build.rst
+# Start of c:\Users\Ryan\Documents\GitHub\Pymetr\docs\doc-build.rst
 Rebuilding the Documentation
 ============================
 
@@ -209,10 +209,10 @@ Conclusion
 
 You now have a basic Sphinx setup with support for Graphviz diagrams and a professional theme from Read the Docs. Modify the `conf.py` settings and `.rst` files to suit your project's documentation needs.
 
-# End of c:\Users\Ryan\Documents\GitHub\pyinstrument\docs\doc-build.rst
+# End of c:\Users\Ryan\Documents\GitHub\Pymetr\docs\doc-build.rst
 
-# Start of c:\Users\Ryan\Documents\GitHub\pyinstrument\docs\index.rst
-PyInstrument Documentation
+# Start of c:\Users\Ryan\Documents\GitHub\Pymetr\docs\index.rst
+Pymetr Documentation
 ==========================
 
 Purpose
@@ -260,9 +260,9 @@ System Dependencies
    bible
    logging
    unit-test
-# End of c:\Users\Ryan\Documents\GitHub\pyinstrument\docs\index.rst
+# End of c:\Users\Ryan\Documents\GitHub\Pymetr\docs\index.rst
 
-# Start of c:\Users\Ryan\Documents\GitHub\pyinstrument\docs\instruments.rst
+# Start of c:\Users\Ryan\Documents\GitHub\Pymetr\docs\instruments.rst
 Instrument Control Library
 ==========================
 
@@ -273,7 +273,7 @@ Instrument Base Class
 
 At the heart of the library is the ``Instrument`` base class, providing a unified API for interaction with diverse instruments. Leveraging PyVISA for backend communication, it supports standard protocols like GPIB, RS232, USB, and Ethernet, while also offering a path to integrate more specialized interfaces such as PXI hardware drivers and LXI protocols.
 
-.. autoclass:: pyinstrument.instruments.Instrument
+.. autoclass:: Pymetr.instruments.Instrument
    :members:
    :undoc-members:
    :show-inheritance:
@@ -351,7 +351,7 @@ Below is a simple example showcasing the library's usage within a Python environ
 
 .. code-block:: python
 
-   from pyinstrument import SCPIInstrument
+   from Pymetr import SCPIInstrument
 
    # Discover and select instruments
    instrument_address = SCPIInstrument.select_resources()
@@ -366,13 +366,13 @@ Below is a simple example showcasing the library's usage within a Python environ
    # Close the connection
    my_instrument.close()
 
-# End of c:\Users\Ryan\Documents\GitHub\pyinstrument\docs\instruments.rst
+# End of c:\Users\Ryan\Documents\GitHub\Pymetr\docs\instruments.rst
 
-# Start of c:\Users\Ryan\Documents\GitHub\pyinstrument\docs\interfaces.rst
+# Start of c:\Users\Ryan\Documents\GitHub\Pymetr\docs\interfaces.rst
 Interfaces Module
 =================
 
-The ``interfaces`` module within the ``pyinstrument`` package provides the infrastructure to implement various communication interfaces for instruments. It includes a base class for defining interfaces and derived classes for specific interface types such as VISA or TCP/IP.
+The ``interfaces`` module within the ``Pymetr`` package provides the infrastructure to implement various communication interfaces for instruments. It includes a base class for defining interfaces and derived classes for specific interface types such as VISA or TCP/IP.
 
 .. note:: This module uses the factory design pattern to create instances of interfaces dynamically based on the requirements.
 
@@ -381,7 +381,7 @@ InstrumentInterface
 
 The ``InstrumentInterface`` class is an abstract base class that defines the required methods for any communication interface.
 
-.. autoclass:: pyinstrument.interfaces.InstrumentInterface
+.. autoclass:: Pymetr.interfaces.InstrumentInterface
    :members:
    :undoc-members:
    :show-inheritance:
@@ -412,12 +412,12 @@ Interface Classes
 
 Derived classes implement specific types of interfaces.
 
-.. autoclass:: pyinstrument.interfaces.VisaInterface
+.. autoclass:: Pymetr.interfaces.VisaInterface
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. autoclass:: pyinstrument.interfaces.TCPIPInterface
+.. autoclass:: Pymetr.interfaces.TCPIPInterface
    :members:
    :undoc-members:
    :show-inheritance:
@@ -440,9 +440,9 @@ Graphical Representation of the Model
    }
 
 The above diagram illustrates the relationship between the ``InstrumentInterface`` and its derived classes. The ``InstrumentInterface`` acts as the blueprint, while ``VisaInterface`` and ``TCPIPInterface`` provide the concrete implementations for their respective communication protocols.
-# End of c:\Users\Ryan\Documents\GitHub\pyinstrument\docs\interfaces.rst
+# End of c:\Users\Ryan\Documents\GitHub\Pymetr\docs\interfaces.rst
 
-# Start of c:\Users\Ryan\Documents\GitHub\pyinstrument\docs\logging.rst
+# Start of c:\Users\Ryan\Documents\GitHub\Pymetr\docs\logging.rst
 Logging in Python Projects
 ==========================
 
@@ -509,9 +509,9 @@ Further Reading
 The Python ``logging`` module is versatile and can be customized extensively to suit the needs of small to large applications. Proper use of logging can greatly enhance the maintainability and debuggability of an application.
 
 
-# End of c:\Users\Ryan\Documents\GitHub\pyinstrument\docs\logging.rst
+# End of c:\Users\Ryan\Documents\GitHub\Pymetr\docs\logging.rst
 
-# Start of c:\Users\Ryan\Documents\GitHub\pyinstrument\docs\oscilloscope.rst
+# Start of c:\Users\Ryan\Documents\GitHub\Pymetr\docs\oscilloscope.rst
 Oscilloscope Extension
 ======================
 
@@ -519,7 +519,7 @@ The ``Oscilloscope`` class serves as an orchestrator for the complex interplay o
 
 This design philosophy allows for a high degree of modularity, enabling each subsystem to be developed, tested, and modified independently while the ``Oscilloscope`` class provides a cohesive and unified interface for the user. The result is a robust and scalable structure, where the complexity of the instrument's functionalities is managed with grace and precision.
 
-The ``pyinstrument`` package reflects this architecture, segregating related functionalities into dedicated subsystem classes. This not only enhances code organization but also fosters intuitive and object-oriented control over each aspect of the oscilloscope. Below is a visual representation of the ``Oscilloscope`` class composition:
+The ``Pymetr`` package reflects this architecture, segregating related functionalities into dedicated subsystem classes. This not only enhances code organization but also fosters intuitive and object-oriented control over each aspect of the oscilloscope. Below is a visual representation of the ``Oscilloscope`` class composition:
 
 .. graphviz::
 
@@ -556,7 +556,7 @@ The ``pyinstrument`` package reflects this architecture, segregating related fun
 Oscilloscope Core
 -----------------
 
-.. automodule:: pyinstrument.oscilloscope.core.Oscilloscope
+.. automodule:: Pymetr.oscilloscope.core.Oscilloscope
    :members:
    :undoc-members:
    :show-inheritance:
@@ -570,7 +570,7 @@ Each subsystem class focuses on a specific area of oscilloscope functionality, p
 Acquire Subsystem
 -----------------
 
-.. automodule:: pyinstrument.oscilloscope.acquire
+.. automodule:: Pymetr.oscilloscope.acquire
    :members:
    :undoc-members:
    :show-inheritance:
@@ -580,7 +580,7 @@ The ``Acquire`` subsystem manages data acquisition settings, offering control ov
 Channel Subsystem
 -----------------
 
-.. automodule:: pyinstrument.oscilloscope.channel
+.. automodule:: Pymetr.oscilloscope.channel
    :members:
    :undoc-members:
    :show-inheritance:
@@ -590,7 +590,7 @@ Each channel of the oscilloscope is represented by a ``Channel`` object, allowin
 Timebase Subsystem
 ------------------
 
-.. automodule:: pyinstrument.oscilloscope.timebase
+.. automodule:: Pymetr.oscilloscope.timebase
    :members:
    :undoc-members:
    :show-inheritance:
@@ -600,7 +600,7 @@ The ``Timebase`` subsystem governs the horizontal sweep of the oscilloscope, dic
 Trigger Subsystem
 -----------------
 
-.. automodule:: pyinstrument.oscilloscope.trigger
+.. automodule:: Pymetr.oscilloscope.trigger
    :members:
    :undoc-members:
    :show-inheritance:
@@ -610,7 +610,7 @@ Trigger settings are crucial for accurate waveform capture. The ``Trigger`` subs
 Waveform Subsystem
 ------------------
 
-.. automodule:: pyinstrument.oscilloscope.waveform
+.. automodule:: Pymetr.oscilloscope.waveform
    :members:
    :undoc-members:
    :show-inheritance:
@@ -620,7 +620,7 @@ After acquisition, the ``Waveform`` subsystem takes over, dealing with waveform 
 WaveGen Subsystem
 -----------------
 
-.. automodule:: pyinstrument.oscilloscope.wavegen
+.. automodule:: Pymetr.oscilloscope.wavegen
    :members:
    :undoc-members:
    :show-inheritance:
@@ -642,7 +642,7 @@ To begin using the ``Oscilloscope`` class, first ensure that PyVISA is installed
 
 .. code-block:: python
 
-   from pyinstrument.oscilloscope.core import Oscilloscope
+   from Pymetr.oscilloscope.core import Oscilloscope
 
    # Replace with your oscilloscope's VISA resource string
    resource_string = 'TCPIP0::192.168.1.111::hislip0::INSTR'
@@ -651,33 +651,33 @@ To begin using the ``Oscilloscope`` class, first ensure that PyVISA is installed
    print(f"Identification string: '{osc.identity()}'")
    osc.close()
 
-# End of c:\Users\Ryan\Documents\GitHub\pyinstrument\docs\oscilloscope.rst
+# End of c:\Users\Ryan\Documents\GitHub\Pymetr\docs\oscilloscope.rst
 
-# Start of c:\Users\Ryan\Documents\GitHub\pyinstrument\docs\packaging.rst
+# Start of c:\Users\Ryan\Documents\GitHub\Pymetr\docs\packaging.rst
 ====================================
-Installing the PyInstrument Package
+Installing the Pymetr Package
 ====================================
 
-The PyInstrument package is designed to facilitate advanced instrumentation capabilities in Python, including oscilloscope controls and data acquisition tools. This document outlines how to install the PyInstrument package, either for development purposes or for use in other projects.
+The Pymetr package is designed to facilitate advanced instrumentation capabilities in Python, including oscilloscope controls and data acquisition tools. This document outlines how to install the Pymetr package, either for development purposes or for use in other projects.
 
 Setup.py File
 -------------
 
-The `setup.py` file is the build script for setuptools. It tells setuptools about your package (such as the name and version) as well as which code files to include. An example `setup.py` file for PyInstrument might look like this:
+The `setup.py` file is the build script for setuptools. It tells setuptools about your package (such as the name and version) as well as which code files to include. An example `setup.py` file for Pymetr might look like this:
 
 .. code-block:: python
 
    from setuptools import setup, find_packages
 
    setup(
-       name='pyinstrument',
+       name='Pymetr',
        version='0.1.0',
        packages=find_packages(),
        description='Python Instrumentation Package',
        long_description=open('README.md').read(),
        author='Your Name',
        author_email='your.email@example.com',
-       url='https://github.com/yourusername/pyinstrument',
+       url='https://github.com/yourusername/Pymetr',
        license='MIT',
        install_requires=[
            'numpy',
@@ -692,25 +692,25 @@ This script is executed to install your package. The `find_packages()` function 
 Installing the Package
 ----------------------
 
-There are two main scenarios for installing the PyInstrument package:
+There are two main scenarios for installing the Pymetr package:
 
-1. **Installing for Use in Projects**: If you wish to use PyInstrument as a dependency in other projects, you can install it from your local copy or from a Git repository.
+1. **Installing for Use in Projects**: If you wish to use Pymetr as a dependency in other projects, you can install it from your local copy or from a Git repository.
 
    To install a local copy directly:
 
    .. code-block:: bash
 
-      pip install path/to/pyinstrument
+      pip install path/to/Pymetr
 
    Or, if your project is hosted on a Git repository, you can install it using:
 
    .. code-block:: bash
 
-      pip install git+https://github.com/yourusername/pyinstrument.git
+      pip install git+https://github.com/yourusername/Pymetr.git
 
-2. **Development Installation**: If you're developing PyInstrument and want to test changes as you make them, you should install the package in "editable" mode. This allows you to modify the source code and see those changes reflected without having to reinstall the package.
+2. **Development Installation**: If you're developing Pymetr and want to test changes as you make them, you should install the package in "editable" mode. This allows you to modify the source code and see those changes reflected without having to reinstall the package.
 
-   Navigate to the root directory of your PyInstrument project and run:
+   Navigate to the root directory of your Pymetr project and run:
 
    .. code-block:: bash
 
@@ -721,13 +721,13 @@ There are two main scenarios for installing the PyInstrument package:
 Conclusion
 ----------
 
-Installing the PyInstrument package is straightforward, whether for use in other projects or for development. The `setup.py` file is crucial for defining package metadata, dependencies, and more. For development purposes, installing in editable mode is highly recommended to facilitate testing and iteration.
+Installing the Pymetr package is straightforward, whether for use in other projects or for development. The `setup.py` file is crucial for defining package metadata, dependencies, and more. For development purposes, installing in editable mode is highly recommended to facilitate testing and iteration.
 
 For more information on packaging Python projects, refer to the official Python Packaging User Guide: https://packaging.python.org/tutorials/packaging-projects/
 
-# End of c:\Users\Ryan\Documents\GitHub\pyinstrument\docs\packaging.rst
+# End of c:\Users\Ryan\Documents\GitHub\Pymetr\docs\packaging.rst
 
-# Start of c:\Users\Ryan\Documents\GitHub\pyinstrument\docs\quickstart.rst
+# Start of c:\Users\Ryan\Documents\GitHub\Pymetr\docs\quickstart.rst
 Quick Start Guide
 ==================
 
@@ -750,9 +750,9 @@ Resource Strings and Instrument Identification
 -----------------------------------------------
 
 Resource strings are unique identifiers that PyVISA uses to communicate with instruments. They typically contain information about the interface type, the address, and other necessary details for making a connection.
-# End of c:\Users\Ryan\Documents\GitHub\pyinstrument\docs\quickstart.rst
+# End of c:\Users\Ryan\Documents\GitHub\Pymetr\docs\quickstart.rst
 
-# Start of c:\Users\Ryan\Documents\GitHub\pyinstrument\docs\sphinx.rst
+# Start of c:\Users\Ryan\Documents\GitHub\Pymetr\docs\sphinx.rst
 Sphinx Documentation Primer
 ===========================
 
@@ -829,9 +829,9 @@ Introduction to reStructuredText (ReST)
 
 reStructuredText is the default plaintext markup language used by Sphinx. It's designed to be simple and readable, making it easy to create well-structured documentation. To get more familiar with reST and its capabilities, check out the `reStructuredText Primer <https://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html>`_ provided by Sphinx.
 
-# End of c:\Users\Ryan\Documents\GitHub\pyinstrument\docs\sphinx.rst
+# End of c:\Users\Ryan\Documents\GitHub\Pymetr\docs\sphinx.rst
 
-# Start of c:\Users\Ryan\Documents\GitHub\pyinstrument\docs\unit-test.rst
+# Start of c:\Users\Ryan\Documents\GitHub\Pymetr\docs\unit-test.rst
 ======================================
 Unit Testing in Python with unittest
 ======================================
@@ -924,5 +924,5 @@ Conclusion
 Unit testing is a powerful practice for maintaining high-quality software. The ``unittest`` framework in Python provides a rich set of tools for writing and running tests, ensuring that your code behaves as expected. By integrating unit testing into your development process, you can improve the reliability and maintainability of your projects.
 
 
-# End of c:\Users\Ryan\Documents\GitHub\pyinstrument\docs\unit-test.rst
+# End of c:\Users\Ryan\Documents\GitHub\Pymetr\docs\unit-test.rst
 

@@ -6,4 +6,4 @@ try:
     from .oscilloscope.core import Oscilloscope
     from . import interfaces
 except ImportError as e:
-    print(f"Failed to import within pyinstrument: {e}")
+    print(f"Failed to import within Pymetr: {e}")

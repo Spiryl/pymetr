@@ -1,5 +1,5 @@
 # oscilloscope.py
-from pyinstrument.instruments import Instrument, InstrumentSubsystem
+from Pymetr.instruments import Instrument, InstrumentSubsystem
 from enum import Enum
 import logging
 from utilities import debug, timeit

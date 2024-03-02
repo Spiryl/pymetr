@@ -1,6 +1,6 @@
 .. code-block:: text
 
-pyinstrument/
+Pymetr/
 │   ├── make.bat
 │   ├── Makefile
 │   ├── README.md
@@ -28,7 +28,7 @@ pyinstrument/
 │   │   │   ├── oscilloscope_notebook.ipynb
 │   │   │   ├── oscilloscope_script.py
 │   ├── spectroscope/
-├── pyinstrument/
+├── Pymetr/
 │   │   ├── instruments.py
 │   │   ├── interfaces.py
 │   │   ├── __init__.py
@@ -41,7 +41,7 @@ pyinstrument/
 │   │   │   ├── waveform.py
 │   │   │   ├── wavegen.py
 │   │   │   ├── __init__.py
-├── pyinstrument.egg-info/
+├── Pymetr.egg-info/
 │   │   ├── dependency_links.txt
 │   │   ├── PKG-INFO
 │   │   ├── SOURCES.txt

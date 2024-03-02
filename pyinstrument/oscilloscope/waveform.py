@@ -1,6 +1,6 @@
 import logging
 from enum import Enum
-from pyinstrument.instruments import InstrumentSubsystem
+from Pymetr.instruments import InstrumentSubsystem
 import numpy as np  # Make sure to import numpy for handling the data
 
 class Waveform(InstrumentSubsystem):

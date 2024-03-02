@@ -5,7 +5,7 @@ sys.path.insert(0, os.path.abspath('../'))
 
 # -- Project information -----------------------------------------------------
 
-project = 'PyInstrument'
+project = 'Pymetr'
 copyright = '2024, Ryan C. Smith'
 author = 'Ryan C. Smith'
 release = '3/01/2024'

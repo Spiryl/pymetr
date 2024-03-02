@@ -1,6 +1,6 @@
-# PyInstrument
+# Pymetr
 
-PyInstrument is a Python library designed to provide an abstraction layer for the control of various instrumentation.
+Pymetr is a Python library designed to provide an abstraction layer for the control of various instrumentation.
 It uses supports pyvisa, raw sockets, and future support for PXIe/PCIe.  It is in the earliest of development stages so use with caution.
 
 ## Features
@@ -12,10 +12,10 @@ It uses supports pyvisa, raw sockets, and future support for PXIe/PCIe.  It is i
 
 ## Installation
 
-You can install PyInstrument directly from GitHub using pip:
+You can install Pymetr directly from GitHub using pip:
 
 ```bash
-pip install git+https://github.com/pyinstrument/pyinstrument.git
+pip install git+https://github.com/Pymetr/Pymetr.git
 ```
 
 ## Documentation
@@ -24,11 +24,11 @@ For detailed documentation, visit [Link to Documentation](docs/build//html/index
 
 ## Examples
 
-Check out the `examples/` directory for more examples on how to use PyInstrument.
+Check out the `examples/` directory for more examples on how to use Pymetr.
 
 ## License
 
-PyInstrument is licensed under the [MIT License](LICENSE).
+Pymetr is licensed under the [MIT License](LICENSE).
 
 ## Authors
 
@@ -36,4 +36,4 @@ PyInstrument is licensed under the [MIT License](LICENSE).
 
 ## Acknowledgments
 
-Thanks to all the contributors who have helped shape PyInstrument into what it is today!
+Thanks to all the contributors who have helped shape Pymetr into what it is today!

@@ -1,4 +1,4 @@
-PyInstrument Documentation
+Pymetr Documentation
 ==========================
 
 Purpose
@@ -8,16 +8,17 @@ This project empowers engineers to craft their own test routines and software, s
 TODO
 ----
 
-Standardize enumerations
-Standardize doc-strings ^^
-Create subsystems.py and refactor
+Standardize enumeration string format across subsystems.
+Add doc-strings to subsystem enum types explaining operation modes.
+Standardize doc-strings format away from the sphinx style parameters.
+Create subsystems.py to manage all subystems and refactor.
 Update subsystem abstract base class and allowed instrument subsystem calls.
-Documentation graphics and hyper-links
-Start spectrum analyzer class
-Start power meter class
-Get package published
-Rework GUI controls
-Refactor GUI acquisition thread
+Documentation graphics and hyper-links.
+Start spectrum analyzer class.
+Start power meter class.
+Get package published. 
+Rework GUI controls.
+Refactor GUI acquisition thread.
 Lunch and Learn!!
 
 

@@ -3,13 +3,13 @@ import logging
 import sys
 from enum import Enum, auto
 
-from pyinstrument.instruments import SCPIInstrument
-from pyinstrument.oscilloscope.acquire import Acquire
-from pyinstrument.oscilloscope.trigger import Trigger
-from pyinstrument.oscilloscope.timebase import Timebase
-from pyinstrument.oscilloscope.channel import Channel
-from pyinstrument.oscilloscope.wavegen import WaveGen
-from pyinstrument.oscilloscope.waveform import Waveform
+from Pymetr.instruments import SCPIInstrument
+from Pymetr.oscilloscope.acquire import Acquire
+from Pymetr.oscilloscope.trigger import Trigger
+from Pymetr.oscilloscope.timebase import Timebase
+from Pymetr.oscilloscope.channel import Channel
+from Pymetr.oscilloscope.wavegen import WaveGen
+from Pymetr.oscilloscope.waveform import Waveform
 
 from utilities import debug, timeit
 
@@ -27,16 +27,16 @@ class Oscilloscope(SCPIInstrument):
     :param resource_string: VISA resource string for oscilloscope connection.
     :type resource_string: str
     :ivar trigger: Manages the trigger settings of the oscilloscope.
-    :vartype trigger: :class:`pyinstrument.oscilloscope.trigger.Trigger`
+    :vartype trigger: :class:`Pymetr.oscilloscope.trigger.Trigger`
     :ivar timebase: Manages the timebase settings of the oscilloscope.
-    :vartype timebase: :class:`pyinstrument.oscilloscope.timebase.Timebase`
+    :vartype timebase: :class:`Pymetr.oscilloscope.timebase.Timebase`
     :ivar waveform: Manages waveform acquisition and processing.
-    :vartype waveform: :class:`pyinstrument.oscilloscope.waveform.Waveform`
+    :vartype waveform: :class:`Pymetr.oscilloscope.waveform.Waveform`
     :ivar wavegen: Controls the waveform generator of the oscilloscope.
-    :vartype wavegen: :class:`pyinstrument.oscilloscope.wavegen.WaveGen`
+    :vartype wavegen: :class:`Pymetr.oscilloscope.wavegen.WaveGen`
     :ivar acquire: Manages data acquisition settings of the oscilloscope.
-    :vartype acquire: :class:`pyinstrument.oscilloscope.acquire.Acquire`
-    :ivar channels: Represents each channel on the oscilloscope as a :class:`pyinstrument.oscilloscope.channel.Channel` object.
+    :vartype acquire: :class:`Pymetr.oscilloscope.acquire.Acquire`
+    :ivar channels: Represents each channel on the oscilloscope as a :class:`Pymetr.oscilloscope.channel.Channel` object.
     :vartype channels: dict
     :ivar continuous_fetch: Flag to enable or disable continuous waveform fetching.
     :vartype continuous_fetch: bool

@@ -1,4 +1,4 @@
-# pyinstrument/oscilloscope/__init__.py
+# Pymetr/oscilloscope/__init__.py
 
 from .core import Oscilloscope  # Assuming this is the correct class name
 

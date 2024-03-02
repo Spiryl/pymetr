@@ -1,14 +1,14 @@
 Instrument Control Library
 ==========================
 
-The ``Instrument Control Library`` forms the backbone of a flexible system designed to communicate with and control a variety of test and measurement hardware. From the foundational ``Instrument`` base class to the specialized interface classes and modular subsystems, this library streamlines the development and execution of instrument control applications.
+The ``Instruments Library`` forms the backbone of a flexible system designed to communicate with and control a variety of test and measurement hardware. From the foundational ``Instrument`` base class to the specialized interface classes and modular subsystems, this library streamlines the development and execution of instrument control applications.
 
 Instrument Base Class
 ---------------------
 
 At the heart of the library is the ``Instrument`` base class, providing a unified API for interaction with diverse instruments. Leveraging PyVISA for backend communication, it supports standard protocols like GPIB, RS232, USB, and Ethernet, while also offering a path to integrate more specialized interfaces such as PXI hardware drivers and LXI protocols.
 
-.. autoclass:: pyinstrument.instruments.Instrument
+.. autoclass:: Pymetr.instruments.Instrument
    :members:
    :undoc-members:
    :show-inheritance:
@@ -86,7 +86,7 @@ Below is a simple example showcasing the library's usage within a Python environ
 
 .. code-block:: python
 
-   from pyinstrument import SCPIInstrument
+   from Pymetr import SCPIInstrument
 
    # Discover and select instruments
    instrument_address = SCPIInstrument.select_resources()
@@ -95,8 +95,4 @@ Below is a simple example showcasing the library's usage within a Python environ
 
    # Basic instrument interaction
    print(my_instrument.query('*IDN?'))
-   my_instrument.write('MEAS:VOLT:DC?')
-   print(my_instrument.read())
-
-   # Close the connection
-   my_instrument.close()
+   print(my_instrument.query('MEAS:VOLT:DC?'))

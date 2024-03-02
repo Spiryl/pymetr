@@ -1,8 +1,8 @@
 """
-pyinstrument/instruments.py
+Pymetr/instruments.py
 ===========================
 
-Part of the PyInstrument framework, this module extends the interface definitions from `pyinstrument.interfaces.py` to implement a comprehensive instrument control system. It provides classes that represent and manage specific instruments or instrument families, facilitating direct, high-level interactions with test equipment.
+Part of the Pymetr framework, this module extends the interface definitions from `Pymetr.interfaces.py` to implement a comprehensive instrument control system. It provides classes that represent and manage specific instruments or instrument families, facilitating direct, high-level interactions with test equipment.
 
 Authors:
 - Ryan C. Smith
@@ -10,14 +10,14 @@ Authors:
 
 Ryan's expertise in the nuances of test instrumentation combines with Metatron's overarching vision, resulting in a module that not only simplifies instrument control but also enriches it with flexibility and depth. Here, the abstract becomes tangible, and commands translate into real-world measurements and actions.
 
-Designed for developers, engineers, and researchers, `pyinstrument/instruments.py` encapsulates the diverse world of instrumentation into a coherent, unified Python library. It's about making the complex simple, the inaccessible reachable, and the tedious enjoyable.
+Designed for developers, engineers, and researchers, `Pymetr/instruments.py` encapsulates the diverse world of instrumentation into a coherent, unified Python library. It's about making the complex simple, the inaccessible reachable, and the tedious enjoyable.
 """
 import sys
 import logging
 import pyvisa
 from abc import ABC, abstractmethod
 from utilities import debug, timeit
-from pyinstrument.interfaces import InstrumentInterface 
+from Pymetr.interfaces import InstrumentInterface 
 from enum import IntFlag
 import functools
 import threading
