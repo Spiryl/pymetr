@@ -1,11 +1,11 @@
-Pymetr Documentation
+PyMetr Documentation
 ==========================
 
 Purpose
 -------
 This project empowers engineers to craft their own test routines and software, streamlining design verification automation. By providing a pristine example platform, it serves as the seed for future development, offering a crystalline foundation from which test scripts and virtual front panels for a variety of test equipment can be built.
 
-TODO
+Todo
 ----
 
 Standardize enumeration string format across subsystems.
@@ -18,9 +18,7 @@ Start spectrum analyzer class.
 Start power meter class.
 Get package published. 
 Rework GUI controls.
-Refactor GUI acquisition thread.
-Lunch and Learn!!
-
+Refactor Oscilloscope GUI acquisition thread.
 
 System Dependencies
 -------------------
