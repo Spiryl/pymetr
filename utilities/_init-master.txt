@@ -1,0 +1,46 @@
+# Start of c:\Users\Ryan\Documents\GitHub\pyinstrument\pyinstrument\__init__.py
+# Update the __all__ list to include specific classes or modules you want to expose.
+__all__ = ['Instrument', 'SCPIInstrument', 'Oscilloscope', 'interfaces']
+
+try:
+    from .instruments import Instrument, SCPIInstrument  # Assuming SCPIInstrument is a class in the instruments module
+    from .oscilloscope.core import Oscilloscope
+    from . import interfaces
+except ImportError as e:
+    print(f"Failed to import within pyinstrument: {e}")
+
+# End of c:\Users\Ryan\Documents\GitHub\pyinstrument\pyinstrument\__init__.py
+
+# Start of c:\Users\Ryan\Documents\GitHub\pyinstrument\pyinstrument\oscilloscope\__init__.py
+# pyinstrument/oscilloscope/__init__.py
+
+from .core import Oscilloscope  # Assuming this is the correct class name
+
+# Import subsystems
+from .acquire import Acquire
+from .channel import Channel
+from .timebase import Timebase
+from .trigger import Trigger
+from .waveform import Waveform
+from .wavegen import WaveGen
+
+__all__ = [
+    "Oscilloscope",
+    "Acquire",
+    "Channel",
+    "Timebase",
+    "Trigger",
+    "Waveform",
+    "WaveGen",
+]
+# End of c:\Users\Ryan\Documents\GitHub\pyinstrument\pyinstrument\oscilloscope\__init__.py
+
+# Start of c:\Users\Ryan\Documents\GitHub\pyinstrument\utilities\__init__.py
+# helpers/__init__.py
+
+from .decorators import *
+from .utils import si_str_to_float
+
+__all__ = ['si_str_to_float']
+# End of c:\Users\Ryan\Documents\GitHub\pyinstrument\utilities\__init__.py
+

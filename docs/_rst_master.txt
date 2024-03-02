@@ -1,0 +1,928 @@
+# Start of c:\Users\Ryan\Documents\GitHub\pyinstrument\docs\bible.rst
+Style Rules
+==================
+
+The guidelines below are the compass for our coding journey. Adhere to them, and the path to clean and readable code shall be illuminated.
+
+Module Names
+------------
+- Lowercase with underscores as necessary to improve readability: `my_module.py`.
+
+Package Names
+-------------
+- All lowercase, no underscores needed: `mypackage`.
+
+Class Names
+-----------
+- CamelCase, capitalizing the first letter of each word: `MyClass`.
+
+Function Names
+--------------
+- Lowercase with underscores separating words: `my_function()`.
+
+Constant Names
+--------------
+- All caps with underscores separating words: `MY_CONSTANT`.
+
+Variable Names
+--------------
+- Lowercase with underscores separating words: `my_variable`.
+
+Indentation
+-----------
+- Use 4 spaces per indentation level. Consistency is key.
+
+Line Length
+-----------
+- Keep each line to a maximum of 79 characters.
+
+Imports
+-------
+- Group your imports in the following order: standard library imports, related third-party imports, local application/library specific imports. Add a blank line between each group.
+
+Whitespace
+----------
+- Keep it clean—no trailing whitespace and use spacing around operators and after commas to improve readability.
+
+File and Directory Naming
+=========================
+
+- **Files**: Use lowercase with underscores as necessary. For example, `my_script.py` or `my_module.py`.
+- **Directories**: Use lowercase without underscores for package directories. For non-package directories, you can use underscores if it improves readability. For example, `mypackage` and `my_directory`.
+
+Files should be named after the module they contain. A Python file called `my_module.py` would correspond to a module named `my_module`.
+
+Directories that are Python packages (those containing an `__init__.py` file) should also be named in lowercase, without underscores, to align with package naming conventions. Non-package directories, such as those containing resources or documentation, can use underscores if it improves readability.
+
+Remember, the goal is to keep names descriptive yet concise. They should give a clue about the content and purpose, without getting too lengthy.
+
+Examples:
+- Correct: `instrument/oscilloscope/controls/`
+- Avoid: `Instrument/Oscilloscope_Controls/`
+
+File Names
+----------
+- Use lowercase, and if it's a Python script, give it a `.py` extension. If the file is a module that will be imported, underscores can be used for readability: `useful_functions.py`.
+- For executable scripts, keep it short and sweet, avoid underscores if possible: `manage`.
+
+Directory Names
+---------------
+- Keep directory names lowercase and avoid using underscores unless it improves readability.
+- Directories that are packages (i.e., contain an `__init__.py` file) should follow package naming conventions: `mypackage`.
+- Non-package directories, like those for documentation, static files, or configuration, can use hyphens to improve readability: `config-files`, `static-assets`.
+# End of c:\Users\Ryan\Documents\GitHub\pyinstrument\docs\bible.rst
+
+# Start of c:\Users\Ryan\Documents\GitHub\pyinstrument\docs\doc-build.rst
+Rebuilding the Documentation
+============================
+
+This guide will walk you through setting up Sphinx for generating project documentation, installing Graphviz for creating diagrams, and using the Read the Docs theme for a clean, professional look.
+
+Installing Sphinx
+-----------------
+
+To install Sphinx, you will need Python installed on your system. Python 3.6 or higher is recommended. You can install Sphinx using pip:
+
+.. code-block:: bash
+
+    pip install sphinx
+
+Installing Graphviz
+-------------------
+
+Graphviz is an open-source graph visualization software used to create diagrams in Sphinx via the Graphviz extension. Install it from your operating system's package manager or the Graphviz download page:
+
+- For Windows, download the installer from `Graphviz Download <https://graphviz.org/download/>`_.
+- For macOS, use Homebrew:
+
+  .. code-block:: bash
+
+      brew install graphviz
+
+- For Linux (Debian/Ubuntu):
+
+  .. code-block:: bash
+
+      sudo apt-get install graphviz
+
+Installing Read the Docs Sphinx Theme
+-------------------------------------
+
+The Read the Docs theme can be installed via pip:
+
+.. code-block:: bash
+
+    pip install sphinx_rtd_theme
+
+Installing Sphinx Graphviz Extension
+------------------------------------
+
+The Sphinx Graphviz extension should be included with Sphinx by default. If you need to install it separately, you can do so using pip:
+
+.. code-block:: bash
+
+    pip install sphinxcontrib-plantuml sphinxcontrib-actdiag sphinxcontrib-blockdiag sphinxcontrib-nwdiag sphinxcontrib-seqdiag
+
+Setting Up `conf.py`
+--------------------
+
+Your `conf.py` file is where you configure your Sphinx documentation build. Here's a basic setup:
+
+.. code-block:: python
+
+    import os
+    import sys
+    sys.path.insert(0, os.path.abspath('../..'))  # Adjust the path to the root of your project
+
+    project = 'Your Project'
+    author = 'Your Name'
+
+    extensions = [
+        'sphinx.ext.autodoc',
+        'sphinx.ext.graphviz',
+        'sphinx_rtd_theme',
+    ]
+
+    html_theme = 'sphinx_rtd_theme'
+    html_static_path = ['_static']
+
+    graphviz_output_format = 'png'
+
+Building Your Documentation
+---------------------------
+
+To build your documentation, navigate to your documentation directory and run:
+
+.. code-block:: bash
+
+    make html
+
+This command will generate HTML documentation in the `_build/html` directory.
+
+Creating Your First Page
+------------------------
+
+Start by creating an `index.rst` file in your documentation source directory with the following content:
+
+.. code-block:: rst
+
+    Welcome to My Project Documentation
+    ===================================
+
+    .. toctree::
+       :maxdepth: 2
+       :caption: Contents:
+
+       introduction
+       getting_started
+       api_reference
+
+Replace `introduction`, `getting_started`, and `api_reference` with the actual names of your `.rst` or `.md` files.
+
+Adding Diagrams with Graphviz
+-----------------------------
+
+You can add diagrams to your `.rst` files using the Graphviz directive:
+
+.. code-block:: rst
+
+    .. graphviz::
+
+       digraph example {
+           A -> B;
+           B -> C;
+           C -> D;
+       }
+
+This simple directive will create a diagram showing nodes A, B, C, and D with directed edges between them as shown below.
+
+.. graphviz::
+
+       digraph example {
+           A -> B;
+           B -> C;
+           C -> D;
+       }
+
+Conclusion
+----------
+
+You now have a basic Sphinx setup with support for Graphviz diagrams and a professional theme from Read the Docs. Modify the `conf.py` settings and `.rst` files to suit your project's documentation needs.
+
+# End of c:\Users\Ryan\Documents\GitHub\pyinstrument\docs\doc-build.rst
+
+# Start of c:\Users\Ryan\Documents\GitHub\pyinstrument\docs\index.rst
+PyInstrument Documentation
+==========================
+
+Purpose
+-------
+This project empowers engineers to craft their own test routines and software, streamlining design verification automation. By providing a pristine example platform, it serves as the seed for future development, offering a crystalline foundation from which test scripts and virtual front panels for a variety of test equipment can be built.
+
+TODO
+----
+
+Standardize enumerations
+Standardize doc-strings ^^
+Create subsystems.py and refactor
+Update subsystem abstract base class and allowed instrument subsystem calls.
+Documentation graphics and hyper-links
+Start spectrum analyzer class
+Start power meter class
+Get package published
+Rework GUI controls
+Refactor GUI acquisition thread
+Lunch and Learn!!
+
+
+System Dependencies
+-------------------
+- **Python Version**: 3.12.0
+- **pyvisa**: Instrument communication
+- **pyside6**: Qt bindings and GUI application development
+- **numpy**: Efficient numerical computations
+- **logging**: Debugging and diagnostic output
+- **enum**: Enumerations for Python
+- **vispy**: High-performance graphics
+
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Contents:
+   
+   quickstart
+   interfaces
+   instruments
+   oscilloscope
+   packaging
+   doc-build
+   sphinx
+   bible
+   logging
+   unit-test
+# End of c:\Users\Ryan\Documents\GitHub\pyinstrument\docs\index.rst
+
+# Start of c:\Users\Ryan\Documents\GitHub\pyinstrument\docs\instruments.rst
+Instrument Control Library
+==========================
+
+The ``Instrument Control Library`` forms the backbone of a flexible system designed to communicate with and control a variety of test and measurement hardware. From the foundational ``Instrument`` base class to the specialized interface classes and modular subsystems, this library streamlines the development and execution of instrument control applications.
+
+Instrument Base Class
+---------------------
+
+At the heart of the library is the ``Instrument`` base class, providing a unified API for interaction with diverse instruments. Leveraging PyVISA for backend communication, it supports standard protocols like GPIB, RS232, USB, and Ethernet, while also offering a path to integrate more specialized interfaces such as PXI hardware drivers and LXI protocols.
+
+.. autoclass:: pyinstrument.instruments.Instrument
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Key Features:
+- Standardized connection management (open/close).
+- Reading and writing capabilities for SCPI-compliant and custom commands.
+- Query execution with response handling.
+- Instrument identification and status management.
+
+Class Diagram
+-------------
+
+.. graphviz::
+
+   digraph instrument_hierarchy {
+      node [shape=record, fontname=Helvetica, fontsize=10];
+      
+      Instrument [label="{Instrument|+ open()\l+ close()\l+ write(command: str)\l+ read(): str\l+ query(command: str): str\l}"]
+      SCPIInstrument [label="{SCPIInstrument}"]
+      VXIInstrument [label="{VXIInstrument}"]
+      LXIInstrument [label="{LXIInstrument}"]
+
+      Instrument -> SCPIInstrument [arrowhead="onormal"]
+      Instrument -> VXIInstrument [arrowhead="onormal"]
+      Instrument -> LXIInstrument [arrowhead="onormal"]
+
+      label="Instrument Class Hierarchy";
+      fontsize=12;
+   }
+
+Instrument Subsystems
+---------------------
+
+The library's design emphasizes modularity through instrument subsystems. These subsystems allow for targeted control and testing of specific instrument functionalities, facilitating a granular approach to instrument interaction.
+
+Subsystem Integration:
+
+.. graphviz::
+
+   digraph subsystem_relationship {
+      node [shape=record, fontname=Helvetica, fontsize=10];
+      
+      Instrument [label="{Instrument|+ sync()\l}"]
+      TimebaseSubsystem [label="{TimebaseSubsystem}"]
+      TriggerSubsystem [label="{TriggerSubsystem}"]
+      MeasurementSubsystem [label="{MeasurementSubsystem}"]
+
+      Instrument -> TimebaseSubsystem [arrowhead="onormal"]
+      Instrument -> TriggerSubsystem [arrowhead="onormal"]
+      Instrument -> MeasurementSubsystem [arrowhead="onormal"]
+
+      { rank=same; TimebaseSubsystem; TriggerSubsystem; MeasurementSubsystem; }
+
+      label="Instrument Subsystem Relationships";
+      fontsize=12;
+   }
+
+Interactive CLI
+---------------
+
+The library includes an interactive CLI for direct engagement with instruments. This tool is invaluable for rapid testing, debugging, and hands-on learning, providing a straightforward interface for real-time instrument control.
+
+Example Usage:
+
+.. code-block:: python
+
+   if __name__ == "__main__":
+       # CLI functionality detailed here
+
+Using the Library
+-----------------
+
+Below is a simple example showcasing the library's usage within a Python environment:
+
+.. code-block:: python
+
+   from pyinstrument import SCPIInstrument
+
+   # Discover and select instruments
+   instrument_address = SCPIInstrument.select_resources()
+   my_instrument = SCPIInstrument(instrument_address, interface_type='pyvisa')
+   my_instrument.open()
+
+   # Basic instrument interaction
+   print(my_instrument.query('*IDN?'))
+   my_instrument.write('MEAS:VOLT:DC?')
+   print(my_instrument.read())
+
+   # Close the connection
+   my_instrument.close()
+
+# End of c:\Users\Ryan\Documents\GitHub\pyinstrument\docs\instruments.rst
+
+# Start of c:\Users\Ryan\Documents\GitHub\pyinstrument\docs\interfaces.rst
+Interfaces Module
+=================
+
+The ``interfaces`` module within the ``pyinstrument`` package provides the infrastructure to implement various communication interfaces for instruments. It includes a base class for defining interfaces and derived classes for specific interface types such as VISA or TCP/IP.
+
+.. note:: This module uses the factory design pattern to create instances of interfaces dynamically based on the requirements.
+
+InstrumentInterface
+-------------------
+
+The ``InstrumentInterface`` class is an abstract base class that defines the required methods for any communication interface.
+
+.. autoclass:: pyinstrument.interfaces.InstrumentInterface
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+The interface class enforces implementation of the following methods:
+
+- ``open``: Initializes the communication channel.
+- ``close``: Terminates the communication channel.
+- ``write``: Transmits a command to the instrument.
+- ``read``: Receives data from the instrument.
+- ``query``: Executes a write followed by a read for streamlined communication.
+
+Factory Method
+--------------
+
+A key feature of the module is the factory method ``create_interface``, which facilitates the creation of interface objects.
+
+.. code-block:: python
+
+   # Creating a VISA interface
+   visa_interface = InstrumentInterface.create_interface('pyvisa', resource_string)
+
+   # Creating a TCP/IP interface
+   tcpip_interface = InstrumentInterface.create_interface('tcpip', '192.168.1.100:5025')
+
+Interface Classes
+-----------------
+
+Derived classes implement specific types of interfaces.
+
+.. autoclass:: pyinstrument.interfaces.VisaInterface
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. autoclass:: pyinstrument.interfaces.TCPIPInterface
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Each interface class provides tailored methods for establishing connections and communicating using the respective protocols.
+
+Graphical Representation of the Model
+-------------------------------------
+
+.. graphviz::
+
+   digraph interfaces {
+       node [shape=record, fontname=Helvetica, fontsize=10];
+       InstrumentInterface [label="{InstrumentInterface|+ open()\l+ close()\l+ write(command: str)\l+ read(): str\l+ query(command: str): str\l|create_interface(interface_type: str, resource_string: str)}"];
+       VisaInterface [label="{VisaInterface|...}"];
+       TCPIPInterface [label="{TCPIPInterface|...}"];
+
+       InstrumentInterface -> VisaInterface;
+       InstrumentInterface -> TCPIPInterface;
+   }
+
+The above diagram illustrates the relationship between the ``InstrumentInterface`` and its derived classes. The ``InstrumentInterface`` acts as the blueprint, while ``VisaInterface`` and ``TCPIPInterface`` provide the concrete implementations for their respective communication protocols.
+# End of c:\Users\Ryan\Documents\GitHub\pyinstrument\docs\interfaces.rst
+
+# Start of c:\Users\Ryan\Documents\GitHub\pyinstrument\docs\logging.rst
+Logging in Python Projects
+==========================
+
+Logging is a powerful way to track events that happen while software runs. The Python ``logging`` module provides a standard way for applications to log messages in different severity levels (debug, info, warning, error, and critical).
+
+Setting Up Logging
+------------------
+
+To set up logging in a Python project, you should configure the logging system using the ``logging.basicConfig()`` function. This configuration is global and affects all loggers within the application.
+
+.. code-block:: python
+
+    import logging
+
+    logging.basicConfig(level=logging.DEBUG,
+                        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+The ``basicConfig`` function has several parameters to customize logging:
+
+- ``level``: The root logger will be set to the specified severity level.
+- ``format``: This is the format of the log message.
+
+Logger Hierarchy and Effective Level
+------------------------------------
+
+The Python logging module uses a hierarchical structure of loggers with a root logger at the top. Each logger can have multiple handlers, which can propagate messages up the hierarchy.
+
+The effective logging level of a logger is the first level set on the logger or its ancestors up to the root.
+
+Creating and Using Loggers
+--------------------------
+
+Create a logger in each module to log messages. The logger name is usually the module's name, represented by ``__name__``.
+
+.. code-block:: python
+
+    logger = logging.getLogger(__name__)
+
+You can then use the logger to log messages at different severity levels:
+
+.. code-block:: python
+
+    logger.debug("Debugging information")
+    logger.info("Informational message")
+    logger.warning("Warning: configuration file not found")
+    logger.error("Error occurred")
+    logger.critical("Critical error -- shutting down")
+
+Logging Best Practices
+----------------------
+
+- **Use Module-Level Loggers**: Create a logger in each module with ``logger = logging.getLogger(__name__)``.
+- **Log at Appropriate Levels**: Choose the appropriate logging level for each message to make the log output more useful.
+- **Configure Logging at Application Entry Point**: Set up logging configuration (e.g., in the main script or Jupyter notebook) to control logging behavior globally.
+- **Use Loggers Hierarchically**: Take advantage of the logging hierarchy to control logging more granularly in large applications.
+
+Further Reading
+---------------
+
+- Official Python Logging Documentation: https://docs.python.org/3/library/logging.html
+- Logging Cookbook: https://docs.python.org/3/howto/logging-cookbook.html
+- Logging Handlers: https://docs.python.org/3/library/logging.handlers.html
+
+The Python ``logging`` module is versatile and can be customized extensively to suit the needs of small to large applications. Proper use of logging can greatly enhance the maintainability and debuggability of an application.
+
+
+# End of c:\Users\Ryan\Documents\GitHub\pyinstrument\docs\logging.rst
+
+# Start of c:\Users\Ryan\Documents\GitHub\pyinstrument\docs\oscilloscope.rst
+Oscilloscope Extension
+======================
+
+The ``Oscilloscope`` class serves as an orchestrator for the complex interplay of its various subsystems, each encapsulated within its own class. Unlike a classical inheritance structure, the ``Oscilloscope`` class does not serve as a superclass from which subsystems inherit. Instead, it aggregates these subsystems—such as ``Trigger``, ``Timebase``, ``Waveform``, ``WaveGen``, ``Acquire``, and ``Channel``—as components, illustrating a composition-based architecture.
+
+This design philosophy allows for a high degree of modularity, enabling each subsystem to be developed, tested, and modified independently while the ``Oscilloscope`` class provides a cohesive and unified interface for the user. The result is a robust and scalable structure, where the complexity of the instrument's functionalities is managed with grace and precision.
+
+The ``pyinstrument`` package reflects this architecture, segregating related functionalities into dedicated subsystem classes. This not only enhances code organization but also fosters intuitive and object-oriented control over each aspect of the oscilloscope. Below is a visual representation of the ``Oscilloscope`` class composition:
+
+.. graphviz::
+
+   digraph architecture {
+      node [shape=record fontname=Helvetica fontsize=10];
+      rankdir=UD;
+      
+      InstrumentInterface [label="{InstrumentInterface|+ open()\l+ close()\l+ write(command: str)\l+ read(): str\l+ query(command: str): str\l}"];
+      
+      Instrument [label="{Instrument|+ identity()\l+ reset()\l+ status()\l}"];
+      Oscilloscope [label="{Oscilloscope|+ run()\l+ stop()\l+ single()\l+ autoscale()\l}"];
+      
+      Acquire [label="{Acquire|+ sync()\l+ _mode: Mode\l+ _type: Type\l}"];
+      Channel [label="{Channel|+ sync()\l+ coupling: Coupling\l+ display: DisplayState\l}"];
+      Timebase [label="{Timebase|+ sync()\l+ mode: Mode\l+ position: float\l}"];
+      Trigger [label="{Trigger|+ sync()\l+ mode: Mode\l+ level: float\l}"];
+      Waveform [label="{Waveform|+ sync()\l+ format: Format\l+ source: Source\l}"];
+      WaveGen [label="{WaveGen|+ sync()\l+ function: Function\l+ output: OutputState\l}"];
+      
+      InstrumentInterface -> Instrument [arrowhead="onormal", style="dashed"];
+      Instrument -> Oscilloscope [arrowhead="onormal", style="dashed"];
+      
+      Oscilloscope -> Acquire [arrowhead="odiamond"];
+      Oscilloscope -> Channel [arrowhead="odiamond"];
+      Oscilloscope -> Timebase [arrowhead="odiamond"];
+      Oscilloscope -> Trigger [arrowhead="odiamond"];
+      Oscilloscope -> Waveform [arrowhead="odiamond"];
+      Oscilloscope -> WaveGen [arrowhead="odiamond"];
+      
+      {rank=same; Acquire Channel Timebase Trigger Waveform WaveGen}
+   }
+
+
+Oscilloscope Core
+-----------------
+
+.. automodule:: pyinstrument.oscilloscope.core.Oscilloscope
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Oscilloscope Subsystems
+-----------------------
+
+The subsystems are instantiated within the ``Oscilloscope`` class and are accessed through the corresponding attributes.
+Each subsystem class focuses on a specific area of oscilloscope functionality, providing specialized methods and properties for that domain.
+
+Acquire Subsystem
+-----------------
+
+.. automodule:: pyinstrument.oscilloscope.acquire
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+The ``Acquire`` subsystem manages data acquisition settings, offering control over how the oscilloscope captures and processes the signal data.
+
+Channel Subsystem
+-----------------
+
+.. automodule:: pyinstrument.oscilloscope.channel
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Each channel of the oscilloscope is represented by a ``Channel`` object, allowing individual control over display, scaling, and other channel-specific settings.
+
+Timebase Subsystem
+------------------
+
+.. automodule:: pyinstrument.oscilloscope.timebase
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+The ``Timebase`` subsystem governs the horizontal sweep of the oscilloscope, dictating the scale and position of the waveform in time.
+
+Trigger Subsystem
+-----------------
+
+.. automodule:: pyinstrument.oscilloscope.trigger
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Trigger settings are crucial for accurate waveform capture. The ``Trigger`` subsystem provides precise control over when the oscilloscope starts acquiring data.
+
+Waveform Subsystem
+------------------
+
+.. automodule:: pyinstrument.oscilloscope.waveform
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+After acquisition, the ``Waveform`` subsystem takes over, dealing with waveform data retrieval and analysis.
+
+WaveGen Subsystem
+-----------------
+
+.. automodule:: pyinstrument.oscilloscope.wavegen
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Some oscilloscopes come with a built-in waveform generator. The ``WaveGen`` subsystem manages this feature, controlling waveform output and modulation.
+
+
+Root-Level Functions
+====================
+
+Beyond the subsystems, the ``Oscilloscope`` class includes root-level functions that are commonly used across different subsystems, ensuring they're accessible in a centralized fashion. These include utility functions like `run`, `stop`, `single`, and `autoscale`, which are independent of the subsystem settings but crucial for the overall operation of the oscilloscope.
+
+.. note:: The ``Oscilloscope`` class is designed with the user in mind, abstracting the complexities of the oscilloscope operation and providing a user-friendly interface that reflects the natural workflow of an engineer or technician working with the instrument.
+
+Getting Started with the Oscilloscope Class
+-------------------------------------------
+
+To begin using the ``Oscilloscope`` class, first ensure that PyVISA is installed and properly configured in your environment. Here's a quick rundown on creating an instance of the ``Oscilloscope`` and running basic operations:
+
+.. code-block:: python
+
+   from pyinstrument.oscilloscope.core import Oscilloscope
+
+   # Replace with your oscilloscope's VISA resource string
+   resource_string = 'TCPIP0::192.168.1.111::hislip0::INSTR'
+   osc = Oscilloscope(resource_string)
+   osc.open()
+   print(f"Identification string: '{osc.identity()}'")
+   osc.close()
+
+# End of c:\Users\Ryan\Documents\GitHub\pyinstrument\docs\oscilloscope.rst
+
+# Start of c:\Users\Ryan\Documents\GitHub\pyinstrument\docs\packaging.rst
+====================================
+Installing the PyInstrument Package
+====================================
+
+The PyInstrument package is designed to facilitate advanced instrumentation capabilities in Python, including oscilloscope controls and data acquisition tools. This document outlines how to install the PyInstrument package, either for development purposes or for use in other projects.
+
+Setup.py File
+-------------
+
+The `setup.py` file is the build script for setuptools. It tells setuptools about your package (such as the name and version) as well as which code files to include. An example `setup.py` file for PyInstrument might look like this:
+
+.. code-block:: python
+
+   from setuptools import setup, find_packages
+
+   setup(
+       name='pyinstrument',
+       version='0.1.0',
+       packages=find_packages(),
+       description='Python Instrumentation Package',
+       long_description=open('README.md').read(),
+       author='Your Name',
+       author_email='your.email@example.com',
+       url='https://github.com/yourusername/pyinstrument',
+       license='MIT',
+       install_requires=[
+           'numpy',
+           'PySide6',
+           'vispy',
+           # Add other dependencies here
+       ],
+   )
+
+This script is executed to install your package. The `find_packages()` function automatically discovers all packages and subpackages. In the `install_requires` list, you should specify any third-party dependencies your package needs.
+
+Installing the Package
+----------------------
+
+There are two main scenarios for installing the PyInstrument package:
+
+1. **Installing for Use in Projects**: If you wish to use PyInstrument as a dependency in other projects, you can install it from your local copy or from a Git repository.
+
+   To install a local copy directly:
+
+   .. code-block:: bash
+
+      pip install path/to/pyinstrument
+
+   Or, if your project is hosted on a Git repository, you can install it using:
+
+   .. code-block:: bash
+
+      pip install git+https://github.com/yourusername/pyinstrument.git
+
+2. **Development Installation**: If you're developing PyInstrument and want to test changes as you make them, you should install the package in "editable" mode. This allows you to modify the source code and see those changes reflected without having to reinstall the package.
+
+   Navigate to the root directory of your PyInstrument project and run:
+
+   .. code-block:: bash
+
+      pip install -e .
+
+   This command tells pip to install the package in a way that's symlinked back to your source code, so changes are immediately effective.
+
+Conclusion
+----------
+
+Installing the PyInstrument package is straightforward, whether for use in other projects or for development. The `setup.py` file is crucial for defining package metadata, dependencies, and more. For development purposes, installing in editable mode is highly recommended to facilitate testing and iteration.
+
+For more information on packaging Python projects, refer to the official Python Packaging User Guide: https://packaging.python.org/tutorials/packaging-projects/
+
+# End of c:\Users\Ryan\Documents\GitHub\pyinstrument\docs\packaging.rst
+
+# Start of c:\Users\Ryan\Documents\GitHub\pyinstrument\docs\quickstart.rst
+Quick Start Guide
+==================
+
+PyVISA and Instrument Communication
+------------------------------------
+
+PyVISA is an open-source Python library that enables you to control all kinds of measurement devices independently of the interface (e.g., GPIB, RS232, USB, Ethernet). For detailed documentation and source code, visit the `PyVISA documentation <https://pyvisa.readthedocs.io/en/latest/>`_ and the `PyVISA GitHub page <https://github.com/pyvisa/pyvisa>`_.
+
+IEEE 488.2 Standard
+--------------------
+
+IEEE 488.2 is a standard for programmable instrumentation that defines codes, formats, protocols, and common commands for use with all IEEE 488-compatible devices. For more information on the IEEE 488.2 standard, you can refer to a reputable site such as `Test & Measurement World <https://www.tmworld.com>`_.
+
+SCPI Protocol
+--------------
+
+SCPI (Standard Commands for Programmable Instruments) defines a standard for syntax and commands to be used in controlling programmable test and measurement devices. This standard ensures that a device from one manufacturer can be controlled and queried in a predictable way using commands from a device of another manufacturer, provided they both adhere to the SCPI standard.
+
+Resource Strings and Instrument Identification
+-----------------------------------------------
+
+Resource strings are unique identifiers that PyVISA uses to communicate with instruments. They typically contain information about the interface type, the address, and other necessary details for making a connection.
+# End of c:\Users\Ryan\Documents\GitHub\pyinstrument\docs\quickstart.rst
+
+# Start of c:\Users\Ryan\Documents\GitHub\pyinstrument\docs\sphinx.rst
+Sphinx Documentation Primer
+===========================
+
+This document serves as a quick reference to understand the various field list tags used in Sphinx documentation. These tags are commonly used within Python docstrings to provide structured metadata about the code.
+
+Understanding Field Lists
+-------------------------
+
+Field lists are a way to specify and organize metadata in reStructuredText (reST), the markup syntax that Sphinx uses. Here are some of the commonly used field tags:
+
+- ``:param <name>:``: Describes a parameter to a function or a method.
+- ``:type <name>:``: Describes the type of a parameter to a function or a method.
+- ``:ivar <name>:``: Describes an instance variable (attribute) of a class.
+- ``:vartype <name>:``: Describes the type of a class or module variable.
+- ``:return:``: Describes what a function or method returns.
+- ``:rtype:``: Describes the return type of a function or method.
+- ``:raises <exception>:``: Describes the exceptions that a function or method may raise.
+
+Example Usage
+-------------
+
+Below is an example of how these field lists might be used in a docstring:
+
+.. code-block:: python
+
+   class MyExampleClass:
+       """
+       A simple example class to demonstrate Sphinx documentation.
+
+       :ivar my_attribute: Stores an example attribute value.
+       :vartype my_attribute: str
+       """
+
+       def __init__(self, param1):
+           """
+           Initializes the class with a specific parameter.
+
+           :param param1: The first parameter required for initialization.
+           :type param1: str
+           """
+           self.my_attribute = param1
+
+       def example_method(self, arg1, arg2):
+           """
+           This method performs an example operation and returns a result.
+
+           :param arg1: The first argument to the method.
+           :type arg1: int
+           :param arg2: The second argument to the method.
+           :type arg2: float
+           :return: The result of processing the arguments.
+           :rtype: bool
+           :raises ValueError: If the arguments do not meet the criteria.
+           """
+           # Example method implementation goes here
+           return True
+
+When this documentation is built with Sphinx, these field lists will be formatted properly and may be cross-referenced with other parts of the documentation if set up accordingly with the intersphinx extension.
+
+Troubleshooting
+---------------
+
+If you encounter any issues during the build process, check the terminal output for error messages. Common issues include syntax errors in reStructuredText files or missing dependencies for Sphinx extensions. Address any reported issues and run `make html` again.
+
+By rebuilding your documentation regularly, you ensure that all team members and users have access to the latest information about your project.
+
+Additional Resources
+--------------------
+
+For more in-depth information on Sphinx documentation, visit the official Sphinx documentation site at `Sphinx Documentation <https://www.sphinx-doc.org/en/master/>`_.
+
+Introduction to reStructuredText (ReST)
+----------------------------------------
+
+reStructuredText is the default plaintext markup language used by Sphinx. It's designed to be simple and readable, making it easy to create well-structured documentation. To get more familiar with reST and its capabilities, check out the `reStructuredText Primer <https://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html>`_ provided by Sphinx.
+
+# End of c:\Users\Ryan\Documents\GitHub\pyinstrument\docs\sphinx.rst
+
+# Start of c:\Users\Ryan\Documents\GitHub\pyinstrument\docs\unit-test.rst
+======================================
+Unit Testing in Python with unittest
+======================================
+
+Introduction
+============
+
+Unit testing is an essential aspect of software development that involves testing individual units or components of a software application in isolation from the rest of the application. The primary goal of unit testing is to validate that each unit of the software performs as designed. In Python, the ``unittest`` framework is a powerful tool for creating and running unit tests, providing a rich set of tools for asserting conditions and organizing test code.
+
+Why Unit Testing?
+=================
+
+- **Early Bug Detection**: Unit tests help catch bugs early in the development cycle, saving time and effort in later stages.
+- **Code Quality**: Writing tests encourages better code design and architecture, leading to more maintainable and robust applications.
+- **Refactoring Confidence**: With a comprehensive test suite, developers can refactor code with confidence, ensuring that changes do not break existing functionality.
+- **Documentation**: Tests serve as a form of documentation, showing how a particular piece of functionality is expected to be used.
+
+Getting Started with unittest
+=============================
+
+The ``unittest`` framework is included with Python's standard library, making it readily available for use without the need for external packages. Here's a quick overview of getting started:
+
+Creating a Test Case
+--------------------
+
+A test case is created by subclassing ``unittest.TestCase``. Each method in the class that begins with ``test_`` is a test to be run by the framework.
+
+.. code-block:: python
+
+    import unittest
+
+    class MyTestCase(unittest.TestCase):
+        def test_something(self):
+            self.assertEqual(True, True)  # An example test
+
+Running Tests
+-------------
+
+Tests can be run by calling ``unittest.main()`` if the test file is executed as the main program.
+
+.. code-block:: python
+
+    if __name__ == '__main__':
+        unittest.main()
+
+Assertions
+----------
+
+The ``unittest`` framework provides a set of assertion methods used to test that conditions are true. Here are some commonly used assertions:
+
+- ``assertEqual(a, b)``: Check that ``a == b``
+- ``assertTrue(x)``: Check that ``x`` is true
+- ``assertFalse(x)``: Check that ``x`` is false
+- ``assertRaises(exc, fun, *args, **kwds)``: Check that an exception is raised when ``fun`` is called with arguments
+
+Example: Testing a Simple Function
+----------------------------------
+
+.. code-block:: python
+
+    def add(a, b):
+        return a + b
+
+    class TestAddFunction(unittest.TestCase):
+        def test_add_integers(self):
+            self.assertEqual(add(1, 2), 3)
+
+        def test_add_strings(self):
+            self.assertEqual(add('hello ', 'world'), 'hello world')
+
+Mocking External Dependencies
+-----------------------------
+
+Sometimes, you need to test code that interacts with external systems or has side effects. The ``unittest.mock`` module allows you to replace parts of your system under test with mock objects and make assertions about how they have been used.
+
+.. code-block:: python
+
+    from unittest.mock import MagicMock
+    import mymodule
+
+    class MyTestCase(unittest.TestCase):
+        def test_function_with_external_dependency(self):
+            mymodule.some_external_dependency = MagicMock()
+            # Your test code here
+            mymodule.some_external_dependency.assert_called_with('expected argument')
+
+Conclusion
+==========
+
+Unit testing is a powerful practice for maintaining high-quality software. The ``unittest`` framework in Python provides a rich set of tools for writing and running tests, ensuring that your code behaves as expected. By integrating unit testing into your development process, you can improve the reliability and maintainability of your projects.
+
+
+# End of c:\Users\Ryan\Documents\GitHub\pyinstrument\docs\unit-test.rst
+

@@ -1,0 +1,66 @@
+.. code-block:: text
+
+pyinstrument/
+│   ├── make.bat
+│   ├── Makefile
+│   ├── README.md
+│   ├── setup.py
+├── docs/
+│   │   ├── bible.rst
+│   │   ├── conf.py
+│   │   ├── doc-build.rst
+│   │   ├── index.rst
+│   │   ├── instruments.rst
+│   │   ├── interfaces.rst
+│   │   ├── logging.rst
+│   │   ├── oscilloscope.rst
+│   │   ├── packaging.rst
+│   │   ├── quickstart.rst
+│   │   ├── sphinx.rst
+│   │   ├── unit-test.rst
+│   ├── _static/
+│   ├── _templates/
+├── examples/
+│   │   ├── instrument_cli.py
+│   ├── oscilloscope/
+│   │   │   ├── oscilloscope_controls.py
+│   │   │   ├── oscilloscope_gui.py
+│   │   │   ├── oscilloscope_notebook.ipynb
+│   │   │   ├── oscilloscope_script.py
+│   ├── spectroscope/
+├── pyinstrument/
+│   │   ├── instruments.py
+│   │   ├── interfaces.py
+│   │   ├── __init__.py
+│   ├── oscilloscope/
+│   │   │   ├── acquire.py
+│   │   │   ├── channel.py
+│   │   │   ├── core.py
+│   │   │   ├── timebase.py
+│   │   │   ├── trigger.py
+│   │   │   ├── waveform.py
+│   │   │   ├── wavegen.py
+│   │   │   ├── __init__.py
+├── pyinstrument.egg-info/
+│   │   ├── dependency_links.txt
+│   │   ├── PKG-INFO
+│   │   ├── SOURCES.txt
+│   │   ├── top_level.txt
+├── scratch/
+│   │   ├── instrument_bak.py
+│   │   ├── oscilloscope_bak.py
+│   │   ├── oscilloscope_gui.py
+│   │   ├── oscilloscope_modes.py
+├── tests/
+│   │   ├── test_instrument.py
+│   ├── oscilloscope/
+│   │   │   ├── test_oscilloscope.py
+│   ├── spectroscope/
+├── utilities/
+│   │   ├── decorators.py
+│   │   ├── utils.py
+│   │   ├── _init_dump.py
+│   │   ├── _project-tree.txt
+│   │   ├── _project_tree.py
+│   │   ├── _rst_dump.py
+│   │   ├── __init__.py

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="En" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Unit Testing in Python with unittest &mdash; PyInstrument 3/01/2024 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="_static/graphviz.css?v=eafc0fe6" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=527ef3e0"></script>
+        <script src="_static/doctools.js?v=888ff710"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Logging in Python Projects" href="logging.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            PyInstrument
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="interfaces.html">Interfaces Module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="instruments.html">Instrument Control Library</a></li>
+<li class="toctree-l1"><a class="reference internal" href="oscilloscope.html">Oscilloscope Extension</a></li>
+<li class="toctree-l1"><a class="reference internal" href="oscilloscope.html#root-level-functions">Root-Level Functions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="packaging.html">Installing the PyInstrument Package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="doc-build.html">Rebuilding the Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sphinx.html">Sphinx Documentation Primer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bible.html">Style Rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bible.html#file-and-directory-naming">File and Directory Naming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="logging.html">Logging in Python Projects</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Unit Testing in Python with unittest</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#introduction">Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#why-unit-testing">Why Unit Testing?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#getting-started-with-unittest">Getting Started with unittest</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#creating-a-test-case">Creating a Test Case</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#running-tests">Running Tests</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#assertions">Assertions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#example-testing-a-simple-function">Example: Testing a Simple Function</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mocking-external-dependencies">Mocking External Dependencies</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#conclusion">Conclusion</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">PyInstrument</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Unit Testing in Python with unittest</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/unit-test.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="unit-testing-in-python-with-unittest">
+<h1>Unit Testing in Python with unittest<a class="headerlink" href="#unit-testing-in-python-with-unittest" title="Link to this heading"></a></h1>
+<section id="introduction">
+<h2>Introduction<a class="headerlink" href="#introduction" title="Link to this heading"></a></h2>
+<p>Unit testing is an essential aspect of software development that involves testing individual units or components of a software application in isolation from the rest of the application. The primary goal of unit testing is to validate that each unit of the software performs as designed. In Python, the <code class="docutils literal notranslate"><span class="pre">unittest</span></code> framework is a powerful tool for creating and running unit tests, providing a rich set of tools for asserting conditions and organizing test code.</p>
+</section>
+<section id="why-unit-testing">
+<h2>Why Unit Testing?<a class="headerlink" href="#why-unit-testing" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><strong>Early Bug Detection</strong>: Unit tests help catch bugs early in the development cycle, saving time and effort in later stages.</p></li>
+<li><p><strong>Code Quality</strong>: Writing tests encourages better code design and architecture, leading to more maintainable and robust applications.</p></li>
+<li><p><strong>Refactoring Confidence</strong>: With a comprehensive test suite, developers can refactor code with confidence, ensuring that changes do not break existing functionality.</p></li>
+<li><p><strong>Documentation</strong>: Tests serve as a form of documentation, showing how a particular piece of functionality is expected to be used.</p></li>
+</ul>
+</section>
+<section id="getting-started-with-unittest">
+<h2>Getting Started with unittest<a class="headerlink" href="#getting-started-with-unittest" title="Link to this heading"></a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">unittest</span></code> framework is included with Python’s standard library, making it readily available for use without the need for external packages. Here’s a quick overview of getting started:</p>
+<section id="creating-a-test-case">
+<h3>Creating a Test Case<a class="headerlink" href="#creating-a-test-case" title="Link to this heading"></a></h3>
+<p>A test case is created by subclassing <code class="docutils literal notranslate"><span class="pre">unittest.TestCase</span></code>. Each method in the class that begins with <code class="docutils literal notranslate"><span class="pre">test_</span></code> is a test to be run by the framework.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">unittest</span>
+
+<span class="k">class</span> <span class="nc">MyTestCase</span><span class="p">(</span><span class="n">unittest</span><span class="o">.</span><span class="n">TestCase</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">test_something</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>  <span class="c1"># An example test</span>
+</pre></div>
+</div>
+</section>
+<section id="running-tests">
+<h3>Running Tests<a class="headerlink" href="#running-tests" title="Link to this heading"></a></h3>
+<p>Tests can be run by calling <code class="docutils literal notranslate"><span class="pre">unittest.main()</span></code> if the test file is executed as the main program.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">unittest</span><span class="o">.</span><span class="n">main</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+<section id="assertions">
+<h3>Assertions<a class="headerlink" href="#assertions" title="Link to this heading"></a></h3>
+<p>The <code class="docutils literal notranslate"><span class="pre">unittest</span></code> framework provides a set of assertion methods used to test that conditions are true. Here are some commonly used assertions:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">assertEqual(a,</span> <span class="pre">b)</span></code>: Check that <code class="docutils literal notranslate"><span class="pre">a</span> <span class="pre">==</span> <span class="pre">b</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">assertTrue(x)</span></code>: Check that <code class="docutils literal notranslate"><span class="pre">x</span></code> is true</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">assertFalse(x)</span></code>: Check that <code class="docutils literal notranslate"><span class="pre">x</span></code> is false</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">assertRaises(exc,</span> <span class="pre">fun,</span> <span class="pre">*args,</span> <span class="pre">**kwds)</span></code>: Check that an exception is raised when <code class="docutils literal notranslate"><span class="pre">fun</span></code> is called with arguments</p></li>
+</ul>
+</section>
+<section id="example-testing-a-simple-function">
+<h3>Example: Testing a Simple Function<a class="headerlink" href="#example-testing-a-simple-function" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">add</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span>
+
+<span class="k">class</span> <span class="nc">TestAddFunction</span><span class="p">(</span><span class="n">unittest</span><span class="o">.</span><span class="n">TestCase</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">test_add_integers</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="n">add</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="mi">3</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">test_add_strings</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="n">add</span><span class="p">(</span><span class="s1">&#39;hello &#39;</span><span class="p">,</span> <span class="s1">&#39;world&#39;</span><span class="p">),</span> <span class="s1">&#39;hello world&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="mocking-external-dependencies">
+<h3>Mocking External Dependencies<a class="headerlink" href="#mocking-external-dependencies" title="Link to this heading"></a></h3>
+<p>Sometimes, you need to test code that interacts with external systems or has side effects. The <code class="docutils literal notranslate"><span class="pre">unittest.mock</span></code> module allows you to replace parts of your system under test with mock objects and make assertions about how they have been used.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">unittest.mock</span> <span class="kn">import</span> <span class="n">MagicMock</span>
+<span class="kn">import</span> <span class="nn">mymodule</span>
+
+<span class="k">class</span> <span class="nc">MyTestCase</span><span class="p">(</span><span class="n">unittest</span><span class="o">.</span><span class="n">TestCase</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">test_function_with_external_dependency</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">mymodule</span><span class="o">.</span><span class="n">some_external_dependency</span> <span class="o">=</span> <span class="n">MagicMock</span><span class="p">()</span>
+        <span class="c1"># Your test code here</span>
+        <span class="n">mymodule</span><span class="o">.</span><span class="n">some_external_dependency</span><span class="o">.</span><span class="n">assert_called_with</span><span class="p">(</span><span class="s1">&#39;expected argument&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="conclusion">
+<h2>Conclusion<a class="headerlink" href="#conclusion" title="Link to this heading"></a></h2>
+<p>Unit testing is a powerful practice for maintaining high-quality software. The <code class="docutils literal notranslate"><span class="pre">unittest</span></code> framework in Python provides a rich set of tools for writing and running tests, ensuring that your code behaves as expected. By integrating unit testing into your development process, you can improve the reliability and maintainability of your projects.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="logging.html" class="btn btn-neutral float-left" title="Logging in Python Projects" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Ryan C. Smith.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
