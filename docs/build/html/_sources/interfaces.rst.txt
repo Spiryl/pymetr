@@ -1,7 +1,7 @@
 Interfaces Module
 =================
 
-The ``interfaces`` module within the ``pyinstrument`` package provides the infrastructure to implement various communication interfaces for instruments. It includes a base class for defining interfaces and derived classes for specific interface types such as VISA or TCP/IP.
+The ``interfaces`` module within the ``Pymetr`` package provides the infrastructure to implement various communication interfaces for instruments. It includes a base class for defining interfaces and derived classes for specific interface types such as VISA or TCP/IP.
 
 .. note:: This module uses the factory design pattern to create instances of interfaces dynamically based on the requirements.
 
@@ -10,7 +10,7 @@ InstrumentInterface
 
 The ``InstrumentInterface`` class is an abstract base class that defines the required methods for any communication interface.
 
-.. autoclass:: pyinstrument.interfaces.InstrumentInterface
+.. autoclass:: Pymetr.interfaces.InstrumentInterface
    :members:
    :undoc-members:
    :show-inheritance:
@@ -41,12 +41,12 @@ Interface Classes
 
 Derived classes implement specific types of interfaces.
 
-.. autoclass:: pyinstrument.interfaces.VisaInterface
+.. autoclass:: Pymetr.interfaces.VisaInterface
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. autoclass:: pyinstrument.interfaces.TCPIPInterface
+.. autoclass:: Pymetr.interfaces.TCPIPInterface
    :members:
    :undoc-members:
    :show-inheritance:

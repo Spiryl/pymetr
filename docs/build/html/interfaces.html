@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Interfaces Module &mdash; PyInstrument 3/01/2024 documentation</title>
+  <title>Interfaces Module &mdash; Pymetr 3/01/2024 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
       <link rel="stylesheet" type="text/css" href="_static/graphviz.css?v=eafc0fe6" />
@@ -35,7 +35,7 @@
           
           
           <a href="index.html" class="icon icon-home">
-            PyInstrument
+            Pymetr
           </a>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -49,45 +49,16 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quick Start Guide</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Interfaces Module</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#instrumentinterface">InstrumentInterface</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#pyinstrument.interfaces.InstrumentInterface"><code class="docutils literal notranslate"><span class="pre">InstrumentInterface</span></code></a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#pyinstrument.interfaces.InstrumentInterface.close"><code class="docutils literal notranslate"><span class="pre">InstrumentInterface.close()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#pyinstrument.interfaces.InstrumentInterface.create_interface"><code class="docutils literal notranslate"><span class="pre">InstrumentInterface.create_interface()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#pyinstrument.interfaces.InstrumentInterface.open"><code class="docutils literal notranslate"><span class="pre">InstrumentInterface.open()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#pyinstrument.interfaces.InstrumentInterface.query"><code class="docutils literal notranslate"><span class="pre">InstrumentInterface.query()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#pyinstrument.interfaces.InstrumentInterface.read"><code class="docutils literal notranslate"><span class="pre">InstrumentInterface.read()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#pyinstrument.interfaces.InstrumentInterface.write"><code class="docutils literal notranslate"><span class="pre">InstrumentInterface.write()</span></code></a></li>
-</ul>
-</li>
-</ul>
-</li>
+<li class="toctree-l2"><a class="reference internal" href="#instrumentinterface">InstrumentInterface</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#factory-method">Factory Method</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#interface-classes">Interface Classes</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#pyinstrument.interfaces.VisaInterface"><code class="docutils literal notranslate"><span class="pre">VisaInterface</span></code></a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#pyinstrument.interfaces.VisaInterface.close"><code class="docutils literal notranslate"><span class="pre">VisaInterface.close()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#pyinstrument.interfaces.VisaInterface.open"><code class="docutils literal notranslate"><span class="pre">VisaInterface.open()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#pyinstrument.interfaces.VisaInterface.query"><code class="docutils literal notranslate"><span class="pre">VisaInterface.query()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#pyinstrument.interfaces.VisaInterface.read"><code class="docutils literal notranslate"><span class="pre">VisaInterface.read()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#pyinstrument.interfaces.VisaInterface.write"><code class="docutils literal notranslate"><span class="pre">VisaInterface.write()</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#pyinstrument.interfaces.TCPIPInterface"><code class="docutils literal notranslate"><span class="pre">TCPIPInterface</span></code></a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#pyinstrument.interfaces.TCPIPInterface.close"><code class="docutils literal notranslate"><span class="pre">TCPIPInterface.close()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#pyinstrument.interfaces.TCPIPInterface.open"><code class="docutils literal notranslate"><span class="pre">TCPIPInterface.open()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#pyinstrument.interfaces.TCPIPInterface.query"><code class="docutils literal notranslate"><span class="pre">TCPIPInterface.query()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#pyinstrument.interfaces.TCPIPInterface.read"><code class="docutils literal notranslate"><span class="pre">TCPIPInterface.read()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#pyinstrument.interfaces.TCPIPInterface.write"><code class="docutils literal notranslate"><span class="pre">TCPIPInterface.write()</span></code></a></li>
-</ul>
-</li>
-</ul>
-</li>
+<li class="toctree-l2"><a class="reference internal" href="#interface-classes">Interface Classes</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#graphical-representation-of-the-model">Graphical Representation of the Model</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="instruments.html">Instrument Control Library</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oscilloscope.html">Oscilloscope Extension</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oscilloscope.html#root-level-functions">Root-Level Functions</a></li>
-<li class="toctree-l1"><a class="reference internal" href="packaging.html">Installing the PyInstrument Package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="packaging.html">Installing the Pymetr Package</a></li>
 <li class="toctree-l1"><a class="reference internal" href="doc-build.html">Rebuilding the Documentation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="sphinx.html">Sphinx Documentation Primer</a></li>
 <li class="toctree-l1"><a class="reference internal" href="bible.html">Style Rules</a></li>
@@ -102,7 +73,7 @@
 
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="index.html">PyInstrument</a>
+          <a href="index.html">Pymetr</a>
       </nav>
 
       <div class="wy-nav-content">
@@ -122,7 +93,7 @@
              
   <section id="interfaces-module">
 <h1>Interfaces Module<a class="headerlink" href="#interfaces-module" title="Link to this heading"></a></h1>
-<p>The <code class="docutils literal notranslate"><span class="pre">interfaces</span></code> module within the <code class="docutils literal notranslate"><span class="pre">pyinstrument</span></code> package provides the infrastructure to implement various communication interfaces for instruments. It includes a base class for defining interfaces and derived classes for specific interface types such as VISA or TCP/IP.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">interfaces</span></code> module within the <code class="docutils literal notranslate"><span class="pre">Pymetr</span></code> package provides the infrastructure to implement various communication interfaces for instruments. It includes a base class for defining interfaces and derived classes for specific interface types such as VISA or TCP/IP.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>This module uses the factory design pattern to create instances of interfaces dynamically based on the requirements.</p>
@@ -130,54 +101,6 @@
 <section id="instrumentinterface">
 <h2>InstrumentInterface<a class="headerlink" href="#instrumentinterface" title="Link to this heading"></a></h2>
 <p>The <code class="docutils literal notranslate"><span class="pre">InstrumentInterface</span></code> class is an abstract base class that defines the required methods for any communication interface.</p>
-<dl class="py class">
-<dt class="sig sig-object py" id="pyinstrument.interfaces.InstrumentInterface">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pyinstrument.interfaces.</span></span><span class="sig-name descname"><span class="pre">InstrumentInterface</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">resource_string</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pyinstrument.interfaces.InstrumentInterface" title="Link to this definition"></a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">ABC</span></code></p>
-<p>Serves as the architect of communication, laying the blueprint for how we talk to the myriad of instruments out there. This abstract base class defines the essential methods for opening and closing connections, sending commands, and receiving data from any instrument, irrespective of its communication protocol.</p>
-<p>Each subclass will tailor these abstract methods to fit the specific needs of the communication protocol it represents, be it VISA, TCP/IP, or something more exotic.</p>
-<dl class="simple">
-<dt>Parameters:</dt><dd><p>resource_string (str): The unique identifier or address needed to establish a connection with the instrument.</p>
-</dd>
-</dl>
-<dl class="py method">
-<dt class="sig sig-object py" id="pyinstrument.interfaces.InstrumentInterface.close">
-<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">close</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyinstrument.interfaces.InstrumentInterface.close" title="Link to this definition"></a></dt>
-<dd><p>Close the connection to the instrument.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="pyinstrument.interfaces.InstrumentInterface.create_interface">
-<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">create_interface</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">interface_type</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resource_string</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pyinstrument.interfaces.InstrumentInterface.create_interface" title="Link to this definition"></a></dt>
-<dd><p>Enhanced to allow passing additional kwargs to interface constructors.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="pyinstrument.interfaces.InstrumentInterface.open">
-<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">open</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyinstrument.interfaces.InstrumentInterface.open" title="Link to this definition"></a></dt>
-<dd><p>Open a connection to the instrument.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="pyinstrument.interfaces.InstrumentInterface.query">
-<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">query</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">command</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pyinstrument.interfaces.InstrumentInterface.query" title="Link to this definition"></a></dt>
-<dd><p>Send a command to the instrument and read the response.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="pyinstrument.interfaces.InstrumentInterface.read">
-<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">read</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyinstrument.interfaces.InstrumentInterface.read" title="Link to this definition"></a></dt>
-<dd><p>Read a response from the instrument.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="pyinstrument.interfaces.InstrumentInterface.write">
-<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">write</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">command</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pyinstrument.interfaces.InstrumentInterface.write" title="Link to this definition"></a></dt>
-<dd><p>Send a command to the instrument.</p>
-</dd></dl>
-
-</dd></dl>
-
 <p>The interface class enforces implementation of the following methods:</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">open</span></code>: Initializes the communication channel.</p></li>
@@ -201,180 +124,6 @@
 <section id="interface-classes">
 <h2>Interface Classes<a class="headerlink" href="#interface-classes" title="Link to this heading"></a></h2>
 <p>Derived classes implement specific types of interfaces.</p>
-<dl class="py class">
-<dt class="sig sig-object py" id="pyinstrument.interfaces.VisaInterface">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pyinstrument.interfaces.</span></span><span class="sig-name descname"><span class="pre">VisaInterface</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">resource_string</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pyinstrument.interfaces.VisaInterface" title="Link to this definition"></a></dt>
-<dd><p>Bases: <a class="reference internal" href="#pyinstrument.interfaces.InstrumentInterface" title="pyinstrument.interfaces.InstrumentInterface"><code class="xref py py-class docutils literal notranslate"><span class="pre">InstrumentInterface</span></code></a></p>
-<p>The VISA maestro, orchestrating communication with instruments over the versatile VISA protocol. This class implements the abstract methods defined in InstrumentInterface, specifically tuning them to interact with instruments via PyVISA. Whether it’s GPIB, USB, Serial, or Ethernet, this interface speaks fluently in all.</p>
-<dl>
-<dt>Inherits from:</dt><dd><p>InstrumentInterface</p>
-</dd>
-<dt>Parameters:</dt><dd><p>resource_string (str): The VISA resource string that uniquely identifies the instrument to connect to, encapsulating the interface type (GPIB, USB, Serial, Ethernet) and its address.</p>
-</dd>
-<dt>Example:</dt><dd><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">visa_interface</span> <span class="o">=</span> <span class="n">VisaInterface</span><span class="p">(</span><span class="s2">&quot;GPIB0::14::INSTR&quot;</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">visa_interface</span><span class="o">.</span><span class="n">open</span><span class="p">()</span>  <span class="c1"># Opens a connection</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">visa_interface</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;*IDN?&quot;</span><span class="p">)</span>  <span class="c1"># Sends a standard SCPI command</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">visa_interface</span><span class="o">.</span><span class="n">read</span><span class="p">())</span>  <span class="c1"># Reads the instrument&#39;s response</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">visa_interface</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>  <span class="c1"># Closes the connection</span>
-</pre></div>
-</div>
-</dd>
-</dl>
-<dl class="py method">
-<dt class="sig sig-object py" id="pyinstrument.interfaces.VisaInterface.close">
-<span class="sig-name descname"><span class="pre">close</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyinstrument.interfaces.VisaInterface.close" title="Link to this definition"></a></dt>
-<dd><p>Terminates the connection to the VISA resource gracefully. This is akin to politely ending a call, ensuring the line is properly closed and the instrument is left in a ready state for future connections.</p>
-<p>If a connection handle exists, it’s used to close the connection, and then cleared to prevent accidental usage afterward. Success or failure of the operation is logged for troubleshooting and audit purposes.</p>
-<dl class="simple">
-<dt>Note:</dt><dd><p>If no connection is open (i.e., the handle is None), a warning is logged to indicate the attempt to close an already closed or never opened connection.</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="pyinstrument.interfaces.VisaInterface.open">
-<span class="sig-name descname"><span class="pre">open</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyinstrument.interfaces.VisaInterface.open" title="Link to this definition"></a></dt>
-<dd><p>Initiates a connection to the designated VISA resource. This method effectively ‘dials’ the instrument, establishing a pathway for communication based on the provided resource string.</p>
-<p>Upon successful connection, a handle to the instrument is obtained, which is used for subsequent communication. Should the connection attempt fail, an error is logged, and the exception is raised to signal the issue.</p>
-<dl class="simple">
-<dt>Raises:</dt><dd><p>Exception: If the connection attempt fails, indicating issues such as incorrect resource string, instrument unavailability, or communication errors.</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="pyinstrument.interfaces.VisaInterface.query">
-<span class="sig-name descname"><span class="pre">query</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">command</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pyinstrument.interfaces.VisaInterface.query" title="Link to this definition"></a></dt>
-<dd><p>Combines the write and read operations into a single, streamlined action. This method is used for commands that require an immediate response from the instrument, effectively asking a question and listening intently for the answer.</p>
-<dl class="simple">
-<dt>Parameters:</dt><dd><p>command (str): The SCPI or device-specific query command to send to the instrument.</p>
-</dd>
-<dt>Returns:</dt><dd><p>str: The instrument’s response to the query, containing the requested data or status information.</p>
-</dd>
-<dt>Raises:</dt><dd><p>Exception: If the query fails due to communication issues, incorrect command syntax, or if the instrument encounters an error processing the query.</p>
-</dd>
-<dt>Note:</dt><dd><p>If the connection to the instrument is not open, a warning is logged, and None is returned, highlighting the necessity of an active connection for querying.</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="pyinstrument.interfaces.VisaInterface.read">
-<span class="sig-name descname"><span class="pre">read</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyinstrument.interfaces.VisaInterface.read" title="Link to this definition"></a></dt>
-<dd><p>Listens for and retrieves a response from the instrument, akin to receiving a text message. This method is essential for gathering data or status information in response to previously issued commands.</p>
-<dl class="simple">
-<dt>Returns:</dt><dd><p>str: The raw response string from the instrument, which may require parsing or further processing depending on the command and instrument.</p>
-</dd>
-<dt>Raises:</dt><dd><p>Exception: If there’s an error during reading, such as a timeout, communication error, or if the response is malformed.</p>
-</dd>
-<dt>Note:</dt><dd><p>If there’s no open connection, a warning is logged, and None is returned, indicating the need to open a connection before attempting to read.</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="pyinstrument.interfaces.VisaInterface.write">
-<span class="sig-name descname"><span class="pre">write</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">command</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pyinstrument.interfaces.VisaInterface.write" title="Link to this definition"></a></dt>
-<dd><p>Sends a specified command to the connected instrument, translating intentions into actions. This method is the primary means of instructing the instrument to perform operations, adjust settings, or query information.</p>
-<dl class="simple">
-<dt>Parameters:</dt><dd><p>command (str): The SCPI or device-specific command string to be executed by the instrument.</p>
-</dd>
-<dt>Raises:</dt><dd><p>Exception: If there’s an issue sending the command, such as communication errors or if the command is rejected by the instrument.</p>
-</dd>
-<dt>Note:</dt><dd><p>A warning is logged if an attempt is made to write to an instrument without an open connection, indicating a need to establish a connection first.</p>
-</dd>
-</dl>
-</dd></dl>
-
-</dd></dl>
-
-<dl class="py class">
-<dt class="sig sig-object py" id="pyinstrument.interfaces.TCPIPInterface">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pyinstrument.interfaces.</span></span><span class="sig-name descname"><span class="pre">TCPIPInterface</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">resource_string</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pyinstrument.interfaces.TCPIPInterface" title="Link to this definition"></a></dt>
-<dd><p>Bases: <a class="reference internal" href="#pyinstrument.interfaces.InstrumentInterface" title="pyinstrument.interfaces.InstrumentInterface"><code class="xref py py-class docutils literal notranslate"><span class="pre">InstrumentInterface</span></code></a></p>
-<p>The network ninja, this class extends the InstrumentInterface to enable communication over TCP/IP. Perfect for instruments that prefer to chat over the network, it establishes a direct line over sockets, sending and receiving messages in the language of TCP/IP.</p>
-<dl>
-<dt>Inherits from:</dt><dd><p>InstrumentInterface</p>
-</dd>
-<dt>Parameters:</dt><dd><p>resource_string (str): The resource string in ‘address:port’ format, pinpointing the instrument’s network address and the port over which to communicate.</p>
-</dd>
-<dt>Example:</dt><dd><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">tcpip_interface</span> <span class="o">=</span> <span class="n">TCPIPInterface</span><span class="p">(</span><span class="s2">&quot;192.168.1.100:5025&quot;</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">tcpip_interface</span><span class="o">.</span><span class="n">open</span><span class="p">()</span>  <span class="c1"># Establishes a TCP/IP connection</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">tcpip_interface</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;:MEAS:VOLT?&quot;</span><span class="p">)</span>  <span class="c1"># Asks for a voltage measurement</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">tcpip_interface</span><span class="o">.</span><span class="n">read</span><span class="p">())</span>  <span class="c1"># Retrieves the measurement result</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">tcpip_interface</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>  <span class="c1"># Closes the network connection</span>
-</pre></div>
-</div>
-</dd>
-</dl>
-<dl class="py method">
-<dt class="sig sig-object py" id="pyinstrument.interfaces.TCPIPInterface.close">
-<span class="sig-name descname"><span class="pre">close</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyinstrument.interfaces.TCPIPInterface.close" title="Link to this definition"></a></dt>
-<dd><p>Politely hangs up the call with the instrument, closing the TCP/IP connection. This method ensures that the communication line is neatly terminated, with the socket being closed and resources being freed.</p>
-<p>It’s considerate, logging the closure or warning if there’s nothing to close, and diligent, wrapping up any potential loose ends by setting the socket to None regardless of the outcome.</p>
-<p>Exceptions are caught and logged, providing a clear exit path even when closing gets complicated.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="pyinstrument.interfaces.TCPIPInterface.open">
-<span class="sig-name descname"><span class="pre">open</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyinstrument.interfaces.TCPIPInterface.open" title="Link to this definition"></a></dt>
-<dd><p>Initiates a TCP/IP connection to the specified instrument. This method is akin to dialing into a direct line, setting up a dedicated pathway for digital conversations.</p>
-<p>It meticulously crafts a socket connection using the instrument’s address and port, providing a real-time communication channel. Successes and setbacks are logged, ensuring transparency in the connection process.</p>
-<dl class="simple">
-<dt>Raises:</dt><dd><p>Exception: Captures and logs any issues encountered during the attempt to establish a connection, such as network errors or incorrect addressing.</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="pyinstrument.interfaces.TCPIPInterface.query">
-<span class="sig-name descname"><span class="pre">query</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">command</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pyinstrument.interfaces.TCPIPInterface.query" title="Link to this definition"></a></dt>
-<dd><p>Engages in a full-blown conversation with the instrument, articulating a command and intently listening for its response. This method combines the articulate nature of <cite>write</cite> with the attentive ear of <cite>read</cite>, facilitating a seamless exchange of information.</p>
-<dl class="simple">
-<dt>Parameters:</dt><dd><p>command (str): The question posed to the instrument, seeking knowledge or action.</p>
-</dd>
-<dt>Returns:</dt><dd><p>str: The enlightened response from the instrument, carrying the sought-after information.</p>
-</dd>
-</dl>
-<p>It embodies the essence of communication, ensuring messages are both sent and received with clarity and purpose. Any missteps along the way, be they in sending or receiving, are meticulously logged and raised, keeping the dialogue open and informative.</p>
-<dl class="simple">
-<dt>Raises:</dt><dd><p>Exception: If either sending the command or receiving the response encounters issues, these are flagged up with detailed logging and raised exceptions, ensuring no query goes unanswered.</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="pyinstrument.interfaces.TCPIPInterface.read">
-<span class="sig-name descname"><span class="pre">read</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyinstrument.interfaces.TCPIPInterface.read" title="Link to this definition"></a></dt>
-<dd><p>Listens for whispers from the instrument, retrieving bytes from the ether and decoding them into meaningful responses. This method patiently waits for the instrument’s reply, capturing the essence of its message.</p>
-<dl class="simple">
-<dt>Returns:</dt><dd><p>str: The decoded string response from the instrument, which may hold data, acknowledgments, or existential musings.</p>
-</dd>
-</dl>
-<p>It’s cautious, only proceeding if the connection is alive, and honest, logging its actions and any encountered issues. In the event of silence (or errors), it gracefully acknowledges the situation, returning None or raising an exception as needed.</p>
-<dl class="simple">
-<dt>Raises:</dt><dd><p>Exception: If reading the response fails, for reasons like network timeouts or data corruption, the error is not just logged but also raised to signal the need for attention.</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="pyinstrument.interfaces.TCPIPInterface.write">
-<span class="sig-name descname"><span class="pre">write</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">command</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pyinstrument.interfaces.TCPIPInterface.write" title="Link to this definition"></a></dt>
-<dd><p>Transmits a command over the TCP/IP network to the instrument, turning intentions into digital signals. This method takes your command string, encodes it into bytes, and sends it down the wire.</p>
-<dl class="simple">
-<dt>Parameters:</dt><dd><p>command (str): The precise instruction intended for the instrument, packaged as a string.</p>
-</dd>
-</dl>
-<p>It’s watchful, ensuring there’s an open connection before sending, and vigilant, logging every step along the way. Should the transmission face any turbulence, it raises an alarm through exceptions, keeping you informed.</p>
-<dl class="simple">
-<dt>Raises:</dt><dd><p>Exception: If the command fails to be sent, possibly due to connection issues or encoding problems, it’s logged and raised for attention.</p>
-</dd>
-</dl>
-</dd></dl>
-
-</dd></dl>
-
 <p>Each interface class provides tailored methods for establishing connections and communicating using the respective protocols.</p>
 </section>
 <section id="graphical-representation-of-the-model">

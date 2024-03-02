@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Installing the PyInstrument Package &mdash; PyInstrument 3/01/2024 documentation</title>
+  <title>Installing the Pymetr Package &mdash; Pymetr 3/01/2024 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
       <link rel="stylesheet" type="text/css" href="_static/graphviz.css?v=eafc0fe6" />
@@ -35,7 +35,7 @@
           
           
           <a href="index.html" class="icon icon-home">
-            PyInstrument
+            Pymetr
           </a>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -52,7 +52,7 @@
 <li class="toctree-l1"><a class="reference internal" href="instruments.html">Instrument Control Library</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oscilloscope.html">Oscilloscope Extension</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oscilloscope.html#root-level-functions">Root-Level Functions</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Installing the PyInstrument Package</a><ul>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Installing the Pymetr Package</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#setup-py-file">Setup.py File</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#installing-the-package">Installing the Package</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#conclusion">Conclusion</a></li>
@@ -72,7 +72,7 @@
 
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="index.html">PyInstrument</a>
+          <a href="index.html">Pymetr</a>
       </nav>
 
       <div class="wy-nav-content">
@@ -80,7 +80,7 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
-      <li class="breadcrumb-item active">Installing the PyInstrument Package</li>
+      <li class="breadcrumb-item active">Installing the Pymetr Package</li>
       <li class="wy-breadcrumbs-aside">
             <a href="_sources/packaging.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -90,23 +90,23 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="installing-the-pyinstrument-package">
-<h1>Installing the PyInstrument Package<a class="headerlink" href="#installing-the-pyinstrument-package" title="Link to this heading"></a></h1>
-<p>The PyInstrument package is designed to facilitate advanced instrumentation capabilities in Python, including oscilloscope controls and data acquisition tools. This document outlines how to install the PyInstrument package, either for development purposes or for use in other projects.</p>
+  <section id="installing-the-pymetr-package">
+<h1>Installing the Pymetr Package<a class="headerlink" href="#installing-the-pymetr-package" title="Link to this heading"></a></h1>
+<p>The Pymetr package is designed to facilitate advanced instrumentation capabilities in Python, including oscilloscope controls and data acquisition tools. This document outlines how to install the Pymetr package, either for development purposes or for use in other projects.</p>
 <section id="setup-py-file">
 <h2>Setup.py File<a class="headerlink" href="#setup-py-file" title="Link to this heading"></a></h2>
-<p>The <cite>setup.py</cite> file is the build script for setuptools. It tells setuptools about your package (such as the name and version) as well as which code files to include. An example <cite>setup.py</cite> file for PyInstrument might look like this:</p>
+<p>The <cite>setup.py</cite> file is the build script for setuptools. It tells setuptools about your package (such as the name and version) as well as which code files to include. An example <cite>setup.py</cite> file for Pymetr might look like this:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">setuptools</span> <span class="kn">import</span> <span class="n">setup</span><span class="p">,</span> <span class="n">find_packages</span>
 
 <span class="n">setup</span><span class="p">(</span>
-    <span class="n">name</span><span class="o">=</span><span class="s1">&#39;pyinstrument&#39;</span><span class="p">,</span>
+    <span class="n">name</span><span class="o">=</span><span class="s1">&#39;Pymetr&#39;</span><span class="p">,</span>
     <span class="n">version</span><span class="o">=</span><span class="s1">&#39;0.1.0&#39;</span><span class="p">,</span>
     <span class="n">packages</span><span class="o">=</span><span class="n">find_packages</span><span class="p">(),</span>
     <span class="n">description</span><span class="o">=</span><span class="s1">&#39;Python Instrumentation Package&#39;</span><span class="p">,</span>
     <span class="n">long_description</span><span class="o">=</span><span class="nb">open</span><span class="p">(</span><span class="s1">&#39;README.md&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">(),</span>
     <span class="n">author</span><span class="o">=</span><span class="s1">&#39;Your Name&#39;</span><span class="p">,</span>
     <span class="n">author_email</span><span class="o">=</span><span class="s1">&#39;your.email@example.com&#39;</span><span class="p">,</span>
-    <span class="n">url</span><span class="o">=</span><span class="s1">&#39;https://github.com/yourusername/pyinstrument&#39;</span><span class="p">,</span>
+    <span class="n">url</span><span class="o">=</span><span class="s1">&#39;https://github.com/yourusername/Pymetr&#39;</span><span class="p">,</span>
     <span class="n">license</span><span class="o">=</span><span class="s1">&#39;MIT&#39;</span><span class="p">,</span>
     <span class="n">install_requires</span><span class="o">=</span><span class="p">[</span>
         <span class="s1">&#39;numpy&#39;</span><span class="p">,</span>
@@ -121,20 +121,20 @@
 </section>
 <section id="installing-the-package">
 <h2>Installing the Package<a class="headerlink" href="#installing-the-package" title="Link to this heading"></a></h2>
-<p>There are two main scenarios for installing the PyInstrument package:</p>
+<p>There are two main scenarios for installing the Pymetr package:</p>
 <ol class="arabic">
-<li><p><strong>Installing for Use in Projects</strong>: If you wish to use PyInstrument as a dependency in other projects, you can install it from your local copy or from a Git repository.</p>
+<li><p><strong>Installing for Use in Projects</strong>: If you wish to use Pymetr as a dependency in other projects, you can install it from your local copy or from a Git repository.</p>
 <p>To install a local copy directly:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>path/to/pyinstrument
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>path/to/Pymetr
 </pre></div>
 </div>
 <p>Or, if your project is hosted on a Git repository, you can install it using:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>git+https://github.com/yourusername/pyinstrument.git
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>git+https://github.com/yourusername/Pymetr.git
 </pre></div>
 </div>
 </li>
-<li><p><strong>Development Installation</strong>: If you’re developing PyInstrument and want to test changes as you make them, you should install the package in “editable” mode. This allows you to modify the source code and see those changes reflected without having to reinstall the package.</p>
-<p>Navigate to the root directory of your PyInstrument project and run:</p>
+<li><p><strong>Development Installation</strong>: If you’re developing Pymetr and want to test changes as you make them, you should install the package in “editable” mode. This allows you to modify the source code and see those changes reflected without having to reinstall the package.</p>
+<p>Navigate to the root directory of your Pymetr project and run:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>.
 </pre></div>
 </div>
@@ -144,7 +144,7 @@
 </section>
 <section id="conclusion">
 <h2>Conclusion<a class="headerlink" href="#conclusion" title="Link to this heading"></a></h2>
-<p>Installing the PyInstrument package is straightforward, whether for use in other projects or for development. The <cite>setup.py</cite> file is crucial for defining package metadata, dependencies, and more. For development purposes, installing in editable mode is highly recommended to facilitate testing and iteration.</p>
+<p>Installing the Pymetr package is straightforward, whether for use in other projects or for development. The <cite>setup.py</cite> file is crucial for defining package metadata, dependencies, and more. For development purposes, installing in editable mode is highly recommended to facilitate testing and iteration.</p>
 <p>For more information on packaging Python projects, refer to the official Python Packaging User Guide: <a class="reference external" href="https://packaging.python.org/tutorials/packaging-projects/">https://packaging.python.org/tutorials/packaging-projects/</a></p>
 </section>
 </section>
