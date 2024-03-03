@@ -183,6 +183,7 @@ class Oscilloscope(SCPIInstrument):
             logger.debug("Autoscaling all sources.")
             self.write(":AUTOScale")
 
+    @SCPIInstrument.wait_for_opc
     def digitize(self, *sources):
         """
         Digitizes the specified sources on the oscilloscope.

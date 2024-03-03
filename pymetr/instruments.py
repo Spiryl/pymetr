@@ -2,7 +2,7 @@
 Pymetr/instruments.py
 ===========================
 
-Part of the Pymetr framework, this module extends the interface definitions from `Pymetr.interfaces.py` to implement a comprehensive instrument control system. It provides classes that represent and manage specific instruments or instrument families, facilitating direct, high-level interactions with test equipment.
+Part of the Pymetr framework, this module extends the interface definitions from `pymetr.interfaces.py` to implement a comprehensive instrument control system. It provides classes that represent and manage specific instruments or instrument families, facilitating direct, high-level interactions with test equipment.
 
 Authors:
 - Ryan C. Smith
@@ -10,7 +10,7 @@ Authors:
 
 Ryan's expertise in the nuances of test instrumentation combines with Metatron's overarching vision, resulting in a module that not only simplifies instrument control but also enriches it with flexibility and depth. Here, the abstract becomes tangible, and commands translate into real-world measurements and actions.
 
-Designed for developers, engineers, and researchers, `Pymetr/instruments.py` encapsulates the diverse world of instrumentation into a coherent, unified Python library. It's about making the complex simple, the inaccessible reachable, and the tedious enjoyable.
+Designed for developers, engineers, and researchers, `pymetr/instruments.py` encapsulates the diverse world of instrumentation into a coherent, unified Python library. It's about making the complex simple, the inaccessible reachable, and the tedious enjoyable.
 """
 import sys
 import logging
@@ -114,6 +114,26 @@ class Instrument(ABC):
         logger.debug(f"Querying {self.__class__.__name__} with command: {command}")
         response = self.interface.query(command)
         logger.info(f"Response from {self.__class__.__name__} to '{command}': {response}")
+        return response
+    
+    def query_binary(self, command, datatype='f', is_big_endian=False):
+        """
+        Sends a command to the instrument and reads back its binary response.
+
+        Parameters:
+            command (str): The SCPI command or any instrument-specific command string for which a binary response is expected.
+            datatype (str): The format of the binary data (e.g., 'f' for float, 'h' for short, 'd' for double). Refer to PyVISA documentation for all options.
+            is_big_endian (bool): Specifies the endianness of the binary data. False for little endian, True for big endian.
+
+        Returns:
+            list: A list of values decoded from the binary response according to the specified datatype.
+
+        This method is especially useful for retrieving large amounts of data from the instrument, such as waveform points.
+        """
+        logger.debug(f"Querying {self.__class__.__name__} with command (binary): {command}")
+        container_format = '>' if is_big_endian else '<'  # '>' for big endian, '<' for little endian
+        response = self.interface.query_binary_values(command, datatype=container_format + datatype, container=list)
+        logger.info(f"Binary response from {self.__class__.__name__} to '{command}': {response}")
         return response
 
     @abstractmethod

@@ -15,6 +15,8 @@ SCPI Protocol
 --------------
 
 SCPI (Standard Commands for Programmable Instruments) defines a standard for syntax and commands to be used in controlling programmable test and measurement devices. This standard ensures that a device from one manufacturer can be controlled and queried in a predictable way using commands from a device of another manufacturer, provided they both adhere to the SCPI standard.
+`Wikipedia Page On SCPI <https://en.wikipedia.org/wiki/Standard_Commands_for_Programmable_Instruments>`_
+
 
 Resource Strings and Instrument Identification
 -----------------------------------------------

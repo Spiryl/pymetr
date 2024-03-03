@@ -65,6 +65,12 @@ class InstrumentInterface(ABC):
         """
         pass
 
+    @abstractmethod
+    def query_binary(self, command, **kwargs):
+        """
+        Send a command to the instrument and read the response.
+        """
+
     @staticmethod
     def create_interface(interface_type, resource_string, **kwargs):
         """
@@ -211,6 +217,11 @@ class VisaInterface(InstrumentInterface):
         else:
             self.logger.warning("Attempted to query an instrument with no open connection.")
             return None
+        
+    def query_binary(self, command, datatype='f', is_big_endian=False, **kwargs):
+            # Forward the call to the PyVISA resource object
+            container_format = '>' if is_big_endian else '<'
+            return self.handle.query_binary_values(command, datatype=container_format + datatype, **kwargs)
 
 class TCPIPInterface(InstrumentInterface):
     """

@@ -2,7 +2,7 @@
 
 import logging
 from enum import Enum
-from Pymetr.instruments import InstrumentSubsystem
+from pymetr.instruments import InstrumentSubsystem
 
 class WaveGen(InstrumentSubsystem):
     """
@@ -78,7 +78,7 @@ class WaveGen(InstrumentSubsystem):
     @output.setter
     def output(self, value):
         if value in self.OutputState.__members__:
-            self._parent.write(f":WGEN:OUTPut {self.Output[value].value}")
+            self._parent.write(f":WGEN:OUTPut {self.OutputState[value].value}")
             logging.info(f"WaveGen output state set to: {value}")
             self._output = self.OutputState[value]
         else:

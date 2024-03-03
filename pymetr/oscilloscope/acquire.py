@@ -2,7 +2,7 @@
 
 import logging
 from enum import Enum
-from Pymetr.instruments import InstrumentSubsystem
+from pymetr.instruments import InstrumentSubsystem
 
 class Acquire(InstrumentSubsystem):
     """

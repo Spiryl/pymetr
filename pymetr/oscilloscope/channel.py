@@ -2,7 +2,7 @@
 
 import logging
 from enum import Enum, auto
-from Pymetr.instruments import InstrumentSubsystem
+from pymetr.instruments import InstrumentSubsystem
 
 class Channel(InstrumentSubsystem):
     """

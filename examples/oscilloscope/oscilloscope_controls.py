@@ -38,6 +38,9 @@ class InstrumentSubsystemControl(QWidget):
         layout.addWidget(self.control)
 
         self.pull_setting()
+        # Adjusting the size policy to allow vertical shrinking
+        sizePolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Minimum)
+        self.widget.setSizePolicy(sizePolicy)
 
     def construct_control(self):
         if self.control_type == 'combo':
@@ -109,11 +112,6 @@ class WaveformControl(QWidget):
         self.layout.addWidget(self.num_points_field)
         self.num_points_field.editingFinished.connect(self.update_num_points)
 
-        # Fetch Button
-        self.fetch_button = QPushButton("Fetch Waveform")
-        self.layout.addWidget(self.fetch_button)
-        self.fetch_button.clicked.connect(self.fetch_waveform)
-
     def update_format(self):
         self.oscope.waveform.format = self.format_combobox.currentText()
 
@@ -124,28 +122,22 @@ class WaveformControl(QWidget):
         num_points = int(self.num_points_field.text())
         self.oscope.waveform.num_points = num_points
 
-    def fetch_waveform(self):
-            # Assuming a method to fetch and display waveform data
-            # This might involve fetching data for all active channels and updating the display accordingly
-            # You might need to implement or adjust this method based on how your application handles data visualization
-            for channel_num in self.oscope.channels:
-                if self.oscope.channels[channel_num].display == 'ON':
-                    trace_data = self.oscope.waveform.fetch_trace(channel=channel_num)
 
 class WaveGenControl(QWidget):
     def __init__(self, oscope, parent=None):
         super(WaveGenControl, self).__init__(parent)
         self.oscope = oscope
         self.init_ui()
-        self.connect_signals()
+        # self.connect_signals()
+        self.sync()  # Ensure sync is called to update UI with initial values
 
     def init_ui(self):
         self.layout = QVBoxLayout(self)
 
-        # Enable checkbox
-        self.enable_checkbox = QCheckBox("Enable")
-        self.enable_checkbox.stateChanged.connect(self.toggle_enable)
-        self.layout.addWidget(self.enable_checkbox)
+        # Replace enable checkbox with a QPushButton for output state
+        self.output_state_button = QPushButton("Output State: OFF")
+        self.output_state_button.clicked.connect(self.toggle_output)
+        self.layout.addWidget(self.output_state_button)
 
         # Frequency controls
         self.frequency_label = QLabel("Frequency:")
@@ -157,7 +149,8 @@ class WaveGenControl(QWidget):
         # Waveform type controls
         self.waveform_type_label = QLabel("Waveform Type:")
         self.waveform_type_combobox = QComboBox()
-        self.waveform_type_combobox.addItems(["Sine", "Square", "Triangle"])
+        # Load waveform types from the Function enum, capitalizing the first letter
+        self.waveform_type_combobox.addItems([func.name.capitalize() for func in self.oscope.wavegen.Function])
         self.waveform_type_combobox.currentIndexChanged.connect(self.update_waveform_type)
         self.layout.addWidget(self.waveform_type_label)
         self.layout.addWidget(self.waveform_type_combobox)
@@ -165,35 +158,56 @@ class WaveGenControl(QWidget):
         # Amplitude controls
         self.amplitude_label = QLabel("Amplitude:")
         self.amplitude_field = QLineEdit()
+        self.layout.addWidget(self.amplitude_field)  # Ensure the field is added to the layout
         self.amplitude_field.editingFinished.connect(self.update_amplitude)
         self.layout.addWidget(self.amplitude_label)
-        self.layout.addWidget(self.amplitude_field)
 
-    def connect_signals(self):
-        # Connect UI elements to their corresponding methods
-        pass  # Placeholder, as signals are connected in init_ui
+    def sync(self):
+        # Sync the GUI with the current state of the oscilloscope's waveform generator
+        output_state = self.oscope.wavegen.output
+        # Adjusting for the instrument's response format
+        if output_state in ['ON', '1']:
+            self.output_state_button.setText("Output State: ON")
+            self.output_state_button.setStyleSheet("background-color: green;")
+        else:
+            self.output_state_button.setText("Output State: OFF")
+            self.output_state_button.setStyleSheet("")
 
-    def toggle_enable(self, state):
-        self.oscope.wavegen.output = 'ON' if state == Qt.Checked else 'OFF'
-        
+        self.frequency_field.setText(str(self.oscope.wavegen.frequency))
+        # Ensure capitalization matches the enum's name format
+        waveform_function = self.oscope.wavegen.function.capitalize()
+        self.waveform_type_combobox.setCurrentText(waveform_function)
+        self.amplitude_field.setText(str(self.oscope.wavegen.amplitude))
+
+    def update_output_button(self, is_on):
+        if is_on:
+            self.output_state_button.setText("Output State: ON")
+            self.output_state_button.setStyleSheet("background-color: green;")
+        else:
+            self.output_state_button.setText("Output State: OFF")
+            self.output_state_button.setStyleSheet("")
+
+    def toggle_output(self):
+        # Toggle the output state and update the button
+        current_state = self.oscope.wavegen.output
+        new_state = 'OFF' if current_state == 'ON' else 'ON'
+        self.oscope.wavegen.output = new_state
+        self.update_output_button(new_state == 'ON')
+
     def update_frequency(self):
+        # Update frequency based on the field's value
         frequency = si_str_to_float(self.frequency_field.text())
         self.oscope.wavegen.frequency = frequency
 
     def update_waveform_type(self):
-        waveform_type = self.waveform_type_combobox.currentText().lower()
+        # Update waveform type based on the combobox selection
+        waveform_type = self.waveform_type_combobox.currentText().upper()
         self.oscope.wavegen.function = waveform_type
 
     def update_amplitude(self):
+        # Update amplitude based on the field's value
         amplitude = si_str_to_float(self.amplitude_field.text())
         self.oscope.wavegen.amplitude = amplitude
-
-    def sync(self):
-        # Sync the GUI with the current state of the oscilloscope's waveform generator
-        self.enable_checkbox.setChecked(self.oscope.wavegen.output == 'ON')
-        self.frequency_field.setText(str(self.oscope.wavegen.frequency))
-        self.waveform_type_combobox.setCurrentText(self.oscope.wavegen.function.capitalize())
-        self.amplitude_field.setText(str(self.oscope.wavegen.amplitude))
 
 class TriggerControl(QWidget):
     def __init__(self, oscope, parent=None):
@@ -372,8 +386,8 @@ class ChannelControlPanel(QWidget):
 
         # Offset slider
         self.offset_slider = QSlider(Qt.Vertical)
-        self.offset_slider.setMinimum(-100)  # Assuming offset range
-        self.offset_slider.setMaximum(100)
+        self.offset_slider.setMinimum(-70)  # Assuming offset range
+        self.offset_slider.setMaximum(70)
         self.offset_slider.setValue(self.channel.offset)
         self.offset_slider.valueChanged.connect(self.update_offset)
         main_layout.addWidget(self.offset_slider)

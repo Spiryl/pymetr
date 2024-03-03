@@ -1,6 +1,6 @@
 import logging
 from enum import Enum
-from Pymetr.instruments import InstrumentSubsystem
+from pymetr.instruments import InstrumentSubsystem
 import numpy as np  # Make sure to import numpy for handling the data
 
 class Waveform(InstrumentSubsystem):
@@ -101,7 +101,7 @@ class Waveform(InstrumentSubsystem):
         super().sync()
         logging.info("Synchronized waveform settings with oscilloscope.")
 
-    def setup_trace(self, channel=1, points_mode="NORMAL", num_points=500, data_format='BYTE'):
+    def setup_trace(self, channel=1, points_mode="NORMAL", num_points=500, data_format='ASCII'):
         # Map the numeric channel input to the appropriate source string
         self.source = channel  # This will use the source setter
 
@@ -160,15 +160,15 @@ class Waveform(InstrumentSubsystem):
             logging.error(f'Had an issue with preamble: {e}')
             return {} if return_type == 'dict' else ""  # Return an empty dict or string on error
 
-
     def fetch_trace(self, channel):
-        # self.fetch_preamble()  # Ensure preamble attributes are up to date
-        dtype = np.uint8 if self.is_data_unsigned else np.int8  # Set dtype based on unsigned status
+        # self.fetch_preamble()  # Uncomment if you have this method
+        dtype = np.uint8 if self.is_data_unsigned else np.int8
 
         if self.format == self.Format.BYTE.name:
             try:
-                trace_data_raw = self.query_binary_values(":WAVeform:DATA?", datatype='B', container=bytes)
-                trace_data = np.frombuffer(trace_data_raw, dtype=dtype)
+                # Adjust the call to query_binary to match the method signature
+                trace_data_raw = self._parent.query_binary(":WAVeform:DATA?", datatype='B', is_big_endian=False)
+                trace_data = np.frombuffer(bytearray(trace_data_raw), dtype=dtype)
                 voltages = (trace_data - self.y_reference) * self.y_increment + self.y_origin
                 return voltages
             except Exception as e:
@@ -193,9 +193,3 @@ class Waveform(InstrumentSubsystem):
                 raise ValueError("Preamble format unrecognized, cannot find data start.")
         voltages = np.array([float(data) for data in trace_data_raw.split(',') if data], dtype=np.float32)
         return voltages
-
-    def query_binary_values(self, query, datatype='B', container=bytes):
-        # Queries binary data from the instrument
-        if not self._parent.handle:
-            raise ValueError("Instrument handle not open")
-        return self._parent.handle.query_binary_values(query, datatype=datatype, container=container)
