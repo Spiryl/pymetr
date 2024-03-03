@@ -3,13 +3,13 @@ import logging
 import sys
 from enum import Enum, auto
 
-from Pymetr.instruments import SCPIInstrument
-from Pymetr.oscilloscope.acquire import Acquire
-from Pymetr.oscilloscope.trigger import Trigger
-from Pymetr.oscilloscope.timebase import Timebase
-from Pymetr.oscilloscope.channel import Channel
-from Pymetr.oscilloscope.wavegen import WaveGen
-from Pymetr.oscilloscope.waveform import Waveform
+from pymetr.instruments import SCPIInstrument
+from pymetr.oscilloscope.acquire import Acquire
+from pymetr.oscilloscope.trigger import Trigger
+from pymetr.oscilloscope.timebase import Timebase
+from pymetr.oscilloscope.channel import Channel
+from pymetr.oscilloscope.wavegen import WaveGen
+from pymetr.oscilloscope.waveform import Waveform
 
 from utilities import debug, timeit
 

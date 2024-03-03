@@ -17,7 +17,7 @@ import logging
 import pyvisa
 from abc import ABC, abstractmethod
 from utilities import debug, timeit
-from Pymetr.interfaces import InstrumentInterface 
+from pymetr.interfaces import InstrumentInterface 
 from enum import IntFlag
 import functools
 import threading

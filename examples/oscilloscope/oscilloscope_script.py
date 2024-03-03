@@ -1,7 +1,7 @@
 import numpy as np
 import sys
-from Pymetr.oscilloscope.core import Oscilloscope
-from Pymetr.instruments import Instrument
+from pymetr.oscilloscope.core import Oscilloscope
+from pymetr.instruments import Instrument
 
 def select_instrument(filter):
     unique_instruments, failed_queries = Instrument.list_resources(filter)
