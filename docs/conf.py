@@ -25,7 +25,7 @@ language = 'En'
 
 # -- Options for HTML output -------------------------------------------------
 
-html_theme = 'agogo'
+html_theme = 'sphinx_rtd_theme'
 html_static_path = []
 
 # -- GraphViz configuration --------------------------------------------------
