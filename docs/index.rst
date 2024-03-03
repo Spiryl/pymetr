@@ -8,17 +8,17 @@ This project empowers engineers to craft their own test routines and software, s
 Todo
 ----
 
-Standardize enumeration string format across subsystems.
-Add doc-strings to subsystem enum types explaining operation modes.
-Standardize doc-strings format away from the sphinx style parameters.
-Create subsystems.py to manage all subystems and refactor.
-Update subsystem abstract base class and allowed instrument subsystem calls.
-Documentation graphics and hyper-links.
-Start spectrum analyzer class.
-Start power meter class.
-Get package published. 
-Rework GUI controls.
-Refactor Oscilloscope GUI acquisition thread.
+- Standardize enumeration string format across subsystems.
+- Add doc-strings to subsystem enum types explaining operation modes.
+- Standardize doc-strings format away from the sphinx style parameters.
+- Create subsystems.py to manage all subystems and refactor.
+- Update subsystem abstract base class and allowed instrument subsystem calls.
+- Documentation graphics and hyper-links.
+- Start spectrum analyzer class.
+- Start power meter class.
+- Get package published. 
+- Rework GUI controls.
+- Refactor Oscilloscope GUI acquisition thread.
 
 System Dependencies
 -------------------
@@ -26,10 +26,7 @@ System Dependencies
 - **pyvisa**: Instrument communication
 - **pyside6**: Qt bindings and GUI application development
 - **numpy**: Efficient numerical computations
-- **logging**: Debugging and diagnostic output
-- **enum**: Enumerations for Python
 - **vispy**: High-performance graphics
-
 
 .. toctree::
    :maxdepth: 2
