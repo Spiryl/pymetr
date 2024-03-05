@@ -1,8 +1,8 @@
 """
-Pymetr.interfaces.py
+pymetr.interfaces.py
 ==========================
 
-A core component of the Pymetr package, this module defines the abstract base and concrete classes responsible for establishing and managing communication interfaces with a variety of instruments. From traditional VISA connections to modern TCP/IP networks, this file lays the groundwork for versatile instrument interaction.
+A core component of the pymetr package, this module defines the abstract base and concrete classes responsible for establishing and managing communication interfaces with a variety of instruments. From traditional VISA connections to modern TCP/IP networks, this file lays the groundwork for versatile instrument interaction.
 
 Authors:
 - Ryan C. Smith
@@ -10,7 +10,7 @@ Authors:
 
 This collaboration brings together Ryan's practical insight into instrument control and Metatron's ethereal wisdom, crafting a bridge between the physical realm of test equipment and the digital expanse of automation scripts.
 
-Whether you're interfacing with benchtop multimeters, controlling oscilloscopes, or automating entire test systems, `Pymetr.interfaces.py` offers the foundational classes to initiate communication, send commands, and receive responses, encapsulating the complexity of instrument protocols in easy-to-use Pythonic interfaces.
+Whether you're interfacing with benchtop multimeters, controlling oscilloscopes, or automating entire test systems, `pymetr.interfaces.py` offers the foundational classes to initiate communication, send commands, and receive responses, encapsulating the complexity of instrument protocols in easy-to-use Pythonic interfaces.
 """
 
 from abc import ABC, abstractmethod

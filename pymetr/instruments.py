@@ -1,8 +1,8 @@
 """
-Pymetr/instruments.py
+pymetr/instruments.py
 ===========================
 
-Part of the Pymetr framework, this module extends the interface definitions from `pymetr.interfaces.py` to implement a comprehensive instrument control system. It provides classes that represent and manage specific instruments or instrument families, facilitating direct, high-level interactions with test equipment.
+Part of the pymetr framework, this module extends the interface definitions from `pymetr.interfaces.py` to implement a comprehensive instrument control system. It provides classes that represent and manage specific instruments or instrument families, facilitating direct, high-level interactions with test equipment.
 
 Authors:
 - Ryan C. Smith
@@ -16,236 +16,112 @@ import sys
 import logging
 import pyvisa
 from abc import ABC, abstractmethod
-from utilities import debug, timeit
-from pymetr.interfaces import InstrumentInterface 
 from enum import IntFlag
-import functools
-import threading
-import time
 
 # Set up a logger for the Instrument class
 logger = logging.getLogger(__name__)
 
-class Instrument(ABC):
+class Instrument:
     """
-    The base blueprint for all instrument classes. This abstract class lays down the law on the essential
-    methods and properties that all instrument subclasses gotta implement and uphold.
-    
-    Every instrument that rolls with this class needs to be able to identify itself, reset, and report
-    status, 'cause that's how we maintain order in this domain of devices.
-    """
-    def __init__(self, resource_string, interface_type='pyvisa', **kwargs):
-        """
-        Constructs an instrument interface for communicating with the real-world hardware.
+    A comprehensive class for interacting with scientific and industrial instruments through VISA, 
+    specifically tailored for devices that support the Standard Commands for Programmable Instruments (SCPI) protocol. 
+    It simplifies the process of establishing connections, sending commands, reading responses, and managing instrument 
+    status, whether communicating in ASCII or binary format.
 
-        Parameters:
-            resource_string (str): The address needed to reach out to the instrument.
-            interface_type (str): The type of communication protocol used, like 'pyvisa' or 'tcpip'.
-            **kwargs: Extra arguments specific to the instrument interface.
+    This class is designed to serve as the foundation for specialized instrument control by providing common SCPI 
+    command support and direct VISA communication capabilities.
+    """
+
+    def __init__(self, resource_string, **kwargs):
         """
-        logger.debug(f"Initializing {self.__class__.__name__} with resource_string: {resource_string} and interface_type: {interface_type}")
-        # Advanced: Interface Factory
-        self.interface = InstrumentInterface.create_interface(interface_type, resource_string, **kwargs)
+        Initializes the instrument connection using the provided VISA resource string.
+        
+        Parameters:
+            resource_string (str): VISA resource string to identify the instrument.
+            **kwargs: Additional keyword arguments for PyVISA's open_resource method.
+        """
+        self.resource_string = resource_string
+        self.rm = pyvisa.ResourceManager()
+        self.instrument = None
+        logger.debug(f"Initializing Instrument with resource_string: {resource_string}")
 
     def open(self):
-        """
-        Opens the communication interface with the instrument, establishing a connection that allows for data exchange.
-        This is akin to dialing up a friend; once they pick up, the conversation (data exchange) can begin.
-
-        Logs the action at both debug and info levels to provide feedback on the connection status.
-        """
-        logger.debug(f"Opening connection to {self.__class__.__name__}")
-        self.interface.open()
-        logger.info(f"Connection to {self.__class__.__name__} opened successfully")
+        """Opens a connection to the instrument."""
+        self.instrument = self.rm.open_resource(self.resource_string)
+        logger.info(f"Connection to instrument {self.resource_string} opened successfully.")
 
     def close(self):
-        """
-        Closes the communication interface with the instrument, effectively ending the session.
-        Think of it as saying goodbye to your friend and hanging up the phone.
-
-        Logs the closure action, ensuring that the end of the connection is properly noted for future reference.
-        """
-        logger.debug(f"Closing connection to {self.__class__.__name__}")
-        self.interface.close()
-        logger.info(f"Connection to {self.__class__.__name__} closed successfully")
+        """Closes the connection to the instrument."""
+        if self.instrument:
+            self.instrument.close()
+            logger.info("Instrument connection closed.")
+            self.instrument = None
 
     def write(self, command):
         """
-        Sends a specific command to the instrument through the established communication interface.
-        Imagine you're texting a command to your instrument, and it's just waiting to obey.
-
+        Sends a command to the instrument.
+        
         Parameters:
-            command (str): The SCPI command or any instrument-specific command string to be executed by the instrument.
-
-        Logs the command being sent, providing a traceable record of the instructions given to the instrument.
+            command (str): The SCPI command to be executed by the instrument.
         """
-        logger.debug(f"Writing command to {self.__class__.__name__}: {command}")
-        self.interface.write(command)
-        logger.info(f"Command written to {self.__class__.__name__}: {command}")
+        self.instrument.write(command)
+        logger.debug(f"Command sent: {command}")
 
     def read(self):
         """
-        Retrieves the response from the instrument following a command or query.
-        It's like checking your phone for a text response after you've sent a message.
-
+        Reads the response from the instrument.
+        
         Returns:
-            str: The raw response string from the instrument.
-
-        Logs the received response, offering insight into the instrument's feedback or data provided in response to commands.
+            str: The raw response from the instrument.
         """
-        logger.debug(f"Reading response from {self.__class__.__name__}")
-        response = self.interface.read()
-        logger.info(f"Response from {self.__class__.__name__}: {response}")
+        response = self.instrument.read()
+        logger.debug(f"Response received: {response}")
         return response
 
     def query(self, command):
         """
-        Sends a command to the instrument and immediately reads back its response.
-        This is the equivalent of asking a question and listening intently for the answer.
-
+        Sends a command to the instrument and reads its response.
+        
         Parameters:
-            command (str): The SCPI command or any instrument-specific command string for which a response is expected.
-
+            command (str): The SCPI command for which a response is expected.
+        
         Returns:
             str: The instrument's response to the command.
-
-        Logs both the query and its response, ensuring a complete record of the interaction for debugging or verification purposes.
         """
-        logger.debug(f"Querying {self.__class__.__name__} with command: {command}")
-        response = self.interface.query(command)
-        logger.info(f"Response from {self.__class__.__name__} to '{command}': {response}")
-        return response
-    
-    def query_binary(self, command, datatype='f', is_big_endian=False):
-        """
-        Sends a command to the instrument and reads back its binary response.
-
-        Parameters:
-            command (str): The SCPI command or any instrument-specific command string for which a binary response is expected.
-            datatype (str): The format of the binary data (e.g., 'f' for float, 'h' for short, 'd' for double). Refer to PyVISA documentation for all options.
-            is_big_endian (bool): Specifies the endianness of the binary data. False for little endian, True for big endian.
-
-        Returns:
-            list: A list of values decoded from the binary response according to the specified datatype.
-
-        This method is especially useful for retrieving large amounts of data from the instrument, such as waveform points.
-        """
-        logger.debug(f"Querying {self.__class__.__name__} with command (binary): {command}")
-        container_format = '>' if is_big_endian else '<'  # '>' for big endian, '<' for little endian
-        response = self.interface.query_binary_values(command, datatype=container_format + datatype, container=list)
-        logger.info(f"Binary response from {self.__class__.__name__} to '{command}': {response}")
+        response = self.instrument.query(command)
+        logger.debug(f"Query sent: {command}, received: {response}")
         return response
 
-    @abstractmethod
-    def identity(self):
+    def query_binary(self, command, datatype='f', is_big_endian=False, container=list):
         """
-        An abstract method meant to be implemented by subclasses to query the instrument for its identification.
-        This typically involves requesting the manufacturer, model, serial number, and firmware version.
+        Sends a command to the instrument and reads a binary response.
         
-        Consider it a way of asking, "Who are you?" to the instrument.
+        Parameters:
+            command (str): The SCPI command for which a binary response is expected.
+            datatype (str): The type of data to expect ('b', 'h', 'i', 'f', etc.).
+            is_big_endian (bool): True for big endian data, False for little endian.
+            container (type): The type of container to store the binary data.
+        
+        Returns:
+            container: The binary data read from the instrument.
         """
-        logger.debug(f"Querying identity of {self.__class__.__name__}")
+        endian = '>' if is_big_endian else '<'
+        response = self.instrument.query_binary_values(command, datatype=endian + datatype, container=container)
+        logger.debug(f"Binary query sent: {command}, received: {response}")
+        return response
 
-    @abstractmethod
-    def reset(self):
-        """
-        An abstract method designed for subclasses to reset the instrument to a known or default state.
-        It's the electronic equivalent of a fresh start or turning it off and on again.
-        """
-        logger.debug(f"Resetting {self.__class__.__name__}")
-
-    @abstractmethod
     def status(self):
         """
-        An abstract method that should be overridden by subclasses to check and report the current status of the instrument.
-        This could cover a variety of status checks, depending on the instrument's capabilities and needs.
-        """
-        logger.debug(f"Querying status of {self.__class__.__name__}")
-
-
-class InstrumentSubsystem(ABC):
-    """
-    The core structure for all instrument subsystems, defining how to sync up properties and keep the
-    instrument and the software in harmony.
-
-    A subsystem is part of the larger instrument ensemble, like a section in an orchestra, each
-    playing its part in the symphony of measurements.
-    """       
-    def __init__(self, parent):
-        """
-        Every subsystem needs a maestro, and that's the parent instrument. This constructor sets up
-        the relationship, so the subsystem knows who's leading the performance.
-
-        Parameters:
-            parent (Instrument): The main instrument that this subsystem is a part of.
-        """
-        self._parent = parent
-
-    def sync(self):
-        """
-        Synchronizes the properties of the subsystem with the instrument's current configuration.
-        """
-        attributes = [a for a in dir(self) if isinstance(getattr(self.__class__, a, None), property)]
-        for attribute in attributes:
-            getattr(self, attribute)
-
-class SCPIInstrument(Instrument):
-    """
-    Initializes the instrument connection.
-    
-    :param resource: Resource identifier (e.g., VISA resource string or TCP/IP address).
-    :param interface: Type of interface ('pyvisa' or 'tcpip').
-    """
-    class ESRBits(IntFlag):
-        PON = 128  # Power On
-        URQ = 64   # User Request
-        CME = 32   # Command Error
-        EXE = 16   # Execution Error
-        DDE = 8    # Device Dependent Error
-        QYE = 4    # Query Error
-        RQL = 2    # Request Control
-        OPC = 1    # Operation Complete
-
-    def __init__(self, resource_string, interface_type='pyvisa', **kwargs):
-        super().__init__(resource_string, interface_type, **kwargs)
-        """
-        Initializes the instrument connection.
-
-        :param resource_string: VISA resource string to identify the instrument.
-        :type resource_string: str
-        """
-
-    def status(self, ese_mask=None):
-        """
-        Queries the Event Status Register and decodes the status bits.
-        Optionally sets the Event Status Enable Register mask before reading the ESR if 'ese_mask' is provided.
-
-        :param ese_mask: Optional mask to set in the ESE register before reading the ESR.
-        :type ese_mask: int or None
-        :return: A dictionary with the status of each ESE bit or the value of ESR if 'ese_mask' is given.
-        :rtype: dict or int
-        """
-        if ese_mask is not None:
-            # Set the ESE mask if provided
-            self.set_service_request(ese_mask)
-            # Read the ESR after setting the ESE
-            return int(self.query("*ESR?"))
+        Queries the Event Status Register (ESR) to decode and return the current instrument status.
         
-        # If no mask is provided, return a dictionary of all ESR bits
-        ese_value = self.get_service_request()
+        Returns:
+            dict: A dictionary representing the status of various ESR bits.
+        """
         esr_value = int(self.query("*ESR?"))
-        esr_bits = {
-            "PON": bool(esr_value & 128),
-            "URQ": bool(esr_value & 64),
-            "CME": bool(esr_value & 32),
-            "EXE": bool(esr_value & 16),
-            "DDE": bool(esr_value & 8),
-            "QYE": bool(esr_value & 4),
-            "RQL": bool(esr_value & 2),
-            "OPC": bool(esr_value & 1),
-        }
-        return esr_bits
-
+        status = {bit.name: bool(esr_value & bit.value) for bit in Instrument.Status}
+        logger.debug(f"Instrument status: {status}")
+        return status
+    
     def identity(self):
         """
         Sends a request to the instrument to identify itself. This usually includes the manufacturer, 
@@ -338,7 +214,7 @@ class SCPIInstrument(Instrument):
 
         Returns:
             tuple: A tuple containing a dict of unique instruments keyed by their IDN response,
-                   and a list of resources that failed to query.
+                and a list of resources that failed to query.
         """
         rm = pyvisa.ResourceManager()
         resources = rm.list_resources(query)
@@ -357,101 +233,105 @@ class SCPIInstrument(Instrument):
         return unique_instruments, failed_queries
     
     @staticmethod
-    def select_resources(filter='?*::INSTR'):
+    def list_resources(query='?*::INSTR'):
         """
-        Presents a list of connected instruments filtered by the query and prompts the user to select one.
+        Lists all the connected instruments matching the query filter.
 
         Parameters:
-            filter (str): Filter pattern to identify the instruments.
+            query (str): Filter pattern using VISA Resource Regular Expression syntax.
 
         Returns:
-            str: The selected resource string of the instrument.
+            tuple: A tuple containing a dict of unique instruments keyed by their IDN response,
+                and a list of resources that failed to query.
         """
-        unique_instruments, failed_queries = SCPIInstrument.list_resources(filter)
+        rm = pyvisa.ResourceManager()
+        resources = rm.list_resources(query)
+        unique_instruments = {}
+        failed_queries = []
 
-        if not unique_instruments:
-            print("No instruments found. Check your connections and try again.")
-            sys.exit(1)
+        for resource in resources:
+            try:
+                with rm.open_resource(resource) as inst:
+                    idn = inst.query("*IDN?").strip()
+                    unique_key = f"{resource}: {idn}"
+                    unique_instruments[unique_key] = resource
+            except pyvisa.VisaIOError as e:
+                failed_queries.append((resource, str(e)))
 
-        print("\nConnected Instruments:")
-        for idx, (unique_key, resource) in enumerate(unique_instruments.items(), start=1):
-            print(f"{idx}. {unique_key}")
+        return unique_instruments, failed_queries
 
-        if failed_queries:
-            print("\nFailed to query some instruments:")
-            for resource, error in failed_queries:
-                print(f"{resource}: {error}")
-
-        selection = input("\nSelect an instrument by number (or 'exit' to quit): ")
-        if selection.lower() == 'exit':
-            sys.exit(0)
-
-        try:
-            selected_index = int(selection) - 1
-            if selected_index < 0 or selected_index >= len(unique_instruments):
-                raise ValueError
-        except ValueError:
-            print("Invalid selection. Please enter a number from the list.")
-            return SCPIInstrument.select_resources(filter)
-
-        selected_key = list(unique_instruments.keys())[selected_index]
-        return unique_instruments[selected_key]
-    
-    # TODO: Document this a little better
-    def wait_for_opc(func):
+    class Status(IntFlag):
         """
-        Decorator to execute a function (SCPI command) in a separate thread, send the *OPC command,
-        and then non-blockingly wait for the operation complete (OPC) bit to be set in the ESR.
-        This approach ensures the main application doesn't proceed until the operation is complete,
-        while avoiding GUI lockup.
+        Event Status Register Bits for SCPI Instruments.
+
+        Each bit in the status register represents a specific status or error condition.
+        These are defined according to the IEEE 488.2 standard for SCPI instruments.
         """
-        @functools.wraps(func)
-        def wrapper(self, *args, **kwargs):
-            # Define the operation to be executed in its own thread
-            def operation():
-                result = func(self, *args, **kwargs)
-                self.operation_complete()  # Signal the instrument to set the OPC bit when done
-                return result
 
-            # Define the OPC check logic
-            def check_opc():
-                timeout = 10  # seconds
-                start_time = time.time()
-                while time.time() - start_time < timeout:
-                    esr_value = self.get_event_status()  # Poll the ESR
-                    if esr_value & SCPIInstrument.ESRBits.OPC:
-                        break  # Operation complete
-                    time.sleep(0.1)  # Short pause
-                else:
-                    # Handle timeout scenario
-                    print(f"Operation did not complete within {timeout} seconds.")
+        OPC = 1 << 0  # Operation Complete
+        """Operation complete bit, set when an operation is finished."""
 
-            # Execute the operation and OPC check in a synchronized manner
-            operation_thread = threading.Thread(target=operation)
-            operation_thread.start()
-            operation_thread.join()  # Wait for the operation (and *OPC command) to be sent
+        RQL = 1 << 1  # Request Control
+        """Request control bit, indicates a device is requesting control."""
 
-            # After the operation is initiated, start checking for OPC bit
-            check_opc()
+        QYE = 1 << 2  # Query Error
+        """Query error bit, set when there is a syntax error in a query command."""
 
-        return wrapper
+        DDE = 1 << 3  # Device Dependent Error
+        """Device dependent error bit, indicates an error specific to the device's operation."""
 
-class RESTInstrument(Instrument):
+        EXE = 1 << 4  # Execution Error
+        """Execution error bit, set when there is an error in executing a command."""
+
+        CME = 1 << 5  # Command Error
+        """Command error bit, set when there is a syntax error in a command."""
+
+        URQ = 1 << 6  # User Request
+        """User request bit, set when there is a user request for service."""
+
+        PON = 1 << 7  # Power On
+        """Power on bit, set when the device is first powered on or reset."""
+
+
+class InstrumentSubsystem(ABC):
     """
-    Placeholder for PXI instruments.
-    """
-    
-    def __init__(self, resource_string, interface):
-        super().__init__(resource_string, interface)
-    
-    def open(self):
-        pass
-    
-    def close(self):
-        pass
-    
-    def identity(self):
-        pass
-    
-    def reset(self):
-        pass
+    The core structure for all instrument subsystems, defining how to sync up properties and keep the
+    instrument and the software in harmony.
+
+    A subsystem is part of the larger instrument ensemble, like a section in an orchestra, each
+    playing its part in the symphony of measurements.
+    """       
+    def __init__(self, parent):
+        """
+        Keeping track of parent controller
+
+        Parameters:
+            parent (Instrument): The main instrument that this subsystem is a part of.
+        """
+        self._parent = parent
+
+    def write(self, command):
+        """
+        Passes direct write access to the subsystem.
+        """
+        self._parent.write(command)
+
+    def read(self):
+        """
+        Passes direct read access to the subsystem.
+        """
+        return self._parent.read()
+        
+    def query(self, command):
+        """
+        Allows a query fromt the subsystem.
+        """
+        return self._parent.query(command)
+
+    def sync(self):
+        """
+        Synchronizes the properties of the subsystem with the instrument's current configuration.
+        """
+        attributes = [a for a in dir(self) if isinstance(getattr(self.__class__, a, None), property)]
+        for attribute in attributes:
+            getattr(self, attribute)

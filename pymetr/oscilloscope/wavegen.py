@@ -27,6 +27,7 @@ class WaveGen(InstrumentSubsystem):
         self._function = None
         self._amplitude = None
         self._output = None
+        self._offset = None
 
     @property
     def frequency(self):
@@ -83,6 +84,18 @@ class WaveGen(InstrumentSubsystem):
             self._output = self.OutputState[value]
         else:
             logging.error(f"Invalid WaveGen output state: {value}")
+
+    @property
+    def offset(self):
+        response = self._parent.query(":WGEN:VOLTage:OFFSet?")
+        self._offset = float(response)
+        logging.debug(f"WaveGen offset fetched: {self._offset}")
+        return self._frequency
+
+    @frequency.setter
+    def frequency(self, value):
+        self._parent.write(f":WGEN:VOLTage:OFFSet {value}")
+        logging.info(f"WaveGen offset set to: {value}V")
 
     def sync(self):
         """ Synchronizes WaveGen settings with the oscilloscope's current configuration. """

@@ -1,98 +1,61 @@
 Instrument Control Library
 ==========================
 
-The ``Instruments Library`` forms the backbone of a flexible system designed to communicate with and control a variety of test and measurement hardware. From the foundational ``Instrument`` base class to the specialized interface classes and modular subsystems, this library streamlines the development and execution of instrument control applications.
+The ``Instruments Library`` is engineered as the foundational framework for interfacing and commanding a wide range of test and measurement devices. At the core of this framework is the ``Instrument`` base class, which interfaces with the PyVISA library to support various communication protocols and instrument-specific operations.
 
 Instrument Base Class
 ---------------------
 
-At the heart of the library is the ``Instrument`` base class, providing a unified API for interaction with diverse instruments. Leveraging PyVISA for backend communication, it supports standard protocols like GPIB, RS232, USB, and Ethernet, while also offering a path to integrate more specialized interfaces such as PXI hardware drivers and LXI protocols.
+The ``Instrument`` base class unifies the API for interacting with instruments of diverse nature. It utilizes PyVISA as the backend for communication, covering standard protocols such as GPIB, RS232, USB, and Ethernet. It is designed to be extended for custom interfaces and communication protocols.
 
-.. autoclass:: Pymetr.instruments.Instrument
-   :members:
-   :undoc-members:
-   :show-inheritance:
+**Key Features:**
 
-Key Features:
-- Standardized connection management (open/close).
-- Reading and writing capabilities for SCPI-compliant and custom commands.
-- Query execution with response handling.
-- Instrument identification and status management.
+- Standardized management of connections (open/close).
+- Execution of SCPI-compliant and customized commands (read/write).
+- Immediate query execution with built-in response processing.
+- Reliable instrument identification and status management.
 
 Class Diagram
 -------------
 
+The class diagram illustrates the relationship between the PyVISA backend and the ``Instrument`` class. It highlights how the ``Instrument`` class extends PyVISA's functionality with additional methods for controlling measurement devices.
+
 .. graphviz::
 
-   digraph instrument_hierarchy {
+   digraph architecture {
       node [shape=record, fontname=Helvetica, fontsize=10];
       
-      Instrument [label="{Instrument|+ open()\l+ close()\l+ write(command: str)\l+ read(): str\l+ query(command: str): str\l}"]
-      SCPIInstrument [label="{SCPIInstrument}"]
-      VXIInstrument [label="{VXIInstrument}"]
-      LXIInstrument [label="{LXIInstrument}"]
+      PyVISA [label="{PyVISA|+ open_resource()\l+ list_resources()\l+ read()\l+ write()\l...}"]
+      Instrument [label="{Instrument|+ identity(): str\l+ status(): str\l+ reset()\l+ clear_status()\l...}"]
 
-      Instrument -> SCPIInstrument [arrowhead="onormal"]
-      Instrument -> VXIInstrument [arrowhead="onormal"]
-      Instrument -> LXIInstrument [arrowhead="onormal"]
+      PyVISA -> Instrument [arrowhead="onormal", style="dashed"]
 
-      label="Instrument Class Hierarchy";
+      label="Instrument Class Architecture";
       fontsize=12;
    }
 
-Instrument Subsystems
+Utilizing the Library
 ---------------------
 
-The library's design emphasizes modularity through instrument subsystems. These subsystems allow for targeted control and testing of specific instrument functionalities, facilitating a granular approach to instrument interaction.
-
-Subsystem Integration:
-
-.. graphviz::
-
-   digraph subsystem_relationship {
-      node [shape=record, fontname=Helvetica, fontsize=10];
-      
-      Instrument [label="{Instrument|+ sync()\l}"]
-      TimebaseSubsystem [label="{TimebaseSubsystem}"]
-      TriggerSubsystem [label="{TriggerSubsystem}"]
-      MeasurementSubsystem [label="{MeasurementSubsystem}"]
-
-      Instrument -> TimebaseSubsystem [arrowhead="onormal"]
-      Instrument -> TriggerSubsystem [arrowhead="onormal"]
-      Instrument -> MeasurementSubsystem [arrowhead="onormal"]
-
-      { rank=same; TimebaseSubsystem; TriggerSubsystem; MeasurementSubsystem; }
-
-      label="Instrument Subsystem Relationships";
-      fontsize=12;
-   }
-
-Interactive CLI
----------------
-
-The library includes an interactive CLI for direct engagement with instruments. This tool is invaluable for rapid testing, debugging, and hands-on learning, providing a straightforward interface for real-time instrument control.
-
-Example Usage:
+Below is a succinct example illustrating the application of the library within a Python script for fundamental instrument interaction:
 
 .. code-block:: python
 
-   if __name__ == "__main__":
-       # CLI functionality detailed here
+   from pymetr.instruments import Instrument
 
-Using the Library
------------------
-
-Below is a simple example showcasing the library's usage within a Python environment:
-
-.. code-block:: python
-
-   from Pymetr import SCPIInstrument
-
-   # Discover and select instruments
-   instrument_address = SCPIInstrument.select_resources()
-   my_instrument = SCPIInstrument(instrument_address, interface_type='pyvisa')
+   # Instrument discovery and selection
+   instrument_address = Instrument.select_resources()
+   my_instrument = Instrument(instrument_address)
    my_instrument.open()
 
-   # Basic instrument interaction
-   print(my_instrument.query('*IDN?'))
+   # Engaging with the instrument
+   print(my_instrument.identity())
    print(my_instrument.query('MEAS:VOLT:DC?'))
+
+Instrument Class API
+--------------------
+
+.. autoclass:: pymetr.instruments.Instrument
+   :members:
+   :undoc-members:
+   :show-inheritance:

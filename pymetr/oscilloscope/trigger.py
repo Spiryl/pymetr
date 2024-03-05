@@ -9,6 +9,16 @@ logger = logging.getLogger(__name__)
 
 class Trigger(InstrumentSubsystem):
 
+    class Source(Enum):
+        CH1 = "CH1"
+        CH2 = "CH2"
+        CH3 = "CH3"
+        CH4 = "CH4"
+        EXT = "EXT"
+        LINE = "LINE"
+        WGEN = "WGEN"
+        # Add other modes as needed
+            
     class Mode(Enum):
         EDGE = "EDGE"
         VIDEO = "VIDEO"

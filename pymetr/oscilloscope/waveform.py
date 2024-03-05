@@ -161,35 +161,64 @@ class Waveform(InstrumentSubsystem):
             return {} if return_type == 'dict' else ""  # Return an empty dict or string on error
 
     def fetch_trace(self, channel):
-        # self.fetch_preamble()  # Uncomment if you have this method
-        dtype = np.uint8 if self.is_data_unsigned else np.int8
+        """
+        Fetches the waveform trace from the specified channel, automatically adjusting to the
+        data format (ASCII, BYTE, WORD) for optimal data retrieval and processing.
 
-        if self.format == self.Format.BYTE.name:
-            try:
-                # Adjust the call to query_binary to match the method signature
-                trace_data_raw = self._parent.query_binary(":WAVeform:DATA?", datatype='B', is_big_endian=False)
-                trace_data = np.frombuffer(bytearray(trace_data_raw), dtype=dtype)
-                voltages = (trace_data - self.y_reference) * self.y_increment + self.y_origin
-                return voltages
-            except Exception as e:
-                logging.error(f"Failed to fetch or interpret binary data: {e}")
-        elif self.format == self.Format.ASCII.name:
-            try:
-                trace_data_raw = self._parent.query(":WAVeform:DATA?").strip()
-                trace_data = self._parse_ascii_trace_data(trace_data_raw)
-                return trace_data
-            except Exception as e:
-                logging.error(f"Error parsing ASCII data: {e}")
+        Parameters:
+            channel (int): The oscilloscope channel to fetch the waveform from.
+
+        Returns:
+            np.ndarray: The waveform data as voltages, adjusted based on the oscilloscope's preamble settings.
+        """
+        self.fetch_preamble()  # Ensure preamble settings are up to date
+        if self._format == self.Format.BYTE:
+            data = self._fetch_binary_trace()
+        elif self._format == self.Format.WORD:
+            data = self._fetch_binary_trace(datatype='h')  # 'h' for signed 2-byte integer
+        elif self._format == self.Format.ASCII:
+            data = self._fetch_ascii_trace()
         else:
-            logging.error(f"Unsupported data format: {self.format}")
+            logging.error("Unsupported data format: {}".format(self._format))
+            return np.array([])  # Return an empty array if format is unsupported
 
-    def _parse_ascii_trace_data(self, trace_data_raw):
-        # Parse ASCII trace data handling oscilloscope data preamble
-        if trace_data_raw.startswith('#'):
-            header_end = trace_data_raw.find(' ')  # Find the end of the preamble
-            if header_end != -1:
-                trace_data_raw = trace_data_raw[header_end + 1:]  # Skip the preamble
-            else:
-                raise ValueError("Preamble format unrecognized, cannot find data start.")
-        voltages = np.array([float(data) for data in trace_data_raw.split(',') if data], dtype=np.float32)
-        return voltages
+        # Convert binary data to voltage values if necessary
+        if self._format in [self.Format.BYTE, self.Format.WORD]:
+            data = (data - self.y_reference) * self.y_increment + self.y_origin
+        
+        return data
+
+    def _fetch_binary_trace(self, datatype='b'):
+        """
+        Fetches binary waveform data from the oscilloscope and interprets it according to the specified datatype.
+
+        Parameters:
+            datatype (str): The datatype to interpret the binary data as. Defaults to 'b' (signed byte).
+
+        Returns:
+            np.ndarray: The waveform data as raw binary values.
+        """
+        command = ":WAVeform:DATA?"
+        try:
+            raw_data = self._parent.query_binary(command, datatype=datatype, is_big_endian=False)
+            return np.array(raw_data, dtype=datatype)
+        except Exception as e:
+            logging.error(f"Failed to fetch or interpret binary data: {e}")
+            return np.array([])  # Return an empty array in case of error
+
+    def _fetch_ascii_trace(self):
+        """
+        Fetches ASCII waveform data from the oscilloscope and converts it to a numpy array.
+
+        Returns:
+            np.ndarray: The waveform data as a numpy array of floats.
+        """
+        command = ":WAVeform:DATA?"
+        try:
+            ascii_data = self._parent.query(command).strip()
+            # Convert ASCII data to a numpy array of floats
+            data_array = np.fromstring(ascii_data, sep=',', dtype=float)
+            return data_array
+        except Exception as e:
+            logging.error(f"Error parsing ASCII data: {e}")
+            return np.array([])  # Return an empty array in case of error

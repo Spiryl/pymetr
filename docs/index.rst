@@ -33,8 +33,9 @@ System Dependencies
    :caption: Contents:
    
    quickstart
-   interfaces
    instruments
+   subsystems
+   design
    oscilloscope
    packaging
    doc-build

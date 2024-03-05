@@ -293,11 +293,11 @@ Class Diagram
       node [shape=record, fontname=Helvetica, fontsize=10];
       
       Instrument [label="{Instrument|+ open()\l+ close()\l+ write(command: str)\l+ read(): str\l+ query(command: str): str\l}"]
-      SCPIInstrument [label="{SCPIInstrument}"]
+      Instrument [label="{Instrument}"]
       VXIInstrument [label="{VXIInstrument}"]
       LXIInstrument [label="{LXIInstrument}"]
 
-      Instrument -> SCPIInstrument [arrowhead="onormal"]
+      Instrument -> Instrument [arrowhead="onormal"]
       Instrument -> VXIInstrument [arrowhead="onormal"]
       Instrument -> LXIInstrument [arrowhead="onormal"]
 
@@ -351,11 +351,11 @@ Below is a simple example showcasing the library's usage within a Python environ
 
 .. code-block:: python
 
-   from Pymetr import SCPIInstrument
+   from Pymetr import Instrument
 
    # Discover and select instruments
-   instrument_address = SCPIInstrument.select_resources()
-   my_instrument = SCPIInstrument(instrument_address, interface_type='pyvisa')
+   instrument_address = Instrument.select_resources()
+   my_instrument = Instrument(instrument_address, interface_type='pyvisa')
    my_instrument.open()
 
    # Basic instrument interaction

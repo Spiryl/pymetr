@@ -1,5 +1,5 @@
 import pyvisa
-from pymetr.instruments import SCPIInstrument
+from pymetr.instruments import Instrument
 if __name__ == "__main__":
     import sys
 
@@ -109,7 +109,7 @@ if __name__ == "__main__":
             instrument_address, _ = list_and_select_instrument(interface_type)
             if instrument_address:
                 interface_type = 'pyvisa' if user_choice in ["1", "2"] else 'tcpip'
-                my_instrument = SCPIInstrument(instrument_address, interface_type=interface_type)
+                my_instrument = Instrument(instrument_address, interface_type=interface_type)
                 my_instrument.open()
                 print(f"\nConnected to {my_instrument.identity().strip()}.\n")
                 

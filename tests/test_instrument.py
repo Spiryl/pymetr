@@ -1,11 +1,11 @@
 # test_instrument.py
 import unittest
 from unittest.mock import patch, MagicMock
-from Pymetr.instruments import Instrument
+from pymetr.instruments import Instrument
 
 class TestInstrument(unittest.TestCase):
 
-    @patch('Pymetr.base.pyvisa.ResourceManager')
+    @patch('pymetr.base.pyvisa.ResourceManager')
     def setUp(self, MockResourceManager):
         # Mocking the ResourceManager and the open_resource return value
         self.mock_rm = MockResourceManager.return_value
@@ -32,13 +32,13 @@ class TestInstrument(unittest.TestCase):
         self.instrument.close()
         self.mock_inst.close.assert_called_once()
 
-    @patch('Pymetr.base.Instrument.write')
+    @patch('pymetr.base.Instrument.write')
     def test_clear_status(self, mock_write):
         """Test clearing the instrument status."""
         self.instrument.clear_status()
         mock_write.assert_called_once_with('*CLS')
 
-    @patch('Pymetr.base.Instrument.query')
+    @patch('pymetr.base.Instrument.query')
     def test_query(self, mock_query):
         query_command = "*IDN?"
         mock_query.return_value = 'Instrument ID'
@@ -46,7 +46,7 @@ class TestInstrument(unittest.TestCase):
         mock_query.assert_called_once_with(query_command)
         self.assertEqual(response, 'Instrument ID')
 
-    @patch('Pymetr.base.Instrument.read')
+    @patch('pymetr.base.Instrument.read')
     def test_read(self, mock_read):
         mock_read.return_value = 'Read response'
         response = self.instrument.read()

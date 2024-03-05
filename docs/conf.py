@@ -5,7 +5,7 @@ sys.path.insert(0, os.path.abspath('../'))
 
 # -- Project information -----------------------------------------------------
 
-project = 'Pymetr'
+project = 'pymetr'
 copyright = '2024, Ryan C. Smith'
 author = 'Ryan C. Smith'
 release = '3/01/2024'
@@ -24,6 +24,12 @@ exclude_patterns = []
 
 language = 'En'
 
+# autodoc_default_options = {
+#     'member-order': 'bysource',
+#     'special-members': '__init__',
+#     'undoc-members': True,
+#     'exclude-members': '__weakref__'
+# }
 # -- Options for HTML output -------------------------------------------------
 
 html_theme = 'sphinx_rtd_theme'

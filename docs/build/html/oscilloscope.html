@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Oscilloscope Extension &mdash; Pymetr 3/01/2024 documentation</title>
+  <title>Oscilloscope Extension &mdash; pymetr 3/01/2024 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
       <link rel="stylesheet" type="text/css" href="_static/graphviz.css?v=eafc0fe6" />
@@ -22,8 +22,8 @@
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Installing the Pymetr Package" href="packaging.html" />
-    <link rel="prev" title="Instrument Control Library" href="instruments.html" /> 
+    <link rel="next" title="Installing the pymetr Package" href="packaging.html" />
+    <link rel="prev" title="Subsystem Practical Coding Example" href="design.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -35,7 +35,7 @@
           
           
           <a href="index.html" class="icon icon-home">
-            Pymetr
+            pymetr
           </a>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -48,24 +48,106 @@
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quick Start Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="interfaces.html">Interfaces Module</a></li>
 <li class="toctree-l1"><a class="reference internal" href="instruments.html">Instrument Control Library</a></li>
+<li class="toctree-l1"><a class="reference internal" href="subsystems.html">Subsystem Architecture for Instrument Control</a></li>
+<li class="toctree-l1"><a class="reference internal" href="design.html">Subsystem Practical Coding Example</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Oscilloscope Extension</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#oscilloscope-core">Oscilloscope Core</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-pymetr.oscilloscope.core.Oscilloscope">Oscilloscope Core</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#oscilloscope-subsystems">Oscilloscope Subsystems</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#acquire-subsystem">Acquire Subsystem</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#channel-subsystem">Channel Subsystem</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#timebase-subsystem">Timebase Subsystem</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#trigger-subsystem">Trigger Subsystem</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#waveform-subsystem">Waveform Subsystem</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#wavegen-subsystem">WaveGen Subsystem</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-pymetr.oscilloscope.acquire">Acquire Subsystem</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#pymetr.oscilloscope.acquire.Acquire"><code class="docutils literal notranslate"><span class="pre">Acquire</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#pymetr.oscilloscope.acquire.Acquire.Mode"><code class="docutils literal notranslate"><span class="pre">Acquire.Mode</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pymetr.oscilloscope.acquire.Acquire.Type"><code class="docutils literal notranslate"><span class="pre">Acquire.Type</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pymetr.oscilloscope.acquire.Acquire.count"><code class="docutils literal notranslate"><span class="pre">Acquire.count</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pymetr.oscilloscope.acquire.Acquire.depth"><code class="docutils literal notranslate"><span class="pre">Acquire.depth</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pymetr.oscilloscope.acquire.Acquire.mode"><code class="docutils literal notranslate"><span class="pre">Acquire.mode</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pymetr.oscilloscope.acquire.Acquire.sample_rate"><code class="docutils literal notranslate"><span class="pre">Acquire.sample_rate</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pymetr.oscilloscope.acquire.Acquire.sync"><code class="docutils literal notranslate"><span class="pre">Acquire.sync()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pymetr.oscilloscope.acquire.Acquire.type"><code class="docutils literal notranslate"><span class="pre">Acquire.type</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#module-pymetr.oscilloscope.channel">Channel Subsystem</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#pymetr.oscilloscope.channel.Channel"><code class="docutils literal notranslate"><span class="pre">Channel</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#pymetr.oscilloscope.channel.Channel.Coupling"><code class="docutils literal notranslate"><span class="pre">Channel.Coupling</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pymetr.oscilloscope.channel.Channel.DisplayState"><code class="docutils literal notranslate"><span class="pre">Channel.DisplayState</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pymetr.oscilloscope.channel.Channel.coupling"><code class="docutils literal notranslate"><span class="pre">Channel.coupling</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pymetr.oscilloscope.channel.Channel.display"><code class="docutils literal notranslate"><span class="pre">Channel.display</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pymetr.oscilloscope.channel.Channel.offset"><code class="docutils literal notranslate"><span class="pre">Channel.offset</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pymetr.oscilloscope.channel.Channel.probe_attenuation"><code class="docutils literal notranslate"><span class="pre">Channel.probe_attenuation</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pymetr.oscilloscope.channel.Channel.scale"><code class="docutils literal notranslate"><span class="pre">Channel.scale</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pymetr.oscilloscope.channel.Channel.sync"><code class="docutils literal notranslate"><span class="pre">Channel.sync()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#module-pymetr.oscilloscope.timebase">Timebase Subsystem</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#pymetr.oscilloscope.timebase.Timebase"><code class="docutils literal notranslate"><span class="pre">Timebase</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#pymetr.oscilloscope.timebase.Timebase.Mode"><code class="docutils literal notranslate"><span class="pre">Timebase.Mode</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pymetr.oscilloscope.timebase.Timebase.Reference"><code class="docutils literal notranslate"><span class="pre">Timebase.Reference</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pymetr.oscilloscope.timebase.Timebase.mode"><code class="docutils literal notranslate"><span class="pre">Timebase.mode</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pymetr.oscilloscope.timebase.Timebase.position"><code class="docutils literal notranslate"><span class="pre">Timebase.position</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pymetr.oscilloscope.timebase.Timebase.range"><code class="docutils literal notranslate"><span class="pre">Timebase.range</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pymetr.oscilloscope.timebase.Timebase.reference"><code class="docutils literal notranslate"><span class="pre">Timebase.reference</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pymetr.oscilloscope.timebase.Timebase.scale"><code class="docutils literal notranslate"><span class="pre">Timebase.scale</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pymetr.oscilloscope.timebase.Timebase.sync"><code class="docutils literal notranslate"><span class="pre">Timebase.sync()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#module-pymetr.oscilloscope.trigger">Trigger Subsystem</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#pymetr.oscilloscope.trigger.Trigger"><code class="docutils literal notranslate"><span class="pre">Trigger</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#pymetr.oscilloscope.trigger.Trigger.Mode"><code class="docutils literal notranslate"><span class="pre">Trigger.Mode</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pymetr.oscilloscope.trigger.Trigger.Slope"><code class="docutils literal notranslate"><span class="pre">Trigger.Slope</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pymetr.oscilloscope.trigger.Trigger.Source"><code class="docutils literal notranslate"><span class="pre">Trigger.Source</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pymetr.oscilloscope.trigger.Trigger.level"><code class="docutils literal notranslate"><span class="pre">Trigger.level</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pymetr.oscilloscope.trigger.Trigger.mode"><code class="docutils literal notranslate"><span class="pre">Trigger.mode</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pymetr.oscilloscope.trigger.Trigger.slope"><code class="docutils literal notranslate"><span class="pre">Trigger.slope</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pymetr.oscilloscope.trigger.Trigger.source"><code class="docutils literal notranslate"><span class="pre">Trigger.source</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pymetr.oscilloscope.trigger.Trigger.sync"><code class="docutils literal notranslate"><span class="pre">Trigger.sync()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#module-pymetr.oscilloscope.waveform">Waveform Subsystem</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#pymetr.oscilloscope.waveform.Waveform"><code class="docutils literal notranslate"><span class="pre">Waveform</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#pymetr.oscilloscope.waveform.Waveform.Format"><code class="docutils literal notranslate"><span class="pre">Waveform.Format</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pymetr.oscilloscope.waveform.Waveform.PointsMode"><code class="docutils literal notranslate"><span class="pre">Waveform.PointsMode</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pymetr.oscilloscope.waveform.Waveform.Source"><code class="docutils literal notranslate"><span class="pre">Waveform.Source</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pymetr.oscilloscope.waveform.Waveform.fetch_preamble"><code class="docutils literal notranslate"><span class="pre">Waveform.fetch_preamble()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pymetr.oscilloscope.waveform.Waveform.fetch_trace"><code class="docutils literal notranslate"><span class="pre">Waveform.fetch_trace()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pymetr.oscilloscope.waveform.Waveform.format"><code class="docutils literal notranslate"><span class="pre">Waveform.format</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pymetr.oscilloscope.waveform.Waveform.num_points"><code class="docutils literal notranslate"><span class="pre">Waveform.num_points</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pymetr.oscilloscope.waveform.Waveform.points_mode"><code class="docutils literal notranslate"><span class="pre">Waveform.points_mode</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pymetr.oscilloscope.waveform.Waveform.setup_trace"><code class="docutils literal notranslate"><span class="pre">Waveform.setup_trace()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pymetr.oscilloscope.waveform.Waveform.source"><code class="docutils literal notranslate"><span class="pre">Waveform.source</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pymetr.oscilloscope.waveform.Waveform.sync"><code class="docutils literal notranslate"><span class="pre">Waveform.sync()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#module-pymetr.oscilloscope.wavegen">WaveGen Subsystem</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#pymetr.oscilloscope.wavegen.WaveGen"><code class="docutils literal notranslate"><span class="pre">WaveGen</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#pymetr.oscilloscope.wavegen.WaveGen.Function"><code class="docutils literal notranslate"><span class="pre">WaveGen.Function</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pymetr.oscilloscope.wavegen.WaveGen.OutputState"><code class="docutils literal notranslate"><span class="pre">WaveGen.OutputState</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pymetr.oscilloscope.wavegen.WaveGen.amplitude"><code class="docutils literal notranslate"><span class="pre">WaveGen.amplitude</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pymetr.oscilloscope.wavegen.WaveGen.frequency"><code class="docutils literal notranslate"><span class="pre">WaveGen.frequency</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pymetr.oscilloscope.wavegen.WaveGen.function"><code class="docutils literal notranslate"><span class="pre">WaveGen.function</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pymetr.oscilloscope.wavegen.WaveGen.offset"><code class="docutils literal notranslate"><span class="pre">WaveGen.offset</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pymetr.oscilloscope.wavegen.WaveGen.output"><code class="docutils literal notranslate"><span class="pre">WaveGen.output</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pymetr.oscilloscope.wavegen.WaveGen.sync"><code class="docutils literal notranslate"><span class="pre">WaveGen.sync()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="#root-level-functions">Root-Level Functions</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#getting-started-with-the-oscilloscope-class">Getting Started with the Oscilloscope Class</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="packaging.html">Installing the Pymetr Package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="packaging.html">Installing the pymetr Package</a></li>
 <li class="toctree-l1"><a class="reference internal" href="doc-build.html">Rebuilding the Documentation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="sphinx.html">Sphinx Documentation Primer</a></li>
 <li class="toctree-l1"><a class="reference internal" href="bible.html">Style Rules</a></li>
@@ -80,7 +162,7 @@
 
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="index.html">Pymetr</a>
+          <a href="index.html">pymetr</a>
       </nav>
 
       <div class="wy-nav-content">
@@ -102,7 +184,7 @@
 <h1>Oscilloscope Extension<a class="headerlink" href="#oscilloscope-extension" title="Link to this heading"></a></h1>
 <p>The <code class="docutils literal notranslate"><span class="pre">Oscilloscope</span></code> class serves as an orchestrator for the complex interplay of its various subsystems, each encapsulated within its own class. Unlike a classical inheritance structure, the <code class="docutils literal notranslate"><span class="pre">Oscilloscope</span></code> class does not serve as a superclass from which subsystems inherit. Instead, it aggregates these subsystems—such as <code class="docutils literal notranslate"><span class="pre">Trigger</span></code>, <code class="docutils literal notranslate"><span class="pre">Timebase</span></code>, <code class="docutils literal notranslate"><span class="pre">Waveform</span></code>, <code class="docutils literal notranslate"><span class="pre">WaveGen</span></code>, <code class="docutils literal notranslate"><span class="pre">Acquire</span></code>, and <code class="docutils literal notranslate"><span class="pre">Channel</span></code>—as components, illustrating a composition-based architecture.</p>
 <p>This design philosophy allows for a high degree of modularity, enabling each subsystem to be developed, tested, and modified independently while the <code class="docutils literal notranslate"><span class="pre">Oscilloscope</span></code> class provides a cohesive and unified interface for the user. The result is a robust and scalable structure, where the complexity of the instrument’s functionalities is managed with grace and precision.</p>
-<p>The <code class="docutils literal notranslate"><span class="pre">Pymetr</span></code> package reflects this architecture, segregating related functionalities into dedicated subsystem classes. This not only enhances code organization but also fosters intuitive and object-oriented control over each aspect of the oscilloscope. Below is a visual representation of the <code class="docutils literal notranslate"><span class="pre">Oscilloscope</span></code> class composition:</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">pymetr</span></code> package reflects this architecture, segregating related functionalities into dedicated subsystem classes. This not only enhances code organization but also fosters intuitive and object-oriented control over each aspect of the oscilloscope. Below is a visual representation of the <code class="docutils literal notranslate"><span class="pre">Oscilloscope</span></code> class composition:</p>
 <div class="graphviz"><img src="_images/graphviz-e941b786a9f11ff4245952d95fb3f3426fa0c713.png" alt="digraph architecture {
    node [shape=record fontname=Helvetica fontsize=10];
    rankdir=UD;
@@ -131,36 +213,693 @@
 
    {rank=same; Acquire Channel Timebase Trigger Waveform WaveGen}
 }" class="graphviz" /></div>
-<section id="oscilloscope-core">
-<h2>Oscilloscope Core<a class="headerlink" href="#oscilloscope-core" title="Link to this heading"></a></h2>
+<section id="module-pymetr.oscilloscope.core.Oscilloscope">
+<span id="oscilloscope-core"></span><h2>Oscilloscope Core<a class="headerlink" href="#module-pymetr.oscilloscope.core.Oscilloscope" title="Link to this heading"></a></h2>
+<p>Represents the oscilloscope device with all its functionalities, offering a high-level
+interface for controlling and managing the oscilloscope’s various subsystems.</p>
+<p>Each subsystem (trigger, timebase, waveform, wavegen, acquire, channels) is represented
+by a separate class, allowing for modular control over the oscilloscope’s features.</p>
+<dl class="field-list simple">
+<dt class="field-odd">param resource_string<span class="colon">:</span></dt>
+<dd class="field-odd"><p>VISA resource string for oscilloscope connection.</p>
+</dd>
+<dt class="field-even">type resource_string<span class="colon">:</span></dt>
+<dd class="field-even"><p>str</p>
+</dd>
+<dt class="field-odd">ivar trigger<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Manages the trigger settings of the oscilloscope.</p>
+</dd>
+<dt class="field-even">vartype trigger<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="#pymetr.oscilloscope.trigger.Trigger" title="pymetr.oscilloscope.trigger.Trigger"><code class="xref py py-class docutils literal notranslate"><span class="pre">pymetr.oscilloscope.trigger.Trigger</span></code></a></p>
+</dd>
+<dt class="field-odd">ivar timebase<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Manages the timebase settings of the oscilloscope.</p>
+</dd>
+<dt class="field-even">vartype timebase<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="#pymetr.oscilloscope.timebase.Timebase" title="pymetr.oscilloscope.timebase.Timebase"><code class="xref py py-class docutils literal notranslate"><span class="pre">pymetr.oscilloscope.timebase.Timebase</span></code></a></p>
+</dd>
+<dt class="field-odd">ivar waveform<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Manages waveform acquisition and processing.</p>
+</dd>
+<dt class="field-even">vartype waveform<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="#pymetr.oscilloscope.waveform.Waveform" title="pymetr.oscilloscope.waveform.Waveform"><code class="xref py py-class docutils literal notranslate"><span class="pre">pymetr.oscilloscope.waveform.Waveform</span></code></a></p>
+</dd>
+<dt class="field-odd">ivar wavegen<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Controls the waveform generator of the oscilloscope.</p>
+</dd>
+<dt class="field-even">vartype wavegen<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="#pymetr.oscilloscope.wavegen.WaveGen" title="pymetr.oscilloscope.wavegen.WaveGen"><code class="xref py py-class docutils literal notranslate"><span class="pre">pymetr.oscilloscope.wavegen.WaveGen</span></code></a></p>
+</dd>
+<dt class="field-odd">ivar acquire<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Manages data acquisition settings of the oscilloscope.</p>
+</dd>
+<dt class="field-even">vartype acquire<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="#pymetr.oscilloscope.acquire.Acquire" title="pymetr.oscilloscope.acquire.Acquire"><code class="xref py py-class docutils literal notranslate"><span class="pre">pymetr.oscilloscope.acquire.Acquire</span></code></a></p>
+</dd>
+<dt class="field-odd">ivar channels<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Represents each channel on the oscilloscope as a <a class="reference internal" href="#pymetr.oscilloscope.channel.Channel" title="pymetr.oscilloscope.channel.Channel"><code class="xref py py-class docutils literal notranslate"><span class="pre">pymetr.oscilloscope.channel.Channel</span></code></a> object.</p>
+</dd>
+<dt class="field-even">vartype channels<span class="colon">:</span></dt>
+<dd class="field-even"><p>dict</p>
+</dd>
+<dt class="field-odd">ivar continuous_fetch<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Flag to enable or disable continuous waveform fetching.</p>
+</dd>
+<dt class="field-even">vartype continuous_fetch<span class="colon">:</span></dt>
+<dd class="field-even"><p>bool</p>
+</dd>
+</dl>
 </section>
 <section id="oscilloscope-subsystems">
 <h2>Oscilloscope Subsystems<a class="headerlink" href="#oscilloscope-subsystems" title="Link to this heading"></a></h2>
 <p>The subsystems are instantiated within the <code class="docutils literal notranslate"><span class="pre">Oscilloscope</span></code> class and are accessed through the corresponding attributes.
 Each subsystem class focuses on a specific area of oscilloscope functionality, providing specialized methods and properties for that domain.</p>
 </section>
-<section id="acquire-subsystem">
-<h2>Acquire Subsystem<a class="headerlink" href="#acquire-subsystem" title="Link to this heading"></a></h2>
+<section id="module-pymetr.oscilloscope.acquire">
+<span id="acquire-subsystem"></span><h2>Acquire Subsystem<a class="headerlink" href="#module-pymetr.oscilloscope.acquire" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.acquire.Acquire">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pymetr.oscilloscope.acquire.</span></span><span class="sig-name descname"><span class="pre">Acquire</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">parent</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pymetr.oscilloscope.acquire.Acquire" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">InstrumentSubsystem</span></code></p>
+<p>Manages the acquisition parameters of the oscilloscope, including mode, type,
+sample rate, depth, and count of acquisition.</p>
+<dl class="simple">
+<dt>Attributes:</dt><dd><p>_mode (Mode): The current acquisition mode.
+_type (Type): The type of acquisition (e.g., normal, average).
+_sample_rate (float): The sample rate in samples per second.
+_depth (int): The depth of the acquisition.
+_count (int): The number of acquisitions to combine.</p>
+</dd>
+</dl>
+<dl class="py class">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.acquire.Acquire.Mode">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Mode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">values</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">module</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">qualname</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">boundary</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pymetr.oscilloscope.acquire.Acquire.Mode" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Enum</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.acquire.Acquire.Mode.RTIM">
+<span class="sig-name descname"><span class="pre">RTIM</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'RTIM'</span></em><a class="headerlink" href="#pymetr.oscilloscope.acquire.Acquire.Mode.RTIM" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.acquire.Acquire.Mode.SEGM">
+<span class="sig-name descname"><span class="pre">SEGM</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'SEGM'</span></em><a class="headerlink" href="#pymetr.oscilloscope.acquire.Acquire.Mode.SEGM" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.acquire.Acquire.Type">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">values</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">module</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">qualname</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">boundary</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pymetr.oscilloscope.acquire.Acquire.Type" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Enum</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.acquire.Acquire.Type.AVERAGE">
+<span class="sig-name descname"><span class="pre">AVERAGE</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'AVER'</span></em><a class="headerlink" href="#pymetr.oscilloscope.acquire.Acquire.Type.AVERAGE" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.acquire.Acquire.Type.HRES">
+<span class="sig-name descname"><span class="pre">HRES</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'HRES'</span></em><a class="headerlink" href="#pymetr.oscilloscope.acquire.Acquire.Type.HRES" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.acquire.Acquire.Type.NORMAL">
+<span class="sig-name descname"><span class="pre">NORMAL</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'NORM'</span></em><a class="headerlink" href="#pymetr.oscilloscope.acquire.Acquire.Type.NORMAL" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.acquire.Acquire.Type.PEAK">
+<span class="sig-name descname"><span class="pre">PEAK</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'PEAK'</span></em><a class="headerlink" href="#pymetr.oscilloscope.acquire.Acquire.Type.PEAK" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.acquire.Acquire.count">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">count</span></span><a class="headerlink" href="#pymetr.oscilloscope.acquire.Acquire.count" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.acquire.Acquire.depth">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">depth</span></span><a class="headerlink" href="#pymetr.oscilloscope.acquire.Acquire.depth" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.acquire.Acquire.mode">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">mode</span></span><a class="headerlink" href="#pymetr.oscilloscope.acquire.Acquire.mode" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.acquire.Acquire.sample_rate">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">sample_rate</span></span><a class="headerlink" href="#pymetr.oscilloscope.acquire.Acquire.sample_rate" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.acquire.Acquire.sync">
+<span class="sig-name descname"><span class="pre">sync</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pymetr.oscilloscope.acquire.Acquire.sync" title="Link to this definition"></a></dt>
+<dd><p>Synchronizes acquisition settings with the oscilloscope’s current configuration.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.acquire.Acquire.type">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">type</span></span><a class="headerlink" href="#pymetr.oscilloscope.acquire.Acquire.type" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
 <p>The <code class="docutils literal notranslate"><span class="pre">Acquire</span></code> subsystem manages data acquisition settings, offering control over how the oscilloscope captures and processes the signal data.</p>
 </section>
-<section id="channel-subsystem">
-<h2>Channel Subsystem<a class="headerlink" href="#channel-subsystem" title="Link to this heading"></a></h2>
+<section id="module-pymetr.oscilloscope.channel">
+<span id="channel-subsystem"></span><h2>Channel Subsystem<a class="headerlink" href="#module-pymetr.oscilloscope.channel" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.channel.Channel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pymetr.oscilloscope.channel.</span></span><span class="sig-name descname"><span class="pre">Channel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">parent</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channel_number</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pymetr.oscilloscope.channel.Channel" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">InstrumentSubsystem</span></code></p>
+<p>Represents an individual channel on the oscilloscope, allowing control over its display, scaling, 
+and other properties.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.channel.Channel.Coupling">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Coupling</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">values</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">module</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">qualname</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">boundary</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pymetr.oscilloscope.channel.Channel.Coupling" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Enum</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.channel.Channel.Coupling.AC">
+<span class="sig-name descname"><span class="pre">AC</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'AC'</span></em><a class="headerlink" href="#pymetr.oscilloscope.channel.Channel.Coupling.AC" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.channel.Channel.Coupling.DC">
+<span class="sig-name descname"><span class="pre">DC</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'DC'</span></em><a class="headerlink" href="#pymetr.oscilloscope.channel.Channel.Coupling.DC" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.channel.Channel.DisplayState">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">DisplayState</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">values</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">module</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">qualname</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">boundary</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pymetr.oscilloscope.channel.Channel.DisplayState" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Enum</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.channel.Channel.DisplayState.OFF">
+<span class="sig-name descname"><span class="pre">OFF</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'0'</span></em><a class="headerlink" href="#pymetr.oscilloscope.channel.Channel.DisplayState.OFF" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.channel.Channel.DisplayState.ON">
+<span class="sig-name descname"><span class="pre">ON</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'1'</span></em><a class="headerlink" href="#pymetr.oscilloscope.channel.Channel.DisplayState.ON" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.channel.Channel.coupling">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">coupling</span></span><a class="headerlink" href="#pymetr.oscilloscope.channel.Channel.coupling" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.channel.Channel.display">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">display</span></span><a class="headerlink" href="#pymetr.oscilloscope.channel.Channel.display" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.channel.Channel.offset">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">offset</span></span><a class="headerlink" href="#pymetr.oscilloscope.channel.Channel.offset" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.channel.Channel.probe_attenuation">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">probe_attenuation</span></span><a class="headerlink" href="#pymetr.oscilloscope.channel.Channel.probe_attenuation" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.channel.Channel.scale">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">scale</span></span><a class="headerlink" href="#pymetr.oscilloscope.channel.Channel.scale" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.channel.Channel.sync">
+<span class="sig-name descname"><span class="pre">sync</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pymetr.oscilloscope.channel.Channel.sync" title="Link to this definition"></a></dt>
+<dd><p>Synchronizes channel settings with the oscilloscope’s current configuration.</p>
+</dd></dl>
+
+</dd></dl>
+
 <p>Each channel of the oscilloscope is represented by a <code class="docutils literal notranslate"><span class="pre">Channel</span></code> object, allowing individual control over display, scaling, and other channel-specific settings.</p>
 </section>
-<section id="timebase-subsystem">
-<h2>Timebase Subsystem<a class="headerlink" href="#timebase-subsystem" title="Link to this heading"></a></h2>
+<section id="module-pymetr.oscilloscope.timebase">
+<span id="timebase-subsystem"></span><h2>Timebase Subsystem<a class="headerlink" href="#module-pymetr.oscilloscope.timebase" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.timebase.Timebase">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pymetr.oscilloscope.timebase.</span></span><span class="sig-name descname"><span class="pre">Timebase</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">parent</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pymetr.oscilloscope.timebase.Timebase" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">InstrumentSubsystem</span></code></p>
+<p>Handles the timebase settings of the oscilloscope which control the horizontal sweep functions.</p>
+<p>The timebase settings include the mode, scale, position, and range of the oscilloscope’s horizontal axis. 
+This class provides a Pythonic interface for getting and setting these properties, with changes being 
+immediately written to the oscilloscope and verified through queries.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.timebase.Timebase.Mode">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Mode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">values</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">module</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">qualname</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">boundary</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pymetr.oscilloscope.timebase.Timebase.Mode" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Enum</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.timebase.Timebase.Mode.MAIN">
+<span class="sig-name descname"><span class="pre">MAIN</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'MAIN'</span></em><a class="headerlink" href="#pymetr.oscilloscope.timebase.Timebase.Mode.MAIN" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.timebase.Timebase.Mode.ROLL">
+<span class="sig-name descname"><span class="pre">ROLL</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'ROLL'</span></em><a class="headerlink" href="#pymetr.oscilloscope.timebase.Timebase.Mode.ROLL" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.timebase.Timebase.Mode.WINDOW">
+<span class="sig-name descname"><span class="pre">WINDOW</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'WIND'</span></em><a class="headerlink" href="#pymetr.oscilloscope.timebase.Timebase.Mode.WINDOW" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.timebase.Timebase.Mode.XY">
+<span class="sig-name descname"><span class="pre">XY</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'XY'</span></em><a class="headerlink" href="#pymetr.oscilloscope.timebase.Timebase.Mode.XY" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.timebase.Timebase.Reference">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Reference</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">values</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">module</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">qualname</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">boundary</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pymetr.oscilloscope.timebase.Timebase.Reference" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Enum</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.timebase.Timebase.Reference.CENTER">
+<span class="sig-name descname"><span class="pre">CENTER</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'CENT'</span></em><a class="headerlink" href="#pymetr.oscilloscope.timebase.Timebase.Reference.CENTER" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.timebase.Timebase.Reference.LEFT">
+<span class="sig-name descname"><span class="pre">LEFT</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'LEFT'</span></em><a class="headerlink" href="#pymetr.oscilloscope.timebase.Timebase.Reference.LEFT" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.timebase.Timebase.Reference.ROLL">
+<span class="sig-name descname"><span class="pre">ROLL</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'ROLL'</span></em><a class="headerlink" href="#pymetr.oscilloscope.timebase.Timebase.Reference.ROLL" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.timebase.Timebase.Reference.XY">
+<span class="sig-name descname"><span class="pre">XY</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'XY'</span></em><a class="headerlink" href="#pymetr.oscilloscope.timebase.Timebase.Reference.XY" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.timebase.Timebase.mode">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">mode</span></span><a class="headerlink" href="#pymetr.oscilloscope.timebase.Timebase.mode" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.timebase.Timebase.position">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">position</span></span><a class="headerlink" href="#pymetr.oscilloscope.timebase.Timebase.position" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.timebase.Timebase.range">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">range</span></span><a class="headerlink" href="#pymetr.oscilloscope.timebase.Timebase.range" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.timebase.Timebase.reference">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">reference</span></span><a class="headerlink" href="#pymetr.oscilloscope.timebase.Timebase.reference" title="Link to this definition"></a></dt>
+<dd><p>Gets the reference position for the timebase.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.timebase.Timebase.scale">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">scale</span></span><a class="headerlink" href="#pymetr.oscilloscope.timebase.Timebase.scale" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.timebase.Timebase.sync">
+<span class="sig-name descname"><span class="pre">sync</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pymetr.oscilloscope.timebase.Timebase.sync" title="Link to this definition"></a></dt>
+<dd><p>Synchronizes timebase settings with the oscilloscope’s current configuration.</p>
+</dd></dl>
+
+</dd></dl>
+
 <p>The <code class="docutils literal notranslate"><span class="pre">Timebase</span></code> subsystem governs the horizontal sweep of the oscilloscope, dictating the scale and position of the waveform in time.</p>
 </section>
-<section id="trigger-subsystem">
-<h2>Trigger Subsystem<a class="headerlink" href="#trigger-subsystem" title="Link to this heading"></a></h2>
+<section id="module-pymetr.oscilloscope.trigger">
+<span id="trigger-subsystem"></span><h2>Trigger Subsystem<a class="headerlink" href="#module-pymetr.oscilloscope.trigger" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.trigger.Trigger">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pymetr.oscilloscope.trigger.</span></span><span class="sig-name descname"><span class="pre">Trigger</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">parent</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pymetr.oscilloscope.trigger.Trigger" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">InstrumentSubsystem</span></code></p>
+<dl class="py class">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.trigger.Trigger.Mode">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Mode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">values</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">module</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">qualname</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">boundary</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pymetr.oscilloscope.trigger.Trigger.Mode" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Enum</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.trigger.Trigger.Mode.EDGE">
+<span class="sig-name descname"><span class="pre">EDGE</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'EDGE'</span></em><a class="headerlink" href="#pymetr.oscilloscope.trigger.Trigger.Mode.EDGE" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.trigger.Trigger.Mode.VIDEO">
+<span class="sig-name descname"><span class="pre">VIDEO</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'VIDEO'</span></em><a class="headerlink" href="#pymetr.oscilloscope.trigger.Trigger.Mode.VIDEO" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.trigger.Trigger.Slope">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Slope</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">values</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">module</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">qualname</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">boundary</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pymetr.oscilloscope.trigger.Trigger.Slope" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Enum</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.trigger.Trigger.Slope.NEGATIVE">
+<span class="sig-name descname"><span class="pre">NEGATIVE</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'NEG'</span></em><a class="headerlink" href="#pymetr.oscilloscope.trigger.Trigger.Slope.NEGATIVE" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.trigger.Trigger.Slope.POSITIVE">
+<span class="sig-name descname"><span class="pre">POSITIVE</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'POS'</span></em><a class="headerlink" href="#pymetr.oscilloscope.trigger.Trigger.Slope.POSITIVE" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.trigger.Trigger.Source">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Source</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">values</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">module</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">qualname</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">boundary</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pymetr.oscilloscope.trigger.Trigger.Source" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Enum</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.trigger.Trigger.Source.CH1">
+<span class="sig-name descname"><span class="pre">CH1</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'CH1'</span></em><a class="headerlink" href="#pymetr.oscilloscope.trigger.Trigger.Source.CH1" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.trigger.Trigger.Source.CH2">
+<span class="sig-name descname"><span class="pre">CH2</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'CH2'</span></em><a class="headerlink" href="#pymetr.oscilloscope.trigger.Trigger.Source.CH2" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.trigger.Trigger.Source.CH3">
+<span class="sig-name descname"><span class="pre">CH3</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'CH3'</span></em><a class="headerlink" href="#pymetr.oscilloscope.trigger.Trigger.Source.CH3" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.trigger.Trigger.Source.CH4">
+<span class="sig-name descname"><span class="pre">CH4</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'CH4'</span></em><a class="headerlink" href="#pymetr.oscilloscope.trigger.Trigger.Source.CH4" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.trigger.Trigger.Source.EXT">
+<span class="sig-name descname"><span class="pre">EXT</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'EXT'</span></em><a class="headerlink" href="#pymetr.oscilloscope.trigger.Trigger.Source.EXT" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.trigger.Trigger.Source.LINE">
+<span class="sig-name descname"><span class="pre">LINE</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'LINE'</span></em><a class="headerlink" href="#pymetr.oscilloscope.trigger.Trigger.Source.LINE" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.trigger.Trigger.Source.WGEN">
+<span class="sig-name descname"><span class="pre">WGEN</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'WGEN'</span></em><a class="headerlink" href="#pymetr.oscilloscope.trigger.Trigger.Source.WGEN" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.trigger.Trigger.level">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">level</span></span><a class="headerlink" href="#pymetr.oscilloscope.trigger.Trigger.level" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.trigger.Trigger.mode">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">mode</span></span><a class="headerlink" href="#pymetr.oscilloscope.trigger.Trigger.mode" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.trigger.Trigger.slope">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">slope</span></span><a class="headerlink" href="#pymetr.oscilloscope.trigger.Trigger.slope" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.trigger.Trigger.source">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">source</span></span><a class="headerlink" href="#pymetr.oscilloscope.trigger.Trigger.source" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.trigger.Trigger.sync">
+<span class="sig-name descname"><span class="pre">sync</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pymetr.oscilloscope.trigger.Trigger.sync" title="Link to this definition"></a></dt>
+<dd><p>Ensures the trigger settings are synchronized with the oscilloscope’s current configuration.</p>
+</dd></dl>
+
+</dd></dl>
+
 <p>Trigger settings are crucial for accurate waveform capture. The <code class="docutils literal notranslate"><span class="pre">Trigger</span></code> subsystem provides precise control over when the oscilloscope starts acquiring data.</p>
 </section>
-<section id="waveform-subsystem">
-<h2>Waveform Subsystem<a class="headerlink" href="#waveform-subsystem" title="Link to this heading"></a></h2>
+<section id="module-pymetr.oscilloscope.waveform">
+<span id="waveform-subsystem"></span><h2>Waveform Subsystem<a class="headerlink" href="#module-pymetr.oscilloscope.waveform" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.waveform.Waveform">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pymetr.oscilloscope.waveform.</span></span><span class="sig-name descname"><span class="pre">Waveform</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">parent</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pymetr.oscilloscope.waveform.Waveform" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">InstrumentSubsystem</span></code></p>
+<p>Manages waveform data acquisition and processing for an oscilloscope channel.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.waveform.Waveform.Format">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Format</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">values</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">module</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">qualname</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">boundary</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pymetr.oscilloscope.waveform.Waveform.Format" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Enum</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.waveform.Waveform.Format.ASCII">
+<span class="sig-name descname"><span class="pre">ASCII</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'ASC'</span></em><a class="headerlink" href="#pymetr.oscilloscope.waveform.Waveform.Format.ASCII" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.waveform.Waveform.Format.BYTE">
+<span class="sig-name descname"><span class="pre">BYTE</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'BYTE'</span></em><a class="headerlink" href="#pymetr.oscilloscope.waveform.Waveform.Format.BYTE" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.waveform.Waveform.Format.WORD">
+<span class="sig-name descname"><span class="pre">WORD</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'WORD'</span></em><a class="headerlink" href="#pymetr.oscilloscope.waveform.Waveform.Format.WORD" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.waveform.Waveform.PointsMode">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">PointsMode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">values</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">module</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">qualname</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">boundary</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pymetr.oscilloscope.waveform.Waveform.PointsMode" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Enum</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.waveform.Waveform.PointsMode.MAXIMUM">
+<span class="sig-name descname"><span class="pre">MAXIMUM</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'MAX'</span></em><a class="headerlink" href="#pymetr.oscilloscope.waveform.Waveform.PointsMode.MAXIMUM" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.waveform.Waveform.PointsMode.NORMAL">
+<span class="sig-name descname"><span class="pre">NORMAL</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'NORM'</span></em><a class="headerlink" href="#pymetr.oscilloscope.waveform.Waveform.PointsMode.NORMAL" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.waveform.Waveform.PointsMode.RAW">
+<span class="sig-name descname"><span class="pre">RAW</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'RAW'</span></em><a class="headerlink" href="#pymetr.oscilloscope.waveform.Waveform.PointsMode.RAW" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.waveform.Waveform.Source">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Source</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">values</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">module</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">qualname</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">boundary</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pymetr.oscilloscope.waveform.Waveform.Source" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Enum</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.waveform.Waveform.Source.BUS1">
+<span class="sig-name descname"><span class="pre">BUS1</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'BUS1'</span></em><a class="headerlink" href="#pymetr.oscilloscope.waveform.Waveform.Source.BUS1" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.waveform.Waveform.Source.BUS2">
+<span class="sig-name descname"><span class="pre">BUS2</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'BUS2'</span></em><a class="headerlink" href="#pymetr.oscilloscope.waveform.Waveform.Source.BUS2" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.waveform.Waveform.Source.CHANNEL">
+<span class="sig-name descname"><span class="pre">CHANNEL</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'CHAN'</span></em><a class="headerlink" href="#pymetr.oscilloscope.waveform.Waveform.Source.CHANNEL" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.waveform.Waveform.Source.EXT">
+<span class="sig-name descname"><span class="pre">EXT</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'EXT'</span></em><a class="headerlink" href="#pymetr.oscilloscope.waveform.Waveform.Source.EXT" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.waveform.Waveform.Source.FFT">
+<span class="sig-name descname"><span class="pre">FFT</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'FFT'</span></em><a class="headerlink" href="#pymetr.oscilloscope.waveform.Waveform.Source.FFT" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.waveform.Waveform.Source.FUNCTION">
+<span class="sig-name descname"><span class="pre">FUNCTION</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'FUNC'</span></em><a class="headerlink" href="#pymetr.oscilloscope.waveform.Waveform.Source.FUNCTION" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.waveform.Waveform.Source.MATH">
+<span class="sig-name descname"><span class="pre">MATH</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'MATH'</span></em><a class="headerlink" href="#pymetr.oscilloscope.waveform.Waveform.Source.MATH" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.waveform.Waveform.Source.WMEM">
+<span class="sig-name descname"><span class="pre">WMEM</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'WMEM'</span></em><a class="headerlink" href="#pymetr.oscilloscope.waveform.Waveform.Source.WMEM" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.waveform.Waveform.fetch_preamble">
+<span class="sig-name descname"><span class="pre">fetch_preamble</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">return_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'dict'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pymetr.oscilloscope.waveform.Waveform.fetch_preamble" title="Link to this definition"></a></dt>
+<dd><p>Fetches the preamble information from the oscilloscope.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>return_type</strong> – Specifies the return type. ‘dict’ returns a dictionary,
+anything else returns the raw string response.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Depending on return_type, either a dictionary with preamble values or a raw string.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.waveform.Waveform.fetch_trace">
+<span class="sig-name descname"><span class="pre">fetch_trace</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">channel</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pymetr.oscilloscope.waveform.Waveform.fetch_trace" title="Link to this definition"></a></dt>
+<dd><p>Fetches the waveform trace from the specified channel, automatically adjusting to the
+data format (ASCII, BYTE, WORD) for optimal data retrieval and processing.</p>
+<dl class="simple">
+<dt>Parameters:</dt><dd><p>channel (int): The oscilloscope channel to fetch the waveform from.</p>
+</dd>
+<dt>Returns:</dt><dd><p>np.ndarray: The waveform data as voltages, adjusted based on the oscilloscope’s preamble settings.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.waveform.Waveform.format">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">format</span></span><a class="headerlink" href="#pymetr.oscilloscope.waveform.Waveform.format" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.waveform.Waveform.num_points">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">num_points</span></span><a class="headerlink" href="#pymetr.oscilloscope.waveform.Waveform.num_points" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.waveform.Waveform.points_mode">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">points_mode</span></span><a class="headerlink" href="#pymetr.oscilloscope.waveform.Waveform.points_mode" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.waveform.Waveform.setup_trace">
+<span class="sig-name descname"><span class="pre">setup_trace</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">channel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">points_mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'NORMAL'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_points</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">500</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data_format</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'ASCII'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pymetr.oscilloscope.waveform.Waveform.setup_trace" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.waveform.Waveform.source">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">source</span></span><a class="headerlink" href="#pymetr.oscilloscope.waveform.Waveform.source" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.waveform.Waveform.sync">
+<span class="sig-name descname"><span class="pre">sync</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pymetr.oscilloscope.waveform.Waveform.sync" title="Link to this definition"></a></dt>
+<dd><p>Synchronizes the properties of the subsystem with the instrument’s current configuration.</p>
+</dd></dl>
+
+</dd></dl>
+
 <p>After acquisition, the <code class="docutils literal notranslate"><span class="pre">Waveform</span></code> subsystem takes over, dealing with waveform data retrieval and analysis.</p>
 </section>
-<section id="wavegen-subsystem">
-<h2>WaveGen Subsystem<a class="headerlink" href="#wavegen-subsystem" title="Link to this heading"></a></h2>
+<section id="module-pymetr.oscilloscope.wavegen">
+<span id="wavegen-subsystem"></span><h2>WaveGen Subsystem<a class="headerlink" href="#module-pymetr.oscilloscope.wavegen" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.wavegen.WaveGen">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pymetr.oscilloscope.wavegen.</span></span><span class="sig-name descname"><span class="pre">WaveGen</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">parent</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pymetr.oscilloscope.wavegen.WaveGen" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">InstrumentSubsystem</span></code></p>
+<p>Manages the built-in waveform generator (WGEN) of the oscilloscope, controlling waveform output and modulation.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.wavegen.WaveGen.Function">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Function</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">values</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">module</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">qualname</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">boundary</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pymetr.oscilloscope.wavegen.WaveGen.Function" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Enum</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.wavegen.WaveGen.Function.DC">
+<span class="sig-name descname"><span class="pre">DC</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'DC'</span></em><a class="headerlink" href="#pymetr.oscilloscope.wavegen.WaveGen.Function.DC" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.wavegen.WaveGen.Function.NOISe">
+<span class="sig-name descname"><span class="pre">NOISe</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'NOIS'</span></em><a class="headerlink" href="#pymetr.oscilloscope.wavegen.WaveGen.Function.NOISe" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.wavegen.WaveGen.Function.PULSe">
+<span class="sig-name descname"><span class="pre">PULSe</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'PULS'</span></em><a class="headerlink" href="#pymetr.oscilloscope.wavegen.WaveGen.Function.PULSe" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.wavegen.WaveGen.Function.RAMP">
+<span class="sig-name descname"><span class="pre">RAMP</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'RAMP'</span></em><a class="headerlink" href="#pymetr.oscilloscope.wavegen.WaveGen.Function.RAMP" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.wavegen.WaveGen.Function.SINusoid">
+<span class="sig-name descname"><span class="pre">SINusoid</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'SIN'</span></em><a class="headerlink" href="#pymetr.oscilloscope.wavegen.WaveGen.Function.SINusoid" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.wavegen.WaveGen.Function.SQUare">
+<span class="sig-name descname"><span class="pre">SQUare</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'SQU'</span></em><a class="headerlink" href="#pymetr.oscilloscope.wavegen.WaveGen.Function.SQUare" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.wavegen.WaveGen.OutputState">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">OutputState</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">values</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">module</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">qualname</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">boundary</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pymetr.oscilloscope.wavegen.WaveGen.OutputState" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Enum</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.wavegen.WaveGen.OutputState.OFF">
+<span class="sig-name descname"><span class="pre">OFF</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'0'</span></em><a class="headerlink" href="#pymetr.oscilloscope.wavegen.WaveGen.OutputState.OFF" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.wavegen.WaveGen.OutputState.ON">
+<span class="sig-name descname"><span class="pre">ON</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'1'</span></em><a class="headerlink" href="#pymetr.oscilloscope.wavegen.WaveGen.OutputState.ON" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.wavegen.WaveGen.amplitude">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">amplitude</span></span><a class="headerlink" href="#pymetr.oscilloscope.wavegen.WaveGen.amplitude" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.wavegen.WaveGen.frequency">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">frequency</span></span><a class="headerlink" href="#pymetr.oscilloscope.wavegen.WaveGen.frequency" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.wavegen.WaveGen.function">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">function</span></span><a class="headerlink" href="#pymetr.oscilloscope.wavegen.WaveGen.function" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.wavegen.WaveGen.offset">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">offset</span></span><a class="headerlink" href="#pymetr.oscilloscope.wavegen.WaveGen.offset" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.wavegen.WaveGen.output">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">output</span></span><a class="headerlink" href="#pymetr.oscilloscope.wavegen.WaveGen.output" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pymetr.oscilloscope.wavegen.WaveGen.sync">
+<span class="sig-name descname"><span class="pre">sync</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pymetr.oscilloscope.wavegen.WaveGen.sync" title="Link to this definition"></a></dt>
+<dd><p>Synchronizes WaveGen settings with the oscilloscope’s current configuration.</p>
+</dd></dl>
+
+</dd></dl>
+
 <p>Some oscilloscopes come with a built-in waveform generator. The <code class="docutils literal notranslate"><span class="pre">WaveGen</span></code> subsystem manages this feature, controlling waveform output and modulation.</p>
 </section>
 </section>
@@ -174,7 +913,7 @@ Each subsystem class focuses on a specific area of oscilloscope functionality, p
 <section id="getting-started-with-the-oscilloscope-class">
 <h2>Getting Started with the Oscilloscope Class<a class="headerlink" href="#getting-started-with-the-oscilloscope-class" title="Link to this heading"></a></h2>
 <p>To begin using the <code class="docutils literal notranslate"><span class="pre">Oscilloscope</span></code> class, first ensure that PyVISA is installed and properly configured in your environment. Here’s a quick rundown on creating an instance of the <code class="docutils literal notranslate"><span class="pre">Oscilloscope</span></code> and running basic operations:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">Pymetr.oscilloscope.core</span> <span class="kn">import</span> <span class="n">Oscilloscope</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pymetr.oscilloscope.core</span> <span class="kn">import</span> <span class="n">Oscilloscope</span>
 
 <span class="c1"># Replace with your oscilloscope&#39;s VISA resource string</span>
 <span class="n">resource_string</span> <span class="o">=</span> <span class="s1">&#39;TCPIP0::192.168.1.111::hislip0::INSTR&#39;</span>
@@ -191,8 +930,8 @@ Each subsystem class focuses on a specific area of oscilloscope functionality, p
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="instruments.html" class="btn btn-neutral float-left" title="Instrument Control Library" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="packaging.html" class="btn btn-neutral float-right" title="Installing the Pymetr Package" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="design.html" class="btn btn-neutral float-left" title="Subsystem Practical Coding Example" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="packaging.html" class="btn btn-neutral float-right" title="Installing the pymetr Package" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

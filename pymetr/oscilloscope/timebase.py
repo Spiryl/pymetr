@@ -125,3 +125,4 @@ class Timebase(InstrumentSubsystem):
         """ Synchronizes timebase settings with the oscilloscope's current configuration. """
         super().sync()
         logging.info("Synchronized timebase settings with oscilloscope.")
+

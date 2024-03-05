@@ -1,7 +1,7 @@
 import sys
 import numpy as np
 
-from Pymetr.oscilloscope.core import Oscilloscope  # Ensure Oscilloscope class is correctly imported
+from pymetr.oscilloscope.core import Oscilloscope  # Ensure Oscilloscope class is correctly imported
 
 
 if __name__ == '__main__':

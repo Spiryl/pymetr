@@ -11,7 +11,7 @@ from vispy import scene
 from oscilloscope_controls import AcquireControl, WaveformControl, WaveGenControl, TriggerControl, TimebaseControl,  ChannelControl, ControlDock
 from pymetr.oscilloscope.core import Oscilloscope
 from pymetr.oscilloscope import Waveform, Trigger, Timebase, WaveGen, Acquire
-from pymetr.instruments import SCPIInstrument
+from pymetr.instruments import Instrument
 from utilities import debug, timeit
 
 class FetchThread(QThread):
@@ -237,7 +237,7 @@ class MainWindow(QMainWindow):
         self.canvas.update_multiple_traces(trace_data_dict)
 
 def select_instrument(filter):
-    unique_instruments, failed_queries = SCPIInstrument.list_resources(filter)
+    unique_instruments, failed_queries = Instrument.list_resources(filter)
     
     if not unique_instruments:
         print("No instruments found. Check your connections and try again.")
