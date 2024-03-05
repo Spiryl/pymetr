@@ -4,7 +4,7 @@ Subsystem Base Class:
 
 Introduction
 ------------
-The Subsystem base class stands at the heart of a sophisticated library designed to abstract and simplify interaction with a myriad of test and measurement devices. Its fundamental purpose is to transform an object-oriented programming model into SCPI (Standard Commands for Programmable Instruments) commands, which are the lingua franca for controlling modern test equipment. This document delves into the theory of operation behind the Subsystem base class, elucidating how it dynamically generates and executes SCPI commands based on user interaction with the object model.
+The ``Subsystem`` base class stands at the heart of a sophisticated library designed to abstract and simplify interaction with a myriad of test and measurement devices. Its fundamental purpose is to transform an object-oriented programming model into SCPI (Standard Commands for Programmable Instruments) commands, which are the lingua franca for controlling modern test equipment. This document delves into the theory of operation behind the Subsystem base class, elucidating how it dynamically generates and executes SCPI commands based on user interaction with the object model.
 
 Conceptual Foundation
 ---------------------
@@ -12,7 +12,7 @@ Conceptual Foundation
 SCPI commands follow a hierarchical, dot-separated syntax that mirrors the organization of instrument functionalities into subsystems and parameters. For example, the command `:SENS:VOLT:DC:NPLC 10` sets the number of power line cycles (NPLC) for DC voltage sensing to 10.
 
 **Object-Oriented Mapping:**
-The Subsystem base class leverages this hierarchical nature by mapping each level of the command structure to an object or a property within the Python programming environment. This approach enables intuitive interaction with complex instruments by using natural Pythonic constructs.
+The ``Subsystem`` base class leverages this hierarchical nature by mapping each level of the command structure to an object or a property within the Python programming environment. This approach enables intuitive interaction with complex instruments by using natural Pythonic constructs.
 
 Class Diagram: Instrument and Subsystem Hierarchy
 -------------------------------------------------
