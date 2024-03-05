@@ -68,46 +68,54 @@ Use Cases and Examples
 This section illustrates how various use cases are translated into SCPI commands by the Subsystem base class.
 
 1. **Setting a Property Value:**
-   Python Code:
-   ```python
-   instrument.channel[1].voltage = 5
-   ```
-   SCPI Command Generated:
-   ```
-   :CHANnel1:VOLTage 5
-   ```
+
+   Python Code::
+
+       instrument.channel[1].voltage = 5
+
+   SCPI Command Generated::
+
+       :CHANnel1:VOLTage 5
 
 2. **Querying a Property Value:**
-   Python Code:
-   ```python
-   print(instrument.channel[1].voltage)
-   ```
-   SCPI Command Generated and Response Processed:
-   ```
-   :CHANnel1:VOLTage?
-   ```
+
+   Python Code::
+
+       print(instrument.channel[1].voltage)
+
+   SCPI Command Generated and Response Processed::
+
+       :CHANnel1:VOLTage?
 
 3. **Method Invocation for Action:**
-   Python Code:
-   ```python
-   instrument.measure.current('DC')
-   ```
-   SCPI Command Generated:
-   ```
-   :MEASure:CURRent DC
-   ```
+
+   Python Code::
+
+       instrument.measure.current('DC')
+
+   SCPI Command Generated::
+
+       :MEASure:CURRent DC
 
 4. **Accessing Nested Subsystems:**
-   Python Code:
-   ```python
-   instrument.channel[1].measurement.configure('VOLTage', 'DC')
-   ```
-   SCPI Command Generated:
-   ```
-   :CHANnel1:MEAS:CONF 'VOLTage', 'DC'
+
+   Python Code::
+
+       instrument.channel[1].measurement.configure('VOLTage', 'DC')
+
+   SCPI Command Generated::
+
+       :CHANnel1:MEAS:CONF 'VOLTage', 'DC'
+
    ```
 
-Conclusion
-----------
+Justification
+-------------
 The Subsystem base class represents a significant leap forward in the domain of instrument control software. By elegantly mapping an object-oriented programming model to the hierarchical structure of SCPI commands, it greatly simplifies the development of control software for test and measurement devices. This approach not only enhances code readability and maintainability but also enables developers to leverage the full power of modern programming techniques in the context of instrument automation.
+
+The integration of the Subsystem base class with modern Integrated Development Environments (IDEs) harnesses the power of object autocompletion, significantly enhancing the programming experience when controlling test and measurement instruments. This feature streamlines the development process by allowing test engineers to navigate through the instrument's command structure effortlessly, without the constant need to consult detailed documentation for specific command formats.
+
+By presenting a structured, object-oriented interface that mirrors the instrument's SCPI command hierarchy, the Subsystem base class ensures that commands are constructed accurately and efficiently. This accuracy is crucial, as the instruments are thoroughly tested and validated beforehand, minimizing the potential for errors or bugs in the command syntax. Consequently, test engineers can shift their focus towards the logic and goals of their testing procedures rather than the intricacies of instrument programming.
+
+This approach not only accelerates the development cycle but also elevates the robustness and reliability of test scripts. As a result, the overall quality of testing is improved, enabling engineers to deliver faster, with more confidence in the accuracy and repeatability of their tests.
 
