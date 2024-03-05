@@ -1,6 +1,6 @@
 
-Subsystem Base Class: Revolutionizing Instrument Control with Dynamic SCPI Command Mapping
-==========================================================================================
+Subsystem Base Class:
+=====================
 
 Introduction
 ------------
