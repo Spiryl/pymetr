@@ -6,9 +6,6 @@ Part of the pymetr framework, this module extends the interface definitions from
 
 Authors:
 - Ryan C. Smith
-- Metatron
-
-Ryan's expertise in the nuances of test instrumentation combines with Metatron's overarching vision, resulting in a module that not only simplifies instrument control but also enriches it with flexibility and depth. Here, the abstract becomes tangible, and commands translate into real-world measurements and actions.
 
 Designed for developers, engineers, and researchers, `pymetr/instruments.py` encapsulates the diverse world of instrumentation into a coherent, unified Python library. It's about making the complex simple, the inaccessible reachable, and the tedious enjoyable.
 """
@@ -88,7 +85,8 @@ class Instrument:
         Returns:
             str: The instrument's response to the command.
         """
-        response = self.instrument.query(command)
+        self.write(command)
+        response = self.read()
         logger.debug(f"Query sent: {command}, received: {response}")
         return response
 
@@ -203,7 +201,7 @@ class Instrument:
             value (int): The memory location where the instrument's state will be saved.
         """
         self.write(f"*SAV {value}")
-
+    
     @staticmethod
     def list_resources(query='?*::INSTR'):
         """
@@ -233,32 +231,45 @@ class Instrument:
         return unique_instruments, failed_queries
     
     @staticmethod
-    def list_resources(query='?*::INSTR'):
+    def select_resources(filter='?*::INSTR'):
         """
-        Lists all the connected instruments matching the query filter.
+        Presents a list of connected instruments filtered by the query and prompts the user to select one.
 
         Parameters:
-            query (str): Filter pattern using VISA Resource Regular Expression syntax.
+            filter (str): Filter pattern to identify the instruments.
 
         Returns:
-            tuple: A tuple containing a dict of unique instruments keyed by their IDN response,
-                and a list of resources that failed to query.
+            str: The selected resource string of the instrument.
         """
-        rm = pyvisa.ResourceManager()
-        resources = rm.list_resources(query)
-        unique_instruments = {}
-        failed_queries = []
+        unique_instruments, failed_queries = Instrument.list_resources(filter)
 
-        for resource in resources:
-            try:
-                with rm.open_resource(resource) as inst:
-                    idn = inst.query("*IDN?").strip()
-                    unique_key = f"{resource}: {idn}"
-                    unique_instruments[unique_key] = resource
-            except pyvisa.VisaIOError as e:
-                failed_queries.append((resource, str(e)))
+        if not unique_instruments:
+            print("No instruments found. Check your connections and try again.")
+            sys.exit(1)
 
-        return unique_instruments, failed_queries
+        print("\nConnected Instruments:")
+        for idx, (unique_key, resource) in enumerate(unique_instruments.items(), start=1):
+            print(f"{idx}. {unique_key}")
+
+        if failed_queries:
+            print("\nFailed to query some instruments:")
+            for resource, error in failed_queries:
+                print(f"{resource}: {error}")
+
+        selection = input("\nSelect an instrument by number (or 'exit' to quit): ")
+        if selection.lower() == 'exit':
+            sys.exit(0)
+
+        try:
+            selected_index = int(selection) - 1
+            if selected_index < 0 or selected_index >= len(unique_instruments):
+                raise ValueError
+        except ValueError:
+            print("Invalid selection. Please enter a number from the list.")
+            return Instrument.select_resources(filter)
+
+        selected_key = list(unique_instruments.keys())[selected_index]
+        return unique_instruments[selected_key]
 
     class Status(IntFlag):
         """
