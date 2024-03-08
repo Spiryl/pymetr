@@ -50,7 +50,7 @@ This example demonstrates how to use the WaveGen subsystem of an instrument to c
         inst.wavegen.frequency = '1MHz'  # Triggers inst.write(":WGEN:FREQ 1MHz")
         inst.wavegen.amplitude = 2  # Triggers inst.write(":WGEN:VOLT 2")
         inst.wavegen.offset = 0.5  # Triggers inst.write(":WGEN:VOLT:OFFS 0.5")
-        inst.wavegen.output = WaveGen.OutputState.ON  # Triggers inst.write(":WGEN:OUTP ON")
+        inst.wavegen.output = WaveGen.Output.ON  # Triggers inst.write(":WGEN:OUTP ON")
 
         # Accessing properties triggers SCPI query commands:
         print(inst.wavegen.function)  # Triggers inst.query(":WGEN:FUNC?") and returns the function mode
