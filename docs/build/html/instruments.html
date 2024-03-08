@@ -22,7 +22,7 @@
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Practical Coding Example: WaveGen Subsystem" href="subsystems.html" />
+    <link rel="next" title="Understanding Subsystems" href="subsystem_theory.html" />
     <link rel="prev" title="Quick Start Guide" href="quickstart.html" /> 
 </head>
 
@@ -79,11 +79,8 @@
 </li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="subsystems.html">Practical Coding Example: WaveGen Subsystem</a></li>
-<li class="toctree-l1"><a class="reference internal" href="subsystems.html#visual-representation-of-property-to-command-translation">Visual Representation of Property to Command Translation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="subsystem_theory.html">Understanding Subsystems</a></li>
 <li class="toctree-l1"><a class="reference internal" href="factories.html">Leveraging Command Parameters and Options for Efficient Instrument Control</a></li>
-<li class="toctree-l1"><a class="reference internal" href="design.html">Subsystem Practical Coding Example</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oscilloscope.html">Oscilloscope Extension</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oscilloscope.html#root-level-functions">Root-Level Functions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="packaging.html">Installing the pymetr Package</a></li>
@@ -121,7 +118,7 @@
              
   <section id="instrument-control-library">
 <h1>Instrument Control Library<a class="headerlink" href="#instrument-control-library" title="Link to this heading"></a></h1>
-<p>The <code class="docutils literal notranslate"><span class="pre">Instruments</span> <span class="pre">Library</span></code> is engineered as the foundational framework for interfacing and commanding a wide range of test and measurement devices. At the core of this framework is the <code class="docutils literal notranslate"><span class="pre">Instrument</span></code> base class, which interfaces with the PyVISA library to support various communication protocols and instrument-specific operations.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">instrument</span></code> Library is engineered as the foundational framework for interfacing and commanding a wide range of test and measurement devices. At the core of this framework is the <code class="docutils literal notranslate"><span class="pre">Instrument</span></code> base class, which interfaces with the PyVISA library to support various communication protocols and instrument-specific operations.</p>
 <section id="instrument-base-class">
 <h2>Instrument Base Class<a class="headerlink" href="#instrument-base-class" title="Link to this heading"></a></h2>
 <p>The <code class="docutils literal notranslate"><span class="pre">Instrument</span></code> base class unifies the API for interacting with instruments of diverse nature. It utilizes PyVISA as the backend for communication, covering standard protocols such as GPIB, RS232, USB, and Ethernet. It is designed to be extended for custom interfaces and communication protocols.</p>
@@ -427,7 +424,7 @@ It’s like setting up push notifications for the events you actually care about
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
         <a href="quickstart.html" class="btn btn-neutral float-left" title="Quick Start Guide" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="subsystems.html" class="btn btn-neutral float-right" title="Practical Coding Example: WaveGen Subsystem" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="subsystem_theory.html" class="btn btn-neutral float-right" title="Understanding Subsystems" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

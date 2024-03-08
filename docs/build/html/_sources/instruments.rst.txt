@@ -1,7 +1,7 @@
 Instrument Control Library
 ==========================
 
-The ``Instruments Library`` is engineered as the foundational framework for interfacing and commanding a wide range of test and measurement devices. At the core of this framework is the ``Instrument`` base class, which interfaces with the PyVISA library to support various communication protocols and instrument-specific operations.
+The ``instrument`` Library is engineered as the foundational framework for interfacing and commanding a wide range of test and measurement devices. At the core of this framework is the ``Instrument`` base class, which interfaces with the PyVISA library to support various communication protocols and instrument-specific operations.
 
 Instrument Base Class
 ---------------------
