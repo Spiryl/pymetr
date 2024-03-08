@@ -1,4 +1,4 @@
-# Start of c:\Users\Ryan\Documents\GitHub\Pymetr\docs\bible.rst
+# Start of c:\Users\Ryan\Documents\GitHub\pymetr\docs\bible.rst
 Style Rules
 ==================
 
@@ -70,9 +70,114 @@ Directory Names
 - Keep directory names lowercase and avoid using underscores unless it improves readability.
 - Directories that are packages (i.e., contain an `__init__.py` file) should follow package naming conventions: `mypackage`.
 - Non-package directories, like those for documentation, static files, or configuration, can use hyphens to improve readability: `config-files`, `static-assets`.
-# End of c:\Users\Ryan\Documents\GitHub\Pymetr\docs\bible.rst
+# End of c:\Users\Ryan\Documents\GitHub\pymetr\docs\bible.rst
 
-# Start of c:\Users\Ryan\Documents\GitHub\Pymetr\docs\doc-build.rst
+# Start of c:\Users\Ryan\Documents\GitHub\pymetr\docs\design.rst
+Subsystem Practical Coding Example
+==================================
+
+This section provides a concrete example of how to create a subsystem within the library, using the waveform subsystem of an oscilloscope as a case study. It highlights the use of properties with getters and setters to keep the software model and the physical instrument state synchronized.
+
+Subsystem Synchronization
+-------------------------
+
+The library employs property decorators to define getters and setters for instrument parameters, facilitating the real-time synchronization of the software model with the instrument's actual settings. This synchronization ensures that changes to parameters within the software are immediately reflected in the instrument's configuration, allowing for robust error handling and prompt feedback.
+
+**Getters and Setters:**
+
+- **Getters**: Retrieve the current value of an instrument setting directly from the hardware, ensuring that the software's state is always up-to-date.
+- **Setters**: Send updated values to the instrument whenever a property is assigned a new value, followed by querying the instrument to validate the change.
+
+These mechanisms ensure that the instrument's object model within the software and its physical state remain aligned, providing a reliable and consistent interface for users.
+
+Creating the Waveform Subsystem
+-------------------------------
+
+The waveform subsystem controls waveform settings on the oscilloscope. It demonstrates how to encapsulate SCPI commands for setting and querying waveform parameters, such as points, points mode, and format.
+
+.. code-block:: python
+   :caption: Waveform Subsystem Example
+   :name: waveform-subsystem-example
+
+   class WaveformSubsystem(InstrumentSubsystem):
+       """A class to represent the waveform subsystem of an oscilloscope."""
+       
+       def __init__(self, parent):
+           super().__init__(parent)
+           self._points = None
+           self._points_mode = None
+           self._format = None
+
+       @property
+       def points(self):
+           """Gets/sets the number of points in the waveform."""
+           if self._points is None:
+               self._points = int(self._parent.query(":WAVEFORM:POINTS?"))
+           return self._points
+
+       @points.setter
+       def points(self, value):
+           self._parent.write(f":WAVEFORM:POINTS {value}")
+           self._points = value  # Synchronize the software model with the instrument
+
+       @property
+       def points_mode(self):
+           """Gets/sets the points mode of the waveform."""
+           if self._points_mode is None:
+               self._points_mode = self._parent.query(":WAVEFORM:POINTS:MODE?")
+           return self._points_mode
+
+       @points_mode.setter
+       def points_mode(self, value):
+           self._parent.write(f":WAVEFORM:POINTS:MODE {value}")
+           self._points_mode = value  # Synchronize the software model with the instrument
+
+       @property
+       def format(self):
+           """Gets/sets the format of the waveform data."""
+           if self._format is None:
+               self._format = self._parent.query(":WAVEFORM:FORMAT?")
+           return self._format
+
+       @format.setter
+       def format(self, value):
+           self._parent.write(f":WAVEFORM:FORMAT {value}")
+           self._format = value  # Synchronize the software model with the instrument
+
+       def sync(self):
+           """Synchronizes the subsystem with the current instrument settings."""
+           self._points = None
+           self._points_mode = None
+           self._format = None
+           # This forces the properties to re-query the instrument when next accessed
+
+Using the Waveform Subsystem
+----------------------------
+
+With the waveform subsystem defined, users can interact with the oscilloscope's waveform settings intuitively:
+
+.. code-block:: python
+   :caption: Using the Waveform Subsystem
+   :name: using-waveform-subsystem
+
+   oscilloscope = Oscilloscope('GPIB::ADDRESS')
+   oscilloscope.open()
+
+   # Configure the waveform settings
+   oscilloscope.waveform.points = 1200
+   oscilloscope.waveform.points_mode = 'MAX'
+   oscilloscope.waveform.format = 'ASC'
+
+   # Retrieve and print the current waveform settings
+   print(f"Waveform Points: {oscilloscope.waveform.points}")
+   print(f"Waveform Points Mode: {oscilloscope.waveform.points_mode}")
+   print(f"Waveform Format: {oscilloscope.waveform.format}")
+
+This example demonstrates how to encapsulate the control and querying of instrument settings within a subsystem, providing a clear and straightforward interface for users. The use of property decorators for getters and setters not only simplifies the command structure but also ensures that the software model remains in sync with the physical state of the instrument, enhancing usability and reliability.
+
+# End of c:\Users\Ryan\Documents\GitHub\pymetr\docs\design.rst
+
+# Start of c:\Users\Ryan\Documents\GitHub\pymetr\docs\doc-build.rst
 Rebuilding the Documentation
 ============================
 
@@ -209,31 +314,30 @@ Conclusion
 
 You now have a basic Sphinx setup with support for Graphviz diagrams and a professional theme from Read the Docs. Modify the `conf.py` settings and `.rst` files to suit your project's documentation needs.
 
-# End of c:\Users\Ryan\Documents\GitHub\Pymetr\docs\doc-build.rst
+# End of c:\Users\Ryan\Documents\GitHub\pymetr\docs\doc-build.rst
 
-# Start of c:\Users\Ryan\Documents\GitHub\Pymetr\docs\index.rst
-Pymetr Documentation
+# Start of c:\Users\Ryan\Documents\GitHub\pymetr\docs\index.rst
+PyMetr Documentation
 ==========================
 
 Purpose
 -------
 This project empowers engineers to craft their own test routines and software, streamlining design verification automation. By providing a pristine example platform, it serves as the seed for future development, offering a crystalline foundation from which test scripts and virtual front panels for a variety of test equipment can be built.
 
-TODO
+Todo
 ----
 
-Standardize enumerations
-Standardize doc-strings ^^
-Create subsystems.py and refactor
-Update subsystem abstract base class and allowed instrument subsystem calls.
-Documentation graphics and hyper-links
-Start spectrum analyzer class
-Start power meter class
-Get package published
-Rework GUI controls
-Refactor GUI acquisition thread
-Lunch and Learn!!
-
+- Standardize enumeration string format across subsystems.
+- Add doc-strings to subsystem enum types explaining operation modes.
+- Standardize doc-strings format away from the sphinx style parameters.
+- Create subsystems.py to manage all subystems and refactor.
+- Update subsystem abstract base class and allowed instrument subsystem calls.
+- Documentation graphics and hyper-links.
+- Start spectrum analyzer class.
+- Start power meter class.
+- Get package published. 
+- Rework GUI controls.
+- Refactor Oscilloscope GUI acquisition thread.
 
 System Dependencies
 -------------------
@@ -241,18 +345,17 @@ System Dependencies
 - **pyvisa**: Instrument communication
 - **pyside6**: Qt bindings and GUI application development
 - **numpy**: Efficient numerical computations
-- **logging**: Debugging and diagnostic output
-- **enum**: Enumerations for Python
 - **vispy**: High-performance graphics
-
 
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
    
    quickstart
-   interfaces
    instruments
+   subsystems
+   subsystem_theory
+   design
    oscilloscope
    packaging
    doc-build
@@ -260,189 +363,75 @@ System Dependencies
    bible
    logging
    unit-test
-# End of c:\Users\Ryan\Documents\GitHub\Pymetr\docs\index.rst
 
-# Start of c:\Users\Ryan\Documents\GitHub\Pymetr\docs\instruments.rst
+# End of c:\Users\Ryan\Documents\GitHub\pymetr\docs\index.rst
+
+# Start of c:\Users\Ryan\Documents\GitHub\pymetr\docs\instruments.rst
 Instrument Control Library
 ==========================
 
-The ``Instrument Control Library`` forms the backbone of a flexible system designed to communicate with and control a variety of test and measurement hardware. From the foundational ``Instrument`` base class to the specialized interface classes and modular subsystems, this library streamlines the development and execution of instrument control applications.
+The ``Instruments Library`` is engineered as the foundational framework for interfacing and commanding a wide range of test and measurement devices. At the core of this framework is the ``Instrument`` base class, which interfaces with the PyVISA library to support various communication protocols and instrument-specific operations.
 
 Instrument Base Class
 ---------------------
 
-At the heart of the library is the ``Instrument`` base class, providing a unified API for interaction with diverse instruments. Leveraging PyVISA for backend communication, it supports standard protocols like GPIB, RS232, USB, and Ethernet, while also offering a path to integrate more specialized interfaces such as PXI hardware drivers and LXI protocols.
+The ``Instrument`` base class unifies the API for interacting with instruments of diverse nature. It utilizes PyVISA as the backend for communication, covering standard protocols such as GPIB, RS232, USB, and Ethernet. It is designed to be extended for custom interfaces and communication protocols.
 
-.. autoclass:: Pymetr.instruments.Instrument
-   :members:
-   :undoc-members:
-   :show-inheritance:
+**Key Features:**
 
-Key Features:
-- Standardized connection management (open/close).
-- Reading and writing capabilities for SCPI-compliant and custom commands.
-- Query execution with response handling.
-- Instrument identification and status management.
+- Standardized management of connections (open/close).
+- Execution of SCPI-compliant and customized commands (read/write).
+- Immediate query execution with built-in response processing.
+- Reliable instrument identification and status management.
 
 Class Diagram
 -------------
 
+The class diagram illustrates the relationship between the PyVISA backend and the ``Instrument`` class. It highlights how the ``Instrument`` class extends PyVISA's functionality with additional methods for controlling measurement devices.
+
 .. graphviz::
 
-   digraph instrument_hierarchy {
+   digraph architecture {
       node [shape=record, fontname=Helvetica, fontsize=10];
       
-      Instrument [label="{Instrument|+ open()\l+ close()\l+ write(command: str)\l+ read(): str\l+ query(command: str): str\l}"]
-      Instrument [label="{Instrument}"]
-      VXIInstrument [label="{VXIInstrument}"]
-      LXIInstrument [label="{LXIInstrument}"]
+      PyVISA [label="{PyVISA|+ open_resource()\l+ list_resources()\l+ read()\l+ write()\l...}"]
+      Instrument [label="{Instrument|+ identity(): str\l+ status(): str\l+ reset()\l+ clear_status()\l...}"]
 
-      Instrument -> Instrument [arrowhead="onormal"]
-      Instrument -> VXIInstrument [arrowhead="onormal"]
-      Instrument -> LXIInstrument [arrowhead="onormal"]
+      PyVISA -> Instrument [arrowhead="onormal", style="dashed"]
 
-      label="Instrument Class Hierarchy";
+      label="Instrument Class Architecture";
       fontsize=12;
    }
 
-Instrument Subsystems
+Utilizing the Library
 ---------------------
 
-The library's design emphasizes modularity through instrument subsystems. These subsystems allow for targeted control and testing of specific instrument functionalities, facilitating a granular approach to instrument interaction.
-
-Subsystem Integration:
-
-.. graphviz::
-
-   digraph subsystem_relationship {
-      node [shape=record, fontname=Helvetica, fontsize=10];
-      
-      Instrument [label="{Instrument|+ sync()\l}"]
-      TimebaseSubsystem [label="{TimebaseSubsystem}"]
-      TriggerSubsystem [label="{TriggerSubsystem}"]
-      MeasurementSubsystem [label="{MeasurementSubsystem}"]
-
-      Instrument -> TimebaseSubsystem [arrowhead="onormal"]
-      Instrument -> TriggerSubsystem [arrowhead="onormal"]
-      Instrument -> MeasurementSubsystem [arrowhead="onormal"]
-
-      { rank=same; TimebaseSubsystem; TriggerSubsystem; MeasurementSubsystem; }
-
-      label="Instrument Subsystem Relationships";
-      fontsize=12;
-   }
-
-Interactive CLI
----------------
-
-The library includes an interactive CLI for direct engagement with instruments. This tool is invaluable for rapid testing, debugging, and hands-on learning, providing a straightforward interface for real-time instrument control.
-
-Example Usage:
+Below is a succinct example illustrating the application of the library within a Python script for fundamental instrument interaction:
 
 .. code-block:: python
 
-   if __name__ == "__main__":
-       # CLI functionality detailed here
+   from pymetr.instruments import Instrument
 
-Using the Library
------------------
-
-Below is a simple example showcasing the library's usage within a Python environment:
-
-.. code-block:: python
-
-   from Pymetr import Instrument
-
-   # Discover and select instruments
+   # Instrument discovery and selection
    instrument_address = Instrument.select_resources()
-   my_instrument = Instrument(instrument_address, interface_type='pyvisa')
+   my_instrument = Instrument(instrument_address)
    my_instrument.open()
 
-   # Basic instrument interaction
-   print(my_instrument.query('*IDN?'))
-   my_instrument.write('MEAS:VOLT:DC?')
-   print(my_instrument.read())
+   # Engaging with the instrument
+   print(my_instrument.identity())
+   print(my_instrument.query('MEAS:VOLT:DC?'))
 
-   # Close the connection
-   my_instrument.close()
+Instrument Class API
+--------------------
 
-# End of c:\Users\Ryan\Documents\GitHub\Pymetr\docs\instruments.rst
-
-# Start of c:\Users\Ryan\Documents\GitHub\Pymetr\docs\interfaces.rst
-Interfaces Module
-=================
-
-The ``interfaces`` module within the ``Pymetr`` package provides the infrastructure to implement various communication interfaces for instruments. It includes a base class for defining interfaces and derived classes for specific interface types such as VISA or TCP/IP.
-
-.. note:: This module uses the factory design pattern to create instances of interfaces dynamically based on the requirements.
-
-InstrumentInterface
--------------------
-
-The ``InstrumentInterface`` class is an abstract base class that defines the required methods for any communication interface.
-
-.. autoclass:: Pymetr.interfaces.InstrumentInterface
+.. autoclass:: pymetr.instruments.Instrument
    :members:
    :undoc-members:
    :show-inheritance:
 
-The interface class enforces implementation of the following methods:
+# End of c:\Users\Ryan\Documents\GitHub\pymetr\docs\instruments.rst
 
-- ``open``: Initializes the communication channel.
-- ``close``: Terminates the communication channel.
-- ``write``: Transmits a command to the instrument.
-- ``read``: Receives data from the instrument.
-- ``query``: Executes a write followed by a read for streamlined communication.
-
-Factory Method
---------------
-
-A key feature of the module is the factory method ``create_interface``, which facilitates the creation of interface objects.
-
-.. code-block:: python
-
-   # Creating a VISA interface
-   visa_interface = InstrumentInterface.create_interface('pyvisa', resource_string)
-
-   # Creating a TCP/IP interface
-   tcpip_interface = InstrumentInterface.create_interface('tcpip', '192.168.1.100:5025')
-
-Interface Classes
------------------
-
-Derived classes implement specific types of interfaces.
-
-.. autoclass:: Pymetr.interfaces.VisaInterface
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-.. autoclass:: Pymetr.interfaces.TCPIPInterface
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-Each interface class provides tailored methods for establishing connections and communicating using the respective protocols.
-
-Graphical Representation of the Model
--------------------------------------
-
-.. graphviz::
-
-   digraph interfaces {
-       node [shape=record, fontname=Helvetica, fontsize=10];
-       InstrumentInterface [label="{InstrumentInterface|+ open()\l+ close()\l+ write(command: str)\l+ read(): str\l+ query(command: str): str\l|create_interface(interface_type: str, resource_string: str)}"];
-       VisaInterface [label="{VisaInterface|...}"];
-       TCPIPInterface [label="{TCPIPInterface|...}"];
-
-       InstrumentInterface -> VisaInterface;
-       InstrumentInterface -> TCPIPInterface;
-   }
-
-The above diagram illustrates the relationship between the ``InstrumentInterface`` and its derived classes. The ``InstrumentInterface`` acts as the blueprint, while ``VisaInterface`` and ``TCPIPInterface`` provide the concrete implementations for their respective communication protocols.
-# End of c:\Users\Ryan\Documents\GitHub\Pymetr\docs\interfaces.rst
-
-# Start of c:\Users\Ryan\Documents\GitHub\Pymetr\docs\logging.rst
+# Start of c:\Users\Ryan\Documents\GitHub\pymetr\docs\logging.rst
 Logging in Python Projects
 ==========================
 
@@ -509,9 +498,9 @@ Further Reading
 The Python ``logging`` module is versatile and can be customized extensively to suit the needs of small to large applications. Proper use of logging can greatly enhance the maintainability and debuggability of an application.
 
 
-# End of c:\Users\Ryan\Documents\GitHub\Pymetr\docs\logging.rst
+# End of c:\Users\Ryan\Documents\GitHub\pymetr\docs\logging.rst
 
-# Start of c:\Users\Ryan\Documents\GitHub\Pymetr\docs\oscilloscope.rst
+# Start of c:\Users\Ryan\Documents\GitHub\pymetr\docs\oscilloscope.rst
 Oscilloscope Extension
 ======================
 
@@ -519,7 +508,7 @@ The ``Oscilloscope`` class serves as an orchestrator for the complex interplay o
 
 This design philosophy allows for a high degree of modularity, enabling each subsystem to be developed, tested, and modified independently while the ``Oscilloscope`` class provides a cohesive and unified interface for the user. The result is a robust and scalable structure, where the complexity of the instrument's functionalities is managed with grace and precision.
 
-The ``Pymetr`` package reflects this architecture, segregating related functionalities into dedicated subsystem classes. This not only enhances code organization but also fosters intuitive and object-oriented control over each aspect of the oscilloscope. Below is a visual representation of the ``Oscilloscope`` class composition:
+The ``pymetr`` package reflects this architecture, segregating related functionalities into dedicated subsystem classes. This not only enhances code organization but also fosters intuitive and object-oriented control over each aspect of the oscilloscope. Below is a visual representation of the ``Oscilloscope`` class composition:
 
 .. graphviz::
 
@@ -556,7 +545,7 @@ The ``Pymetr`` package reflects this architecture, segregating related functiona
 Oscilloscope Core
 -----------------
 
-.. automodule:: Pymetr.oscilloscope.core.Oscilloscope
+.. automodule:: pymetr.oscilloscope.core.Oscilloscope
    :members:
    :undoc-members:
    :show-inheritance:
@@ -570,7 +559,7 @@ Each subsystem class focuses on a specific area of oscilloscope functionality, p
 Acquire Subsystem
 -----------------
 
-.. automodule:: Pymetr.oscilloscope.acquire
+.. automodule:: pymetr.oscilloscope.acquire
    :members:
    :undoc-members:
    :show-inheritance:
@@ -580,7 +569,7 @@ The ``Acquire`` subsystem manages data acquisition settings, offering control ov
 Channel Subsystem
 -----------------
 
-.. automodule:: Pymetr.oscilloscope.channel
+.. automodule:: pymetr.oscilloscope.channel
    :members:
    :undoc-members:
    :show-inheritance:
@@ -590,7 +579,7 @@ Each channel of the oscilloscope is represented by a ``Channel`` object, allowin
 Timebase Subsystem
 ------------------
 
-.. automodule:: Pymetr.oscilloscope.timebase
+.. automodule:: pymetr.oscilloscope.timebase
    :members:
    :undoc-members:
    :show-inheritance:
@@ -600,7 +589,7 @@ The ``Timebase`` subsystem governs the horizontal sweep of the oscilloscope, dic
 Trigger Subsystem
 -----------------
 
-.. automodule:: Pymetr.oscilloscope.trigger
+.. automodule:: pymetr.oscilloscope.trigger
    :members:
    :undoc-members:
    :show-inheritance:
@@ -610,7 +599,7 @@ Trigger settings are crucial for accurate waveform capture. The ``Trigger`` subs
 Waveform Subsystem
 ------------------
 
-.. automodule:: Pymetr.oscilloscope.waveform
+.. automodule:: pymetr.oscilloscope.waveform
    :members:
    :undoc-members:
    :show-inheritance:
@@ -620,7 +609,7 @@ After acquisition, the ``Waveform`` subsystem takes over, dealing with waveform 
 WaveGen Subsystem
 -----------------
 
-.. automodule:: Pymetr.oscilloscope.wavegen
+.. automodule:: pymetr.oscilloscope.wavegen
    :members:
    :undoc-members:
    :show-inheritance:
@@ -631,7 +620,7 @@ Some oscilloscopes come with a built-in waveform generator. The ``WaveGen`` subs
 Root-Level Functions
 ====================
 
-Beyond the subsystems, the ``Oscilloscope`` class includes root-level functions that are commonly used across different subsystems, ensuring they're accessible in a centralized fashion. These include utility functions like `run`, `stop`, `single`, and `autoscale`, which are independent of the subsystem settings but crucial for the overall operation of the oscilloscope.
+Beyond the subsystems, the ``Oscilloscope`` class includes root-level functions. These include functions like `run`, `stop`, `single`, and `autoscale`.
 
 .. note:: The ``Oscilloscope`` class is designed with the user in mind, abstracting the complexities of the oscilloscope operation and providing a user-friendly interface that reflects the natural workflow of an engineer or technician working with the instrument.
 
@@ -642,7 +631,7 @@ To begin using the ``Oscilloscope`` class, first ensure that PyVISA is installed
 
 .. code-block:: python
 
-   from Pymetr.oscilloscope.core import Oscilloscope
+   from pymetr.oscilloscope.core import Oscilloscope
 
    # Replace with your oscilloscope's VISA resource string
    resource_string = 'TCPIP0::192.168.1.111::hislip0::INSTR'
@@ -651,33 +640,45 @@ To begin using the ``Oscilloscope`` class, first ensure that PyVISA is installed
    print(f"Identification string: '{osc.identity()}'")
    osc.close()
 
-# End of c:\Users\Ryan\Documents\GitHub\Pymetr\docs\oscilloscope.rst
+Extending the Oscilloscope Class
+---------------------------------
 
-# Start of c:\Users\Ryan\Documents\GitHub\Pymetr\docs\packaging.rst
+Some specific models of osilloscopes may have subsystems or settings which differ from the Keysight DSOX1204G. That this class can be used as a base class to create specific models of oscilloscopes.
+
+.. code-block:: python
+
+   from pymetr.oscilloscope.core import Oscilloscope
+
+   Class oscilloscope_XYZ(Oscilloscope):
+      # Continue example code
+
+# End of c:\Users\Ryan\Documents\GitHub\pymetr\docs\oscilloscope.rst
+
+# Start of c:\Users\Ryan\Documents\GitHub\pymetr\docs\packaging.rst
 ====================================
-Installing the Pymetr Package
+Installing the pymetr Package
 ====================================
 
-The Pymetr package is designed to facilitate advanced instrumentation capabilities in Python, including oscilloscope controls and data acquisition tools. This document outlines how to install the Pymetr package, either for development purposes or for use in other projects.
+The pymetr package is designed to facilitate advanced instrumentation capabilities in Python, including oscilloscope controls and data acquisition tools. This document outlines how to install the pymetr package, either for development purposes or for use in other projects.
 
 Setup.py File
 -------------
 
-The `setup.py` file is the build script for setuptools. It tells setuptools about your package (such as the name and version) as well as which code files to include. An example `setup.py` file for Pymetr might look like this:
+The `setup.py` file is the build script for setuptools. It tells setuptools about your package (such as the name and version) as well as which code files to include. An example `setup.py` file for pymetr might look like this:
 
 .. code-block:: python
 
    from setuptools import setup, find_packages
 
    setup(
-       name='Pymetr',
+       name='pymetr',
        version='0.1.0',
        packages=find_packages(),
        description='Python Instrumentation Package',
        long_description=open('README.md').read(),
        author='Your Name',
        author_email='your.email@example.com',
-       url='https://github.com/yourusername/Pymetr',
+       url='https://github.com/yourusername/pymetr',
        license='MIT',
        install_requires=[
            'numpy',
@@ -692,25 +693,25 @@ This script is executed to install your package. The `find_packages()` function 
 Installing the Package
 ----------------------
 
-There are two main scenarios for installing the Pymetr package:
+There are two main scenarios for installing the pymetr package:
 
-1. **Installing for Use in Projects**: If you wish to use Pymetr as a dependency in other projects, you can install it from your local copy or from a Git repository.
+1. **Installing for Use in Projects**: If you wish to use pymetr as a dependency in other projects, you can install it from your local copy or from a Git repository.
 
    To install a local copy directly:
 
    .. code-block:: bash
 
-      pip install path/to/Pymetr
+      pip install path/to/pymetr
 
    Or, if your project is hosted on a Git repository, you can install it using:
 
    .. code-block:: bash
 
-      pip install git+https://github.com/yourusername/Pymetr.git
+      pip install git+https://github.com/yourusername/pymetr.git
 
-2. **Development Installation**: If you're developing Pymetr and want to test changes as you make them, you should install the package in "editable" mode. This allows you to modify the source code and see those changes reflected without having to reinstall the package.
+2. **Development Installation**: If you're developing pymetr and want to test changes as you make them, you should install the package in "editable" mode. This allows you to modify the source code and see those changes reflected without having to reinstall the package.
 
-   Navigate to the root directory of your Pymetr project and run:
+   Navigate to the root directory of your pymetr project and run:
 
    .. code-block:: bash
 
@@ -721,38 +722,70 @@ There are two main scenarios for installing the Pymetr package:
 Conclusion
 ----------
 
-Installing the Pymetr package is straightforward, whether for use in other projects or for development. The `setup.py` file is crucial for defining package metadata, dependencies, and more. For development purposes, installing in editable mode is highly recommended to facilitate testing and iteration.
+Installing the pymetr package is straightforward, whether for use in other projects or for development. The `setup.py` file is crucial for defining package metadata, dependencies, and more. For development purposes, installing in editable mode is highly recommended to facilitate testing and iteration.
 
 For more information on packaging Python projects, refer to the official Python Packaging User Guide: https://packaging.python.org/tutorials/packaging-projects/
 
-# End of c:\Users\Ryan\Documents\GitHub\Pymetr\docs\packaging.rst
+# End of c:\Users\Ryan\Documents\GitHub\pymetr\docs\packaging.rst
 
-# Start of c:\Users\Ryan\Documents\GitHub\Pymetr\docs\quickstart.rst
+# Start of c:\Users\Ryan\Documents\GitHub\pymetr\docs\quickstart.rst
 Quick Start Guide
 ==================
+
+This guide is designed to quickly acquaint you with the foundational elements necessary for instrument communication using the PyVISA library, understanding the IEEE 488.2 standard, and utilizing the SCPI protocol.
 
 PyVISA and Instrument Communication
 ------------------------------------
 
-PyVISA is an open-source Python library that enables you to control all kinds of measurement devices independently of the interface (e.g., GPIB, RS232, USB, Ethernet). For detailed documentation and source code, visit the `PyVISA documentation <https://pyvisa.readthedocs.io/en/latest/>`_ and the `PyVISA GitHub page <https://github.com/pyvisa/pyvisa>`_.
+PyVISA is a powerful Python library that provides a unified interface for communication with measurement devices across various interfaces, including GPIB, RS232, USB, and Ethernet. As an open-source library, PyVISA simplifies the process of sending commands to and reading responses from your instruments.
+
+- **Documentation and Source Code:** For comprehensive information and to access the source code, please visit the `PyVISA documentation <https://pyvisa.readthedocs.io/en/latest/>`_ and the `PyVISA GitHub page <https://github.com/pyvisa/pyvisa>`_.
 
 IEEE 488.2 Standard
 --------------------
 
-IEEE 488.2 is a standard for programmable instrumentation that defines codes, formats, protocols, and common commands for use with all IEEE 488-compatible devices. For more information on the IEEE 488.2 standard, you can refer to a reputable site such as `Test & Measurement World <https://www.tmworld.com>`_.
+The IEEE 488.2 standard outlines codes, formats, protocols, and common commands for programmable instrumentation, ensuring compatibility across devices from different manufacturers that support the IEEE 488 (GPIB) interface.
+
+- **Further Reading:** For a deeper understanding of the IEEE 488.2 standard and its applications, refer to resources such as `Test & Measurement World <https://www.tmworld.com>`_.
 
 SCPI Protocol
 --------------
 
-SCPI (Standard Commands for Programmable Instruments) defines a standard for syntax and commands to be used in controlling programmable test and measurement devices. This standard ensures that a device from one manufacturer can be controlled and queried in a predictable way using commands from a device of another manufacturer, provided they both adhere to the SCPI standard.
+SCPI, or Standard Commands for Programmable Instruments, is a comprehensive standard that specifies a uniform set of commands for controlling and querying test and measurement devices. This ensures interoperability between devices from different manufacturers, provided they adhere to the SCPI protocol.
 
-Resource Strings and Instrument Identification
------------------------------------------------
+- **Learning More:** To explore more about the SCPI standard and its implementation, visit the `Wikipedia Page On SCPI <https://en.wikipedia.org/wiki/Standard_Commands_for_Programmable_Instruments>`_.
 
-Resource strings are unique identifiers that PyVISA uses to communicate with instruments. They typically contain information about the interface type, the address, and other necessary details for making a connection.
-# End of c:\Users\Ryan\Documents\GitHub\Pymetr\docs\quickstart.rst
+Getting Started with PyVISA
+----------------------------
 
-# Start of c:\Users\Ryan\Documents\GitHub\Pymetr\docs\sphinx.rst
+To begin using PyVISA for instrument communication, you will need to install the library and the necessary backend (NI-VISA or pyvisa-py). Here's a quick rundown to get you started:
+
+1. **Installation:** Install PyVISA using pip:
+
+   .. code-block:: bash
+
+      pip install pyvisa
+
+2. **Identify Your Instrument:** Use PyVISA's resource manager to list connected instruments:
+
+   .. code-block:: python
+
+      import pyvisa
+      rm = pyvisa.ResourceManager()
+      print(rm.list_resources())
+
+3. **Open a Session:** Choose a resource string from the list and open a session to communicate with the instrument:
+
+   .. code-block:: python
+
+      instrument = rm.open_resource('GPIB0::23::INSTR')
+      print(instrument.query('*IDN?'))
+
+This quick start guide aims to provide you with the essential knowledge and steps to embark on instrument communication projects, facilitating a smoother transition into developing sophisticated test and measurement applications.
+
+# End of c:\Users\Ryan\Documents\GitHub\pymetr\docs\quickstart.rst
+
+# Start of c:\Users\Ryan\Documents\GitHub\pymetr\docs\sphinx.rst
 Sphinx Documentation Primer
 ===========================
 
@@ -829,9 +862,166 @@ Introduction to reStructuredText (ReST)
 
 reStructuredText is the default plaintext markup language used by Sphinx. It's designed to be simple and readable, making it easy to create well-structured documentation. To get more familiar with reST and its capabilities, check out the `reStructuredText Primer <https://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html>`_ provided by Sphinx.
 
-# End of c:\Users\Ryan\Documents\GitHub\Pymetr\docs\sphinx.rst
+# End of c:\Users\Ryan\Documents\GitHub\pymetr\docs\sphinx.rst
 
-# Start of c:\Users\Ryan\Documents\GitHub\Pymetr\docs\unit-test.rst
+# Start of c:\Users\Ryan\Documents\GitHub\pymetr\docs\subsystems.rst
+
+Subsystem Architecture for Instrument Control
+=============================================
+
+The Subsystem architecture is a pivotal foundation for creating and managing test and measurement instruments within a Python-based control environment. Its design promotes a modular, object-oriented approach to instrument control, simplifying the development of instrument drivers and enhancing the efficiency of test script creation.
+
+Introduction
+------------
+
+At the core of effective test and measurement automation lies the need for a structured yet flexible way to communicate with and control instruments. The Subsystem architecture addresses this need by offering a dynamic framework that abstracts the complexity of SCPI command hierarchies into an intuitive, Pythonic interface.
+
+Key Features
+------------
+
+- **Modular Design**: Facilitates the creation of instrument drivers by modularizing control commands into discrete subsystems.
+- **Dynamic Command Generation**: Automates the construction and execution of SCPI commands based on the interaction with subsystem properties.
+- **Ease of Use**: Streamlines the writing of test scripts by providing a clear and simple interface for instrument control.
+
+Subsystem in Action: Building Blocks
+------------------------------------
+
+.. graphviz::
+
+    digraph subsystem_blocks {
+        node [shape=record fontname=Helvetica fontsize=10];
+        
+        Instrument [label="Instrument"];
+        Subsystem [label="Subsystem"];
+        Command [label="Command"];
+        
+        Instrument -> Subsystem;
+        Subsystem -> Command;
+        
+        label="Subsystem Architecture Building Blocks";
+    }
+
+The diagram illustrates the hierarchical relationship between the generic `Instrument` class and its `Subsystem` components, down to individual commands.
+
+Creating a Generic Instrument
+------------------------------
+
+.. graphviz::
+
+    digraph subsystem_blocks_extended {
+        node [shape=record, fontname=Helvetica, fontsize=10];
+
+        Instrument [label="{Instrument|+ open()\l+ close()\l+ write(command: str)\l+ read(): str\l+ query(command: str): str\l|attributes: connection, address}"];
+        Subsystem [label="{Subsystem|+ set_value(val)\l+ query()\l|settings: mode, frequency}"];
+        Command [label="Command SCPI: 'SYStem:STATus?'"];
+
+        Instrument -> Subsystem [label=" aggregates"];
+        Subsystem -> Command [label=" generates"];
+
+        label="Subsystem Architecture: Extended Building Blocks";
+        fontsize=12;
+    }
+
+
+This snippet demonstrates the instantiation of a `GenericInstrument`, showcasing the integration of multiple `Subsystem` instances, each representing a different aspect of the instrument's functionality.
+
+Enhanced Usage Example
+----------------------
+
+Let's delve deeper into how the `Subsystem` architecture empowers engineers to effortlessly configure and control a generic instrument:
+
+.. code-block:: python
+
+    # Example: Configuring a generic instrument's subsystem
+    generic_instrument = GenericInstrument()
+    generic_instrument.subsystem1.mode.value = "AUTO"
+    generic_instrument.subsystem2.frequency(1e3)
+
+    # Resultant SCPI Commands:
+    # Setting mode: ":SUBSYS1:MODE AUTO"
+    # Setting frequency: ":SUBSYS2:FREQ 1e3"
+
+.. graphviz::
+
+    digraph usage_example {
+        node [shape=record fontname=Helvetica fontsize=10];
+        
+        Instrument [label="Instrument"];
+        Subsystem1 [label="setting1(Mode)"];
+        Subsystem2 [label="setting2(Frequency)"];
+        
+        Instrument -> Subsystem1 [label=" :setting1 {value}"];
+        Instrument -> Subsystem2 [label=" :setting2 {value}"];
+        
+        label="Enhanced Usage Example";
+    }
+
+The diagrams and code snippets illustrate how engineers can use the `Subsystem` architecture to define and interact with the generic instrument's functionalities, leading to straightforward and intuitive test script development.
+
+Conclusion: Empowering Instrumentation with Subsystem
+------------------------------------------------------
+
+The Subsystem architecture revolutionizes the way engineers create, extend, and utilize instrument control libraries. By abstracting the intricacies of SCPI command structures into a coherent, modular framework, it accelerates the development of robust instrument drivers and streamlines the authoring of test scripts. Its emphasis on modularity, dynamic interaction, and ease of use makes it an indispensable tool in the modern test and measurement automation toolkit.
+
+# End of c:\Users\Ryan\Documents\GitHub\pymetr\docs\subsystems.rst
+
+# Start of c:\Users\Ryan\Documents\GitHub\pymetr\docs\subsystem_theory.rst
+Understanding Subsystems
+========================
+
+Welcome to the deeper dive into our instrumentation framework, focusing on the strategic use of subsystems to streamline instrument control. This section aims to illuminate the theory behind subsystems and their pivotal role in simplifying interaction with test equipment.
+
+Overview
+--------
+
+The Subsystem is a foundational concept in our design philosophy, representing a logical component or a distinct functional unit within an instrument. Examples include waveform generators, oscilloscope channels, or power supply modules. Modeling these functions as separate subsystems enables us to encapsulate functionality, thereby simplifying the complex and making the inaccessible readily manageable.
+
+Why Subsystems?
+---------------
+
+- **Modularity**: Breaks down complex instruments into manageable units for easier development and upkeep.
+- **Reusability**: Allows for development once and deployment everywhere, reducing code duplication across instruments.
+- **Extensibility**: Facilitates the addition of new features to existing instruments with minimal disruption.
+
+How It Works
+------------
+
+Our approach leverages Python classes to encapsulate each subsystem. We utilize a base `Subsystem` class for common functionalities such as command execution and querying. Specialized subsystems inherit from this base class, tailoring it with specific capabilities.
+
+The alignment with the SCPI command tree is particularly noteworthy. Instruments are often structured in a hierarchical command system, mirroring our subsystem model. This similarity allows our subsystem prefixes to closely match those of the SCPI commands, minimizing code duplication and maximizing efficiency.
+
+.. note:: 
+
+   The power of our model lies in its direct alignment with the SCPI command structure, utilizing subsystem prefixes to streamline command execution. This approach reduces code duplication and leverages modern IDEs for autocompletion, enabling script creation without constant reference to the programming manual.
+
+Example: Setting Oscilloscope Parameters
+----------------------------------------
+
+Consider setting parameters on an oscilloscope. Our subsystem approach abstracts the SCPI commands into intuitive property calls, making script development straightforward and IDE-friendly.
+
+.. code-block:: python
+
+   # Assuming `osc` is an instance of an Oscilloscope class with subsystems
+   osc.channel1.bandwidth_limit = True  # Enables BW limit
+   # Behind the scenes: osc.channel1.write(":CHAN1:BANDWIDTH_LIMIT ON")
+
+   osc.channel1.scale = 0.05  # Sets channel scale to 50mV/div
+   # Behind the scenes: osc.channel1.write(":CHAN1:SCALE 0.05")
+
+   print(osc.channel1.measure.voltage_peak_to_peak())  # Queries the peak-to-peak voltage
+   # Behind the scenes: osc.channel1.query(":MEASure:VPP? CHAN1")
+
+This snippet demonstrates how each property or method call on a subsystem translates into a write or query to the instrument, abstracting the complexity of SCPI commands into user-friendly operations.
+
+Next Steps
+----------
+
+The next page delves into the practical implementation of these concepts, showcasing how to create a custom oscilloscope model utilizing our subsystems. This example will highlight the ease of extending the instrument's capabilities and the seamless interaction with its features.
+
+
+# End of c:\Users\Ryan\Documents\GitHub\pymetr\docs\subsystem_theory.rst
+
+# Start of c:\Users\Ryan\Documents\GitHub\pymetr\docs\unit-test.rst
 ======================================
 Unit Testing in Python with unittest
 ======================================
@@ -924,5 +1114,5 @@ Conclusion
 Unit testing is a powerful practice for maintaining high-quality software. The ``unittest`` framework in Python provides a rich set of tools for writing and running tests, ensuring that your code behaves as expected. By integrating unit testing into your development process, you can improve the reliability and maintainability of your projects.
 
 
-# End of c:\Users\Ryan\Documents\GitHub\Pymetr\docs\unit-test.rst
+# End of c:\Users\Ryan\Documents\GitHub\pymetr\docs\unit-test.rst
 

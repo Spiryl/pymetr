@@ -4,7 +4,7 @@ import sys
 from enum import Enum, auto
 
 from pymetr.instruments import Instrument
-from pymetr.oscilloscope.acquire import Acquire
+from pymetr.subsystems import Acquire, Trigger, Timebase, Channel, WaveGen, Waveform
 from pymetr.oscilloscope.trigger import Trigger
 from pymetr.oscilloscope.timebase import Timebase
 from pymetr.oscilloscope.channel import Channel

@@ -1,121 +1,52 @@
+Understanding Subsystems
+========================
 
-Subsystem Base Class:
-=====================
+Welcome to the deeper dive into our instrumentation framework, focusing on the strategic use of subsystems to streamline instrument control. This section aims to illuminate the theory behind subsystems and their pivotal role in simplifying interaction with test equipment.
 
-Introduction
+Overview
+--------
+
+The Subsystem is a foundational concept in our design philosophy, representing a logical component or a distinct functional unit within an instrument. Examples include waveform generators, oscilloscope channels, or power supply modules. Modeling these functions as separate subsystems enables us to encapsulate functionality, thereby simplifying the complex and making the inaccessible readily manageable.
+
+Why Subsystems?
+---------------
+
+- **Modularity**: Breaks down complex instruments into manageable units for easier development and upkeep.
+- **Reusability**: Allows for development once and deployment everywhere, reducing code duplication across instruments.
+- **Extensibility**: Facilitates the addition of new features to existing instruments with minimal disruption.
+
+How It Works
 ------------
-The ``Subsystem`` base class stands at the heart of a sophisticated library designed to abstract and simplify interaction with a myriad of test and measurement devices. Its fundamental purpose is to transform an object-oriented programming model into SCPI (Standard Commands for Programmable Instruments) commands, which are the lingua franca for controlling modern test equipment. This document delves into the theory of operation behind the Subsystem base class, elucidating how it dynamically generates and executes SCPI commands based on user interaction with the object model.
 
-Conceptual Foundation
----------------------
-**SCPI Command Structure:**
-SCPI commands follow a hierarchical, dot-separated syntax that mirrors the organization of instrument functionalities into subsystems and parameters. For example, the command `:SENS:VOLT:DC:NPLC 10` sets the number of power line cycles (NPLC) for DC voltage sensing to 10.
+Our approach leverages Python classes to encapsulate each subsystem. We utilize a base `Subsystem` class for common functionalities such as command execution and querying. Specialized subsystems inherit from this base class, tailoring it with specific capabilities.
 
-**Object-Oriented Mapping:**
-The ``Subsystem`` base class leverages this hierarchical nature by mapping each level of the command structure to an object or a property within the Python programming environment. This approach enables intuitive interaction with complex instruments by using natural Pythonic constructs.
+The alignment with the SCPI command tree is particularly noteworthy. Instruments are often structured in a hierarchical command system, mirroring our subsystem model. This similarity allows our subsystem prefixes to closely match those of the SCPI commands, minimizing code duplication and maximizing efficiency.
 
-Class Diagram: Instrument and Subsystem Hierarchy
--------------------------------------------------
+.. note:: 
 
-.. graphviz::
+   The power of our model lies in its direct alignment with the SCPI command structure, utilizing subsystem prefixes to streamline command execution. This approach reduces code duplication and leverages modern IDEs for autocompletion, enabling script creation without constant reference to the programming manual.
 
-   digraph subsystem_hierarchy {
-      node [shape=record, fontname=Helvetica, fontsize=10];
+Example: Setting Oscilloscope Parameters
+----------------------------------------
 
-      Instrument [label="{Instrument|+ write(command: str)\l+ read(): str\l...}"]
-      Subsystem [label="{Subsystem|+ _build_command()\l+ _execute(command)\l+ query()\l+ value\l...}"]
-      Waveform [label="{Waveform|+ frequency\l+ amplitude\l+ offset\l...}"]
-      Channel [label="{Channel|+ voltage\l+ current\l...}"]
-      ChannelNested [label="{Measurement|+ configure\l+ result\l...}"]
+Consider setting parameters on an oscilloscope. Our subsystem approach abstracts the SCPI commands into intuitive property calls, making script development straightforward and IDE-friendly.
 
-      Instrument -> Subsystem [label=" aggregates"]
-      Subsystem -> Waveform [label=" includes"]
-      Subsystem -> Channel [label=" includes"]
-      Channel -> ChannelNested [label=" aggregates"]
+.. code-block:: python
 
-      label="Instrument and Subsystem Aggregation";
-      fontsize=12;
-   }
+    # Assuming `scope` is an instance of an Oscilloscope class with an Acquire subsystem
+    scope.acquire.type = Acquire.Type.NORMAL  # Sets acquisition type to normal
+    # Behind the scenes: scope.acquire.write("TYPE NORM")
 
-Subsystem Base Class Overview
------------------------------
-The ``Subsystem`` base class encapsulates the core functionality needed to interface with an instrument at the command level. It provides a flexible framework for extending the command hierarchy into nested subsystems, each represented as an object within the library.
+    scope.acquire.sample_rate = 1e6  # Sets sample rate to 1 MSa/s
+    # Behind the scenes: scope.acquire.write("SRATe 1e6")
 
-**Key Features:**
+    print(scope.acquire.depth)  # Queries the current acquisition depth
+    # Behind the scenes: scope.acquire.query("DEPTh?")
 
-- **Dynamic SCPI Command Generation:** Automatically constructs SCPI command strings based on how objects and properties are accessed and manipulated in code.
-- **Hierarchical Object Model:** Organizes control parameters and settings into a nested structure that mirrors the SCPI command hierarchy.
-- **Integrated Communication Layer:** Abstracts the low-level details of instrument communication, offering a simple method for command execution and response handling.
-- **Logging and Debugging Support:** Facilitates development and troubleshooting by providing insightful logging of command transactions.
+This snippet demonstrates how each property or method call on a subsystem translates into a write or query to the instrument, abstracting the complexity of SCPI commands into user-friendly operations.
 
-Theoretical Operation
----------------------
-The operation of the Subsystem base class revolves around three core processes: command construction, execution, and response handling.
+Next Steps
+----------
 
-1. **Command Construction:**
-   - The class dynamically constructs SCPI commands by traversing the object hierarchy, appending each object's corresponding command segment to form a complete SCPI command string.
-   - Property accesses and method calls within the object model initiate the construction of command strings tailored to the specific action being performed (e.g., setting a value, querying a setting).
-
-2. **Command Execution:**
-   - Once a command string is constructed, it is passed to the communication layer, which handles the transmission of the command to the instrument and waits for a response if necessary.
-   - The communication layer abstracts the specifics of the communication protocol (e.g., GPIB, USB, Ethernet), allowing the Subsystem class to focus solely on command logic.
-
-3. **Response Handling:**
-   - For query operations, the class processes the response from the instrument, converting it into an appropriate Python data type (e.g., string, integer, float) for return to the caller.
-
-Use Cases and Examples
-----------------------
-This section illustrates how various use cases are translated into SCPI commands by the Subsystem base class.
-
-1. **Setting a Property Value:**
-
-   Python Code::
-
-       instrument.channel[1].voltage = 5
-
-   SCPI Command Generated::
-
-       :CHANnel1:VOLTage 5
-
-2. **Querying a Property Value:**
-
-   Python Code::
-
-       print(instrument.channel[1].voltage)
-
-   SCPI Command Generated and Response Processed::
-
-       :CHANnel1:VOLTage?
-
-3. **Method Invocation for Action:**
-
-   Python Code::
-
-       instrument.measure.current('DC')
-
-   SCPI Command Generated::
-
-       :MEASure:CURRent DC
-
-4. **Accessing Nested Subsystems:**
-
-   Python Code::
-
-       instrument.channel[1].measurement.configure('VOLTage', 'DC')
-
-   SCPI Command Generated::
-
-       :CHANnel1:MEAS:CONF 'VOLTage', 'DC'
-
-   ```
-
-Justification
--------------
-The Subsystem base class represents a significant leap forward in the domain of instrument control software. By elegantly mapping an object-oriented programming model to the hierarchical structure of SCPI commands, it greatly simplifies the development of control software for test and measurement devices. This approach not only enhances code readability and maintainability but also enables developers to leverage the full power of modern programming techniques in the context of instrument automation.
-
-The integration of the Subsystem base class with modern Integrated Development Environments (IDEs) harnesses the power of object autocompletion, significantly enhancing the programming experience when controlling test and measurement instruments. This feature streamlines the development process by allowing test engineers to navigate through the instrument's command structure effortlessly, without the constant need to consult detailed documentation for specific command formats.
-
-By presenting a structured, object-oriented interface that mirrors the instrument's SCPI command hierarchy, the Subsystem base class ensures that commands are constructed accurately and efficiently. This accuracy is crucial, as the instruments are thoroughly tested and validated beforehand, minimizing the potential for errors or bugs in the command syntax. Consequently, test engineers can shift their focus towards the logic and goals of their testing procedures rather than the intricacies of instrument programming.
-
-This approach not only accelerates the development cycle but also elevates the robustness and reliability of test scripts. As a result, the overall quality of testing is improved, enabling engineers to deliver faster, with more confidence in the accuracy and repeatability of their tests.
+The next page delves into the practical implementation of these concepts, showcasing how to create a custom oscilloscope model utilizing our subsystems. This example will highlight the ease of extending the instrument's capabilities and the seamless interaction with its features.
 

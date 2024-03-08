@@ -1,97 +1,76 @@
+Practical Coding Example: WaveGen Subsystem
+-------------------------------------------
 
-Subsystem Architecture for Instrument Control
-=============================================
-
-The Subsystem architecture is a pivotal foundation for creating and managing test and measurement instruments within a Python-based control environment. Its design promotes a modular, object-oriented approach to instrument control, simplifying the development of instrument drivers and enhancing the efficiency of test script creation.
-
-Introduction
-------------
-
-At the core of effective test and measurement automation lies the need for a structured yet flexible way to communicate with and control instruments. The Subsystem architecture addresses this need by offering a dynamic framework that abstracts the complexity of SCPI command hierarchies into an intuitive, Pythonic interface.
-
-Key Features
-------------
-
-- **Modular Design**: Facilitates the creation of instrument drivers by modularizing control commands into discrete subsystems.
-- **Dynamic Command Generation**: Automates the construction and execution of SCPI commands based on the interaction with subsystem properties.
-- **Ease of Use**: Streamlines the writing of test scripts by providing a clear and simple interface for instrument control.
-
-Subsystem in Action: Building Blocks
-------------------------------------
-
-.. graphviz::
-
-    digraph subsystem_blocks {
-        node [shape=record fontname=Helvetica fontsize=10];
-        
-        Instrument [label="Instrument"];
-        Subsystem [label="Subsystem"];
-        Command [label="Command"];
-        
-        Instrument -> Subsystem;
-        Subsystem -> Command;
-        
-        label="Subsystem Architecture Building Blocks";
-    }
-
-The diagram illustrates the hierarchical relationship between the generic `Instrument` class and its `Subsystem` components, down to individual commands.
-
-Creating a Generic Instrument
-------------------------------
-
-.. graphviz::
-
-    digraph subsystem_blocks_extended {
-        node [shape=record, fontname=Helvetica, fontsize=10];
-
-        Instrument [label="{Instrument|+ open()\l+ close()\l+ write(command: str)\l+ read(): str\l+ query(command: str): str\l|attributes: connection, address}"];
-        Subsystem [label="{Subsystem|+ set_value(val)\l+ query()\l|settings: mode, frequency}"];
-        Command [label="Command SCPI: 'SYStem:STATus?'"];
-
-        Instrument -> Subsystem [label=" aggregates"];
-        Subsystem -> Command [label=" generates"];
-
-        label="Subsystem Architecture: Extended Building Blocks";
-        fontsize=12;
-    }
-
-
-This snippet demonstrates the instantiation of a `GenericInstrument`, showcasing the integration of multiple `Subsystem` instances, each representing a different aspect of the instrument's functionality.
-
-Enhanced Usage Example
-----------------------
-
-Let's delve deeper into how the `Subsystem` architecture empowers engineers to effortlessly configure and control a generic instrument:
+This example demonstrates how to use the WaveGen subsystem of an instrument to control waveform output and modulation. Below, we detail the translation of property settings into SCPI commands.
 
 .. code-block:: python
 
-    # Example: Configuring a generic instrument's subsystem
-    generic_instrument = GenericInstrument()
-    generic_instrument.subsystem1.mode.value = "AUTO"
-    generic_instrument.subsystem2.frequency(1e3)
+    from pymetr.instruments import Instrument, Subsystem, command_property, command_options
+    import logging
 
-    # Resultant SCPI Commands:
-    # Setting mode: ":SUBSYS1:MODE AUTO"
-    # Setting frequency: ":SUBSYS2:FREQ 1e3"
+    logging.basicConfig(level=logging.INFO)
+
+    class WaveGen(Subsystem):
+        """
+        Manages the built-in waveform generator (WGEN) of an instrument, controlling waveform output and modulation.
+        """
+
+        # Nested enums for clean namespace and easy access
+        Functions = command_options('Functions', ['SIN', 'SQU', 'RAMP', 'PULSE', 'NOISE', 'DC'])
+        OutputState = command_options('OutputState', ['ON', 'OFF'])
+
+        # Updated property definitions without redundant ":WGEN" prefix
+        function = command_property(":FUNC", Functions, "Waveform function")
+        frequency = command_property(":FREQ", doc_str="Waveform frequency")
+        amplitude = command_property(":VOLT", doc_str="Waveform amplitude")
+        output = command_property(":OUTP", OutputState, "Waveform output state")
+        offset = command_property(":VOLT:OFFS", doc_str="Waveform offset")
+
+    def __init__(self, parent):
+        super().__init__(parent, ":WGEN")
+
+    class MyInstrument(Instrument):
+        def __init__(self, resource_string):
+            super().__init__(resource_string)
+            self.wavegen = WaveGen(self)
+
+    if __name__ == "__main__":
+        # We can look for our instrument and select it via command line using the following static function.
+        instrument_address = Instrument.select_resources("TCPIP?*INSTR")
+
+        # We need to create an instance of our instrument and give it a name
+        inst = MyInstrument(instrument_address)
+        
+        inst.open() # Open a connection to the instrument through PyVisa
+
+        # Setting properties triggers SCPI write commands:
+        inst.wavegen.function = WaveGen.Functions.SIN  # Triggers inst.write(":WGEN:FUNC SIN")
+        inst.wavegen.frequency = '1MHz'  # Triggers inst.write(":WGEN:FREQ 1MHz")
+        inst.wavegen.amplitude = 2  # Triggers inst.write(":WGEN:VOLT 2")
+        inst.wavegen.offset = 0.5  # Triggers inst.write(":WGEN:VOLT:OFFS 0.5")
+        inst.wavegen.output = WaveGen.OutputState.ON  # Triggers inst.write(":WGEN:OUTP ON")
+
+        # Accessing properties triggers SCPI query commands:
+        print(inst.wavegen.function)  # Triggers inst.query(":WGEN:FUNC?") and returns the function mode
+        print(inst.wavegen.frequency)  # Triggers inst.query(":WGEN:FREQ?") and returns the frequency
+        print(inst.wavegen.amplitude)  # Triggers inst.query(":WGEN:VOLT?") and returns the amplitude
+        print(inst.wavegen.offset)  # Triggers inst.query(":WGEN:VOLT:OFFS?") and returns the offset
+        print(inst.wavegen.output)  # Triggers inst.query(":WGEN:OUTP?") and returns the output state
+
+        inst.close() # CLoses the instrument connection
+
+Visual Representation of Property to Command Translation
+---------------------------------------------------------
 
 .. graphviz::
 
-    digraph usage_example {
-        node [shape=record fontname=Helvetica fontsize=10];
-        
-        Instrument [label="Instrument"];
-        Subsystem1 [label="setting1(Mode)"];
-        Subsystem2 [label="setting2(Frequency)"];
-        
-        Instrument -> Subsystem1 [label=" :setting1 {value}"];
-        Instrument -> Subsystem2 [label=" :setting2 {value}"];
-        
-        label="Enhanced Usage Example";
+    digraph subsystem {
+        node [shape=record, fontname=Arial];
+
+        WaveGen [label="{WaveGen Subsystem|+ function (SIN)|+ frequency (1MHz)|+ amplitude (2V)|+ output (ON)|+ offset (0.5)}"];
+        SCPI [label="{SCPI Commands|:FUNC SIN|:FREQ 1MHz|:VOLT 2V|:OUTP ON|:VOLT:OFFS 0.5}"];
+
+        WaveGen -> SCPI [label="translates to"];
     }
 
-The diagrams and code snippets illustrate how engineers can use the `Subsystem` architecture to define and interact with the generic instrument's functionalities, leading to straightforward and intuitive test script development.
-
-Conclusion: Empowering Instrumentation with Subsystem
-------------------------------------------------------
-
-The Subsystem architecture revolutionizes the way engineers create, extend, and utilize instrument control libraries. By abstracting the intricacies of SCPI command structures into a coherent, modular framework, it accelerates the development of robust instrument drivers and streamlines the authoring of test scripts. Its emphasis on modularity, dynamic interaction, and ease of use makes it an indispensable tool in the modern test and measurement automation toolkit.
+This Graphviz diagram illustrates how setting properties on the `WaveGen` subsystem translates into specific SCPI commands sent to the instrument.

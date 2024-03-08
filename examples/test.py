@@ -5,6 +5,7 @@ logger = logging.getLogger(__name__)
 
 from pymetr import Instrument
 
+# TODO modify to accept an enum for IDE autocompletion, string list won't auto complete.
 def command_property(cmd_str, valid_values=None, doc_str="", read_only=False):
     """
     Factory function to create a property in a subsystem class for interacting with instrument commands.
@@ -37,7 +38,9 @@ def command_property(cmd_str, valid_values=None, doc_str="", read_only=False):
 
     return property(fget=getter, fset=setter, doc=doc_str)
 
-# Turn this in to subsystem base class.
+# Turn this in to subsystem base class.  We don't need teh local parameters since this class should not be used by itself.
+# I need to make sure that people know right away they shouldn't instatiate this class only inhereit from it.
+# Is that possible?  I'd also like this class documented with doc-strings.
 class Subsystem:
     # Subsystem Parameters "Using System for base example"
     date = command_property(":DATe", doc_str="The date saved in the system")
@@ -89,6 +92,8 @@ class Subsystem:
         self.write(":BEEper") # Result in :SYSTem:BEEPer
 
 # TODO: Create new enum factory
+        
+# Everythign below here is just test code to see if its working.        
 class WaveGen(Subsystem):
     FUNCTIONS = ["SIN", "SQU", "RAMP", "PULSE", "NOISE", "DC"]
     function = command_property(":FUNC", FUNCTIONS, "Waveform function")
@@ -119,7 +124,7 @@ print("The instruments error status: ", inst.subsyst.error)
 # Specific subsystem test
 print(inst.wavegen.function)
 print("The wavegen frequency is: ", inst.wavegen.frequency)
-inst.wavegen.frequency = 1000000
+inst.wavegen.frequency = '1k'
 print("The wavegen frequency now is: ", inst.wavegen.frequency)
 
 # Lets Beep!
@@ -127,3 +132,5 @@ inst.subsyst.beep()
 print("The instruments error status: ", inst.subsyst.error)
 inst.subsyst.preset()
 inst.status()
+
+inst.close()

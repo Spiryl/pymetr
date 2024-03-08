@@ -12,7 +12,6 @@ Designed for developers, engineers, and researchers, `pymetr/instruments.py` enc
 import sys
 import logging
 import pyvisa
-from abc import ABC, abstractmethod
 from enum import IntFlag
 
 # Set up a logger for the Instrument class
@@ -302,47 +301,3 @@ class Instrument:
 
         PON = 1 << 7  # Power On
         """Power on bit, set when the device is first powered on or reset."""
-
-
-class InstrumentSubsystem(ABC):
-    """
-    The core structure for all instrument subsystems, defining how to sync up properties and keep the
-    instrument and the software in harmony.
-
-    A subsystem is part of the larger instrument ensemble, like a section in an orchestra, each
-    playing its part in the symphony of measurements.
-    """       
-    def __init__(self, parent):
-        """
-        Keeping track of parent controller
-
-        Parameters:
-            parent (Instrument): The main instrument that this subsystem is a part of.
-        """
-        self._parent = parent
-
-    def write(self, command):
-        """
-        Passes direct write access to the subsystem.
-        """
-        self._parent.write(command)
-
-    def read(self):
-        """
-        Passes direct read access to the subsystem.
-        """
-        return self._parent.read()
-        
-    def query(self, command):
-        """
-        Allows a query fromt the subsystem.
-        """
-        return self._parent.query(command)
-
-    def sync(self):
-        """
-        Synchronizes the properties of the subsystem with the instrument's current configuration.
-        """
-        attributes = [a for a in dir(self) if isinstance(getattr(self.__class__, a, None), property)]
-        for attribute in attributes:
-            getattr(self, attribute)
