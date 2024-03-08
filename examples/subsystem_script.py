@@ -1,4 +1,5 @@
-from pymetr.instrument import Instrument, Subsystem, command_property, command_options
+from pymetr.instrument import Instrument
+from pymetr.subsystem import Subsystem, command_property, command_options
 import logging
 
 # Set up basic logging
@@ -40,16 +41,16 @@ if __name__ == "__main__":
     print(inst.identity())
 
     # Specific subsystem tests showcasing all properties
-    inst.wavegen.function = WaveGen.Functions.SIN  # Set waveform function
+    inst.wavegen.function = WaveGen.Functions.SQU  # Set waveform function
     print(f"Waveform function set to: {inst.wavegen.function}")
 
     inst.wavegen.frequency = '1MHz'  # Set frequency
     print(f"Wavegen frequency set to: {inst.wavegen.frequency}")
 
-    inst.wavegen.amplitude = '2V'  # Set amplitude
+    inst.wavegen.amplitude = 2  # Set amplitude
     print(f"Wavegen amplitude set to: {inst.wavegen.amplitude}")
 
-    inst.wavegen.offset = '0.5'  # Set offset
+    inst.wavegen.offset = 0.5  # Set offset
     print(f"Wavegen offset set to: {inst.wavegen.offset}")
 
     inst.wavegen.output = WaveGen.OutputState.ON  # Enable output

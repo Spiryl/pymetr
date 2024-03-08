@@ -1,38 +1,5 @@
-import numpy as np
-import sys
-from pymetr.oscilloscope.core import Oscilloscope
+from pymetr.oscilloscope import Oscilloscope
 from pymetr.instrument import Instrument
-
-def select_instrument(filter):
-    unique_instruments, failed_queries = Instrument.list_resources(filter)
-    
-    if not unique_instruments:
-        print("No instruments found. Check your connections and try again.")
-        sys.exit(1)
-    
-    print("\nConnected Instruments:")
-    for idx, (unique_key, resource) in enumerate(unique_instruments.items(), start=1):
-        print(f"{idx}. {unique_key}")
-
-    if failed_queries:
-        print("\nFailed to query some instruments:")
-        for resource, error in failed_queries:
-            print(f"{resource}: {error}")
-
-    selection = input("\nSelect an instrument by number (or 'exit' to quit): ")
-    if selection.lower() == 'exit':
-        sys.exit(0)
-
-    try:
-        selected_index = int(selection) - 1
-        if selected_index < 0 or selected_index >= len(unique_instruments):
-            raise ValueError
-    except ValueError:
-        print("Invalid selection. Please enter a number from the list.")
-        return select_instrument(filter)
-    
-    selected_key = list(unique_instruments.keys())[selected_index]
-    return unique_instruments[selected_key]
 
 def test_oscilloscope_commands(resource_string):
     oscope = Oscilloscope(resource_string)
@@ -77,5 +44,5 @@ def test_oscilloscope_commands(resource_string):
 
 if __name__ == '__main__':
     # The filter can be removed or changed for different connection types. 
-    resource_string = select_instrument("TCPIP?*::INSTR")
+    resource_string = Oscilloscope.select_instrument("TCPIP?*::INSTR")
     test_oscilloscope_commands(resource_string)

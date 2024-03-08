@@ -56,7 +56,7 @@ Each subsystem class focuses on a specific area of oscilloscope functionality, p
 Acquire Subsystem
 -----------------
 
-.. automodule:: pymetr.subsystems.acquire
+.. automodule:: pymetr.subsystems.Acquire
    :members:
    :undoc-members:
    :show-inheritance:
@@ -66,7 +66,7 @@ The ``Acquire`` subsystem manages data acquisition settings, offering control ov
 Channel Subsystem
 -----------------
 
-.. automodule:: pymetr.subsystems.channel
+.. automodule:: pymetr.subsystems.Channel
    :members:
    :undoc-members:
    :show-inheritance:
@@ -76,7 +76,7 @@ Each channel of the oscilloscope is represented by a ``Channel`` object, allowin
 Timebase Subsystem
 ------------------
 
-.. automodule:: pymetr.subsystems.timebase
+.. automodule:: pymetr.subsystems.Timebase
    :members:
    :undoc-members:
    :show-inheritance:
@@ -86,7 +86,7 @@ The ``Timebase`` subsystem governs the horizontal sweep of the oscilloscope, dic
 Trigger Subsystem
 -----------------
 
-.. automodule:: pymetr.subsystems.trigger
+.. automodule:: pymetr.subsystems.Trigger
    :members:
    :undoc-members:
    :show-inheritance:
@@ -96,7 +96,7 @@ Trigger settings are crucial for accurate waveform capture. The ``Trigger`` subs
 Waveform Subsystem
 ------------------
 
-.. automodule:: pymetr.subsystems.waveform
+.. automodule:: pymetr.subsystems.Waveform
    :members:
    :undoc-members:
    :show-inheritance:
@@ -106,7 +106,7 @@ After acquisition, the ``Waveform`` subsystem takes over, dealing with waveform 
 WaveGen Subsystem
 -----------------
 
-.. automodule:: pymetr.subsystems.wavegen
+.. automodule:: pymetr.subsystems.WaveGen
    :members:
    :undoc-members:
    :show-inheritance:
@@ -136,15 +136,3 @@ To begin using the ``Oscilloscope`` class, first ensure that PyVISA is installed
    osc.open()
    print(f"Identification string: '{osc.identity()}'")
    osc.close()
-
-Extending the Oscilloscope Class
----------------------------------
-
-Some specific models of osilloscopes may have subsystems or settings which differ from the Keysight DSOX1204G. That this class can be used as a base class to create specific models of oscilloscopes.
-
-.. code-block:: python
-
-   from pymetr.oscilloscope.core import Oscilloscope
-
-   Class oscilloscope_XYZ(Oscilloscope):
-      # Continue example code

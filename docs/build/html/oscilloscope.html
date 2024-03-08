@@ -57,17 +57,16 @@
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Oscilloscope Extension</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#module-pymetr.oscilloscope.Oscilloscope">Oscilloscope Core</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#oscilloscope-subsystems">Oscilloscope Subsystems</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#acquire-subsystem">Acquire Subsystem</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#channel-subsystem">Channel Subsystem</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#timebase-subsystem">Timebase Subsystem</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#trigger-subsystem">Trigger Subsystem</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#waveform-subsystem">Waveform Subsystem</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#wavegen-subsystem">WaveGen Subsystem</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-pymetr.subsystems.Acquire">Acquire Subsystem</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-pymetr.subsystems.Channel">Channel Subsystem</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-pymetr.subsystems.Timebase">Timebase Subsystem</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-pymetr.subsystems.Trigger">Trigger Subsystem</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-pymetr.subsystems.Waveform">Waveform Subsystem</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-pymetr.subsystems.WaveGen">WaveGen Subsystem</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="#root-level-functions">Root-Level Functions</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#getting-started-with-the-oscilloscope-class">Getting Started with the Oscilloscope Class</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#extending-the-oscilloscope-class">Extending the Oscilloscope Class</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="packaging.html">Installing the pymetr Package</a></li>
@@ -157,28 +156,46 @@ continuous_fetch (bool): Flag to enable/disable continuous waveform fetching.</p
 <p>The subsystems are instantiated within the <code class="docutils literal notranslate"><span class="pre">Oscilloscope</span></code> class and are accessed through the corresponding attributes.
 Each subsystem class focuses on a specific area of oscilloscope functionality, providing specialized methods and properties for that domain.</p>
 </section>
-<section id="acquire-subsystem">
-<h2>Acquire Subsystem<a class="headerlink" href="#acquire-subsystem" title="Link to this heading"></a></h2>
+<section id="module-pymetr.subsystems.Acquire">
+<span id="acquire-subsystem"></span><h2>Acquire Subsystem<a class="headerlink" href="#module-pymetr.subsystems.Acquire" title="Link to this heading"></a></h2>
+<p>Manages the acquisition settings of an oscilloscope or similar instrument, allowing control over the mode, type,
+sample rate, depth, and count of acquisitions. This subsystem simplifies interaction with the device’s acquisition
+parameters, providing a high-level interface to configure and retrieve acquisition settings.</p>
 <p>The <code class="docutils literal notranslate"><span class="pre">Acquire</span></code> subsystem manages data acquisition settings, offering control over how the oscilloscope captures and processes the signal data.</p>
 </section>
-<section id="channel-subsystem">
-<h2>Channel Subsystem<a class="headerlink" href="#channel-subsystem" title="Link to this heading"></a></h2>
+<section id="module-pymetr.subsystems.Channel">
+<span id="channel-subsystem"></span><h2>Channel Subsystem<a class="headerlink" href="#module-pymetr.subsystems.Channel" title="Link to this heading"></a></h2>
+<p>Represents a single channel on an oscilloscope or similar instrument, providing control over display state,
+vertical scale and offset, coupling mode, and probe attenuation factor. This class allows for fine-tuned control
+of each channel’s visual and electrical input characteristics.</p>
 <p>Each channel of the oscilloscope is represented by a <code class="docutils literal notranslate"><span class="pre">Channel</span></code> object, allowing individual control over display, scaling, and other channel-specific settings.</p>
 </section>
-<section id="timebase-subsystem">
-<h2>Timebase Subsystem<a class="headerlink" href="#timebase-subsystem" title="Link to this heading"></a></h2>
+<section id="module-pymetr.subsystems.Timebase">
+<span id="timebase-subsystem"></span><h2>Timebase Subsystem<a class="headerlink" href="#module-pymetr.subsystems.Timebase" title="Link to this heading"></a></h2>
+<p>Controls the timebase settings of an oscilloscope, including mode, reference position, scale, position,
+and range. This subsystem is essential for adjusting how waveform data is displayed over time, affecting
+the horizontal scale and positioning of waveforms on the screen.</p>
 <p>The <code class="docutils literal notranslate"><span class="pre">Timebase</span></code> subsystem governs the horizontal sweep of the oscilloscope, dictating the scale and position of the waveform in time.</p>
 </section>
-<section id="trigger-subsystem">
-<h2>Trigger Subsystem<a class="headerlink" href="#trigger-subsystem" title="Link to this heading"></a></h2>
+<section id="module-pymetr.subsystems.Trigger">
+<span id="trigger-subsystem"></span><h2>Trigger Subsystem<a class="headerlink" href="#module-pymetr.subsystems.Trigger" title="Link to this heading"></a></h2>
+<p>Manages the trigger settings of an oscilloscope or similar instrument, allowing configuration of trigger
+mode, source, level, and slope. This subsystem is crucial for setting up how and when the instrument starts
+capturing data, based on specific signal conditions.</p>
 <p>Trigger settings are crucial for accurate waveform capture. The <code class="docutils literal notranslate"><span class="pre">Trigger</span></code> subsystem provides precise control over when the oscilloscope starts acquiring data.</p>
 </section>
-<section id="waveform-subsystem">
-<h2>Waveform Subsystem<a class="headerlink" href="#waveform-subsystem" title="Link to this heading"></a></h2>
+<section id="module-pymetr.subsystems.Waveform">
+<span id="waveform-subsystem"></span><h2>Waveform Subsystem<a class="headerlink" href="#module-pymetr.subsystems.Waveform" title="Link to this heading"></a></h2>
+<p>Manages waveform data retrieval and configuration settings on an oscilloscope or similar instrument. It provides
+control over the waveform source, data format, points mode, and allows querying of waveform data. This subsystem
+is key for analyzing captured signal data in different formats and resolutions.</p>
 <p>After acquisition, the <code class="docutils literal notranslate"><span class="pre">Waveform</span></code> subsystem takes over, dealing with waveform data retrieval and analysis.</p>
 </section>
-<section id="wavegen-subsystem">
-<h2>WaveGen Subsystem<a class="headerlink" href="#wavegen-subsystem" title="Link to this heading"></a></h2>
+<section id="module-pymetr.subsystems.WaveGen">
+<span id="wavegen-subsystem"></span><h2>WaveGen Subsystem<a class="headerlink" href="#module-pymetr.subsystems.WaveGen" title="Link to this heading"></a></h2>
+<p>Controls the built-in waveform generator (WGEN) of an instrument, managing output waveform function, frequency,
+amplitude, output state, and offset. This subsystem facilitates the generation of various waveform types for
+testing and analysis purposes.</p>
 <p>Some oscilloscopes come with a built-in waveform generator. The <code class="docutils literal notranslate"><span class="pre">WaveGen</span></code> subsystem manages this feature, controlling waveform output and modulation.</p>
 </section>
 </section>
@@ -200,16 +217,6 @@ Each subsystem class focuses on a specific area of oscilloscope functionality, p
 <span class="n">osc</span><span class="o">.</span><span class="n">open</span><span class="p">()</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Identification string: &#39;</span><span class="si">{</span><span class="n">osc</span><span class="o">.</span><span class="n">identity</span><span class="p">()</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
 <span class="n">osc</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-</pre></div>
-</div>
-</section>
-<section id="extending-the-oscilloscope-class">
-<h2>Extending the Oscilloscope Class<a class="headerlink" href="#extending-the-oscilloscope-class" title="Link to this heading"></a></h2>
-<p>Some specific models of osilloscopes may have subsystems or settings which differ from the Keysight DSOX1204G. That this class can be used as a base class to create specific models of oscilloscopes.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pymetr.oscilloscope.core</span> <span class="kn">import</span> <span class="n">Oscilloscope</span>
-
-<span class="n">Class</span> <span class="n">oscilloscope_XYZ</span><span class="p">(</span><span class="n">Oscilloscope</span><span class="p">):</span>
-   <span class="c1"># Continue example code</span>
 </pre></div>
 </div>
 </section>
