@@ -1,5 +1,5 @@
 import pyvisa
-from pymetr.instruments import Instrument
+from pymetr.instrument import Instrument
 if __name__ == "__main__":
     import sys
 

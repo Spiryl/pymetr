@@ -117,7 +117,7 @@ Some oscilloscopes come with a built-in waveform generator. The ``WaveGen`` subs
 Root-Level Functions
 ====================
 
-Beyond the subsystems, the ``Oscilloscope`` class includes root-level functions that are commonly used across different subsystems, ensuring they're accessible in a centralized fashion. These include utility functions like `run`, `stop`, `single`, and `autoscale`, which are independent of the subsystem settings but crucial for the overall operation of the oscilloscope.
+Beyond the subsystems, the ``Oscilloscope`` class includes root-level functions. These include functions like `run`, `stop`, `single`, and `autoscale`.
 
 .. note:: The ``Oscilloscope`` class is designed with the user in mind, abstracting the complexities of the oscilloscope operation and providing a user-friendly interface that reflects the natural workflow of an engineer or technician working with the instrument.
 
@@ -136,3 +136,15 @@ To begin using the ``Oscilloscope`` class, first ensure that PyVISA is installed
    osc.open()
    print(f"Identification string: '{osc.identity()}'")
    osc.close()
+
+Extending the Oscilloscope Class
+---------------------------------
+
+Some specific models of osilloscopes may have subsystems or settings which differ from the Keysight DSOX1204G. That this class can be used as a base class to create specific models of oscilloscopes.
+
+.. code-block:: python
+
+   from pymetr.oscilloscope.core import Oscilloscope
+
+   Class oscilloscope_XYZ(Oscilloscope):
+      # Continue example code

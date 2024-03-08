@@ -11,7 +11,7 @@ from vispy import scene
 from oscilloscope_controls import AcquireControl, WaveformControl, WaveGenControl, TriggerControl, TimebaseControl,  ChannelControl, ControlDock
 from pymetr.oscilloscope.core import Oscilloscope
 from pymetr.oscilloscope import Waveform, Trigger, Timebase, WaveGen, Acquire
-from pymetr.instruments import Instrument
+from pymetr.instrument import Instrument
 from utilities import debug, timeit
 
 class FetchThread(QThread):

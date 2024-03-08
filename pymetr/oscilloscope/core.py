@@ -3,7 +3,7 @@ import logging
 import sys
 from enum import Enum, auto
 
-from pymetr.instruments import Instrument
+from pymetr.instrument import Instrument
 from pymetr.oscilloscope.acquire import Acquire
 from pymetr.oscilloscope.trigger import Trigger
 from pymetr.oscilloscope.timebase import Timebase

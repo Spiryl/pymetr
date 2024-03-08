@@ -1,4 +1,4 @@
-from pymetr.instruments import Instrument, Subsystem, command_property, command_options
+from pymetr.instrument import Instrument, Subsystem, command_property, command_options
 import logging
 
 # Set up basic logging

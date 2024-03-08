@@ -35,6 +35,7 @@ System Dependencies
    quickstart
    instruments
    subsystems
+   subsystem_theory
    design
    oscilloscope
    packaging

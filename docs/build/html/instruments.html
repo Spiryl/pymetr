@@ -22,7 +22,7 @@
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Subsystem Architecture for Instrument Control" href="subsystems.html" />
+    <link rel="next" title="Practical Coding Example: WaveGen Subsystem" href="subsystems.html" />
     <link rel="prev" title="Quick Start Guide" href="quickstart.html" /> 
 </head>
 
@@ -69,6 +69,7 @@
 <li class="toctree-l4"><a class="reference internal" href="#pymetr.instruments.Instrument.read"><code class="docutils literal notranslate"><span class="pre">Instrument.read()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#pymetr.instruments.Instrument.reset"><code class="docutils literal notranslate"><span class="pre">Instrument.reset()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#pymetr.instruments.Instrument.save_setup"><code class="docutils literal notranslate"><span class="pre">Instrument.save_setup()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pymetr.instruments.Instrument.select_resources"><code class="docutils literal notranslate"><span class="pre">Instrument.select_resources()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#pymetr.instruments.Instrument.set_service_request"><code class="docutils literal notranslate"><span class="pre">Instrument.set_service_request()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#pymetr.instruments.Instrument.status"><code class="docutils literal notranslate"><span class="pre">Instrument.status()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#pymetr.instruments.Instrument.write"><code class="docutils literal notranslate"><span class="pre">Instrument.write()</span></code></a></li>
@@ -78,7 +79,9 @@
 </li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="subsystems.html">Subsystem Architecture for Instrument Control</a></li>
+<li class="toctree-l1"><a class="reference internal" href="subsystems.html">Practical Coding Example: WaveGen Subsystem</a></li>
+<li class="toctree-l1"><a class="reference internal" href="subsystems.html#visual-representation-of-property-to-command-translation">Visual Representation of Property to Command Translation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="subsystem_theory.html">Understanding Subsystems</a></li>
 <li class="toctree-l1"><a class="reference internal" href="design.html">Subsystem Practical Coding Example</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oscilloscope.html">Oscilloscope Extension</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oscilloscope.html#root-level-functions">Root-Level Functions</a></li>
@@ -371,6 +374,18 @@ taking a snapshot of your current setup so you can return to it later.</p>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="pymetr.instruments.Instrument.select_resources">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">select_resources</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filter</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'?*::INSTR'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pymetr.instruments.Instrument.select_resources" title="Link to this definition"></a></dt>
+<dd><p>Presents a list of connected instruments filtered by the query and prompts the user to select one.</p>
+<dl class="simple">
+<dt>Parameters:</dt><dd><p>filter (str): Filter pattern to identify the instruments.</p>
+</dd>
+<dt>Returns:</dt><dd><p>str: The selected resource string of the instrument.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="pymetr.instruments.Instrument.set_service_request">
 <span class="sig-name descname"><span class="pre">set_service_request</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mask</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pymetr.instruments.Instrument.set_service_request" title="Link to this definition"></a></dt>
 <dd><p>Configures the instrument to enable certain status events to generate service requests (SRQ). 
@@ -411,7 +426,7 @@ It’s like setting up push notifications for the events you actually care about
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
         <a href="quickstart.html" class="btn btn-neutral float-left" title="Quick Start Guide" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="subsystems.html" class="btn btn-neutral float-right" title="Subsystem Architecture for Instrument Control" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="subsystems.html" class="btn btn-neutral float-right" title="Practical Coding Example: WaveGen Subsystem" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>
