@@ -50,5 +50,5 @@ Below is a succinct example illustrating the application of the library within a
 
    # Engaging with the instrument
    print(my_instrument.identity())
-   print(my_instrument.query('MEAS:VOLT:DC?'))
+   print(my_instrument.query(':MEAS:VOLT:DC?'))
 
