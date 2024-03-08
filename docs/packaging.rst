@@ -1,5 +1,5 @@
 ====================================
-Installing the pymetr Package
+Installing the PyMetr Package
 ====================================
 
 The pymetr package is designed to facilitate advanced instrumentation capabilities in Python, including oscilloscope controls and data acquisition tools. This document outlines how to install the pymetr package, either for development purposes or for use in other projects.
