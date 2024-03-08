@@ -1,5 +1,5 @@
-Practical Coding Example: WaveGen Subsystem
--------------------------------------------
+Practical Coding Example:
+-------------------------
 
 This example demonstrates how to use the WaveGen subsystem of an instrument to control waveform output and modulation. Below, we detail the translation of property settings into SCPI commands.
 
@@ -7,9 +7,6 @@ This example demonstrates how to use the WaveGen subsystem of an instrument to c
 
     from pymetr.instrument import Instrument
     from pymetr.subsystem import Subsystem, command_property, command_options
-    import logging
-
-    logging.basicConfig(level=logging.INFO)
 
     class WaveGen(Subsystem):
         """
@@ -36,6 +33,7 @@ This example demonstrates how to use the WaveGen subsystem of an instrument to c
             self.wavegen = WaveGen(self)
 
     if __name__ == "__main__":
+
         # We can look for our instrument and select it via command line using the following static function.
         instrument_address = Instrument.select_resources("TCPIP?*INSTR")
 
@@ -59,19 +57,3 @@ This example demonstrates how to use the WaveGen subsystem of an instrument to c
         print(inst.wavegen.output)  # Triggers inst.query(":WGEN:OUTP?") and returns the output state
 
         inst.close() # CLoses the instrument connection
-
-Visual Representation of Property to Command Translation
----------------------------------------------------------
-
-.. graphviz::
-
-    digraph subsystem {
-        node [shape=record, fontname=Arial];
-
-        WaveGen [label="{WaveGen Subsystem|+ function (SIN)|+ frequency (1MHz)|+ amplitude (2V)|+ output (ON)|+ offset (0.5)}"];
-        SCPI [label="{SCPI Commands|:FUNC SIN|:FREQ 1MHz|:VOLT 2V|:OUTP ON|:VOLT:OFFS 0.5}"];
-
-        WaveGen -> SCPI [label="translates to"];
-    }
-
-This Graphviz diagram illustrates how setting properties on the `WaveGen` subsystem translates into specific SCPI commands sent to the instrument.

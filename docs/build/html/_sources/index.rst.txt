@@ -8,17 +8,12 @@ This project empowers engineers to craft their own test routines and software, s
 Todo
 ----
 
-- Standardize enumeration string format across subsystems.
-- Add doc-strings to subsystem enum types explaining operation modes.
-- Standardize doc-strings format away from the sphinx style parameters.
-- Create subsystems.py to manage all subystems and refactor.
-- Update subsystem abstract base class and allowed instrument subsystem calls.
-- Documentation graphics and hyper-links.
+- Documentation graphics
+- Rework GUI controls layout
+- Refactor Oscilloscope GUI acquisition thread.
 - Start spectrum analyzer class.
 - Start power meter class.
-- Get package published. 
-- Rework GUI controls.
-- Refactor Oscilloscope GUI acquisition thread.
+
 
 System Dependencies
 -------------------

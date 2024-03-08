@@ -26,27 +26,22 @@ The alignment with the SCPI command tree is particularly noteworthy. Instruments
 
    The power of our model lies in its direct alignment with the SCPI command structure, utilizing subsystem prefixes to streamline command execution. This approach reduces code duplication and leverages modern IDEs for autocompletion, enabling script creation without constant reference to the programming manual.
 
-Example: Setting Oscilloscope Parameters
-----------------------------------------
+Example: Setting Parameters
+---------------------------
 
 Consider setting parameters on an oscilloscope. Our subsystem approach abstracts the SCPI commands into intuitive property calls, making script development straightforward and IDE-friendly.
 
 .. code-block:: python
 
-    # Assuming `scope` is an instance of an Oscilloscope class with an Acquire subsystem
-    scope.acquire.type = Acquire.Type.NORMAL  # Sets acquisition type to normal
-    # Behind the scenes: scope.acquire.write("TYPE NORM")
+    # Here `oscope` is an instance of an Oscilloscope class with an Acquire subsystem
 
-    scope.acquire.sample_rate = 1e6  # Sets sample rate to 1 MSa/s
-    # Behind the scenes: scope.acquire.write("SRATe 1e6")
+    oscope.acquire.type = Acquire.Type.NORMAL  # Sets acquisition type to normal
+    # Behind the scenes: scope.acquire.write(":ACQuire:TYPE NORM")
+
+    oscope.acquire.sample_rate = 1e6  # Sets sample rate to 1 MSa/s
+    # Behind the scenes: scope.acquire.write(":ACQuire:SRATe 1e6")
 
     print(scope.acquire.depth)  # Queries the current acquisition depth
-    # Behind the scenes: scope.acquire.query("DEPTh?")
+    # Behind the scenes: scope.acquire.query(":ACQuire:DEPTh?")
 
 This snippet demonstrates how each property or method call on a subsystem translates into a write or query to the instrument, abstracting the complexity of SCPI commands into user-friendly operations.
-
-Next Steps
-----------
-
-The next page delves into the practical implementation of these concepts, showcasing how to create a custom oscilloscope model utilizing our subsystems. This example will highlight the ease of extending the instrument's capabilities and the seamless interaction with its features.
-
