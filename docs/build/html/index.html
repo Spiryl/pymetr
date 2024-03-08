@@ -49,9 +49,9 @@
 <li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quick Start Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="instruments.html">Instrument Control Library</a></li>
 <li class="toctree-l1"><a class="reference internal" href="subsystem_theory.html">Understanding Subsystems</a></li>
-<li class="toctree-l1"><a class="reference internal" href="factories.html">Leveraging Command Parameters and Options for Efficient Instrument Control</a></li>
+<li class="toctree-l1"><a class="reference internal" href="factories.html">Command Parameters and Options</a></li>
+<li class="toctree-l1"><a class="reference internal" href="subsystem_example.html">Practical Coding Example:</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oscilloscope.html">Oscilloscope Extension</a></li>
-<li class="toctree-l1"><a class="reference internal" href="oscilloscope.html#root-level-functions">Root-Level Functions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="packaging.html">Installing the pymetr Package</a></li>
 <li class="toctree-l1"><a class="reference internal" href="doc-build.html">Rebuilding the Documentation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="sphinx.html">Sphinx Documentation Primer</a></li>
@@ -59,6 +59,7 @@
 <li class="toctree-l1"><a class="reference internal" href="bible.html#file-and-directory-naming">File and Directory Naming</a></li>
 <li class="toctree-l1"><a class="reference internal" href="logging.html">Logging in Python Projects</a></li>
 <li class="toctree-l1"><a class="reference internal" href="unit-test.html">Unit Testing in Python with unittest</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">PyMetr API</a></li>
 </ul>
 
         </div>
@@ -124,7 +125,6 @@
 <li class="toctree-l2"><a class="reference internal" href="instruments.html#instrument-base-class">Instrument Base Class</a></li>
 <li class="toctree-l2"><a class="reference internal" href="instruments.html#class-diagram">Class Diagram</a></li>
 <li class="toctree-l2"><a class="reference internal" href="instruments.html#utilizing-the-library">Utilizing the Library</a></li>
-<li class="toctree-l2"><a class="reference internal" href="instruments.html#instrument-class-api">Instrument Class API</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="subsystem_theory.html">Understanding Subsystems</a><ul>
@@ -134,25 +134,16 @@
 <li class="toctree-l2"><a class="reference internal" href="subsystem_theory.html#example-setting-parameters">Example: Setting Parameters</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="factories.html">Leveraging Command Parameters and Options for Efficient Instrument Control</a><ul>
+<li class="toctree-l1"><a class="reference internal" href="factories.html">Command Parameters and Options</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="factories.html#simplifying-property-synchronization">Simplifying Property Synchronization</a></li>
 <li class="toctree-l2"><a class="reference internal" href="factories.html#introducing-command-property-and-command-options">Introducing <cite>command_property</cite> and <cite>command_options</cite></a></li>
 <li class="toctree-l2"><a class="reference internal" href="factories.html#refactoring-the-acquire-subsystem">Refactoring the Acquire Subsystem</a></li>
 <li class="toctree-l2"><a class="reference internal" href="factories.html#conclusion">Conclusion</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="subsystem_example.html">Practical Coding Example:</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oscilloscope.html">Oscilloscope Extension</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="oscilloscope.html#module-pymetr.oscilloscope.Oscilloscope">Oscilloscope Core</a></li>
-<li class="toctree-l2"><a class="reference internal" href="oscilloscope.html#oscilloscope-subsystems">Oscilloscope Subsystems</a></li>
-<li class="toctree-l2"><a class="reference internal" href="oscilloscope.html#module-pymetr.subsystems.Acquire">Acquire Subsystem</a></li>
-<li class="toctree-l2"><a class="reference internal" href="oscilloscope.html#module-pymetr.subsystems.Channel">Channel Subsystem</a></li>
-<li class="toctree-l2"><a class="reference internal" href="oscilloscope.html#module-pymetr.subsystems.Timebase">Timebase Subsystem</a></li>
-<li class="toctree-l2"><a class="reference internal" href="oscilloscope.html#module-pymetr.subsystems.Trigger">Trigger Subsystem</a></li>
-<li class="toctree-l2"><a class="reference internal" href="oscilloscope.html#module-pymetr.subsystems.Waveform">Waveform Subsystem</a></li>
-<li class="toctree-l2"><a class="reference internal" href="oscilloscope.html#module-pymetr.subsystems.WaveGen">WaveGen Subsystem</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="oscilloscope.html#root-level-functions">Root-Level Functions</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="oscilloscope.html#root-functions">Root Functions</a></li>
 <li class="toctree-l2"><a class="reference internal" href="oscilloscope.html#getting-started-with-the-oscilloscope-class">Getting Started with the Oscilloscope Class</a></li>
 </ul>
 </li>
@@ -213,6 +204,18 @@
 <li class="toctree-l2"><a class="reference internal" href="unit-test.html#why-unit-testing">Why Unit Testing?</a></li>
 <li class="toctree-l2"><a class="reference internal" href="unit-test.html#getting-started-with-unittest">Getting Started with unittest</a></li>
 <li class="toctree-l2"><a class="reference internal" href="unit-test.html#conclusion">Conclusion</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">PyMetr API</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api.html#instrument-base-class-api">Instrument Base Class API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#module-pymetr.oscilloscope.Oscilloscope">Oscilloscope</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#oscilloscope-subsystems">Oscilloscope Subsystems</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#module-pymetr.subsystems.Acquire">Acquire Subsystem</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#module-pymetr.subsystems.Channel">Channel Subsystem</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#module-pymetr.subsystems.Timebase">Timebase Subsystem</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#module-pymetr.subsystems.Trigger">Trigger Subsystem</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#module-pymetr.subsystems.Waveform">Waveform Subsystem</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#module-pymetr.subsystems.WaveGen">WaveGen Subsystem</a></li>
 </ul>
 </li>
 </ul>

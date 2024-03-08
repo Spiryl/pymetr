@@ -50,7 +50,7 @@ There are two main scenarios for installing the pymetr package:
 
    .. code-block:: bash
 
-      pip install git+https://github.com/yourusername/pymetr.git
+      pip install git+https://github.com/pymetr/pymetr.git
 
 2. **Development Installation**: If you're developing pymetr and want to test changes as you make them, you should install the package in "editable" mode. This allows you to modify the source code and see those changes reflected without having to reinstall the package.
 

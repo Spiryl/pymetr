@@ -1,7 +1,7 @@
 Command Parameters and Options
 ==============================
 
-The `pymetr` library introduces an efficient, streamlined approach to instrument control, significantly reducing the complexity traditionally associated with direct device communication. Through the innovative use of factory functions `command_property` and `command_options`, `pymetr` enables developers to define instrument properties with minimal code, enhancing maintainability, readability, and error handling.
+The ``pymetr`` library introduces an efficient, streamlined approach to instrument control, significantly reducing the complexity traditionally associated with direct device communication. Through the innovative use of factory functions `command_property` and `command_options`, ``pymetr`` enables developers to define instrument properties with minimal code, enhancing maintainability, readability, and error handling.
 
 Simplifying Property Synchronization
 -------------------------------------

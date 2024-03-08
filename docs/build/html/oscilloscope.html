@@ -23,7 +23,7 @@
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Installing the pymetr Package" href="packaging.html" />
-    <link rel="prev" title="Subsystem Practical Coding Example" href="design.html" /> 
+    <link rel="prev" title="Practical Coding Example:" href="subsystem_example.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -49,22 +49,11 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quick Start Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="instruments.html">Instrument Control Library</a></li>
-<li class="toctree-l1"><a class="reference internal" href="subsystems.html">Practical Coding Example:</a></li>
 <li class="toctree-l1"><a class="reference internal" href="subsystem_theory.html">Understanding Subsystems</a></li>
-<li class="toctree-l1"><a class="reference internal" href="factories.html">Leveraging Command Parameters and Options for Efficient Instrument Control</a></li>
-<li class="toctree-l1"><a class="reference internal" href="design.html">Subsystem Practical Coding Example</a></li>
+<li class="toctree-l1"><a class="reference internal" href="factories.html">Command Parameters and Options</a></li>
+<li class="toctree-l1"><a class="reference internal" href="subsystem_example.html">Practical Coding Example:</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Oscilloscope Extension</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#module-pymetr.oscilloscope.Oscilloscope">Oscilloscope Core</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#oscilloscope-subsystems">Oscilloscope Subsystems</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#module-pymetr.subsystems.Acquire">Acquire Subsystem</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#module-pymetr.subsystems.Channel">Channel Subsystem</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#module-pymetr.subsystems.Timebase">Timebase Subsystem</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#module-pymetr.subsystems.Trigger">Trigger Subsystem</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#module-pymetr.subsystems.Waveform">Waveform Subsystem</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#module-pymetr.subsystems.WaveGen">WaveGen Subsystem</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="#root-level-functions">Root-Level Functions</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#root-functions">Root Functions</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#getting-started-with-the-oscilloscope-class">Getting Started with the Oscilloscope Class</a></li>
 </ul>
 </li>
@@ -75,6 +64,7 @@
 <li class="toctree-l1"><a class="reference internal" href="bible.html#file-and-directory-naming">File and Directory Naming</a></li>
 <li class="toctree-l1"><a class="reference internal" href="logging.html">Logging in Python Projects</a></li>
 <li class="toctree-l1"><a class="reference internal" href="unit-test.html">Unit Testing in Python with unittest</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">PyMetr API</a></li>
 </ul>
 
         </div>
@@ -103,26 +93,26 @@
              
   <section id="oscilloscope-extension">
 <h1>Oscilloscope Extension<a class="headerlink" href="#oscilloscope-extension" title="Link to this heading"></a></h1>
-<p>The <code class="docutils literal notranslate"><span class="pre">Oscilloscope</span></code> class serves as an orchestrator for the complex interplay of its various subsystems, each encapsulated within its own class. Unlike a classical inheritance structure, the <code class="docutils literal notranslate"><span class="pre">Oscilloscope</span></code> class does not serve as a superclass from which subsystems inherit. Instead, it aggregates these subsystems—such as <code class="docutils literal notranslate"><span class="pre">Trigger</span></code>, <code class="docutils literal notranslate"><span class="pre">Timebase</span></code>, <code class="docutils literal notranslate"><span class="pre">Waveform</span></code>, <code class="docutils literal notranslate"><span class="pre">WaveGen</span></code>, <code class="docutils literal notranslate"><span class="pre">Acquire</span></code>, and <code class="docutils literal notranslate"><span class="pre">Channel</span></code>—as components, illustrating a composition-based architecture.</p>
+<p>The <cite>Oscilloscope</cite> class serves as an orchestrator for the complex interplay of its various subsystems, each encapsulated within its own class. Unlike a classical inheritance structure, the <code class="docutils literal notranslate"><span class="pre">Oscilloscope</span></code> class does not serve as a superclass from which subsystems inherit. Instead, it aggregates these subsystems—such as <code class="docutils literal notranslate"><span class="pre">Trigger</span></code>, <code class="docutils literal notranslate"><span class="pre">Timebase</span></code>, <code class="docutils literal notranslate"><span class="pre">Waveform</span></code>, <code class="docutils literal notranslate"><span class="pre">WaveGen</span></code>, <code class="docutils literal notranslate"><span class="pre">Acquire</span></code>, and <code class="docutils literal notranslate"><span class="pre">Channel</span></code>—as components, illustrating a composition-based architecture.</p>
 <p>This design philosophy allows for a high degree of modularity, enabling each subsystem to be developed, tested, and modified independently while the <code class="docutils literal notranslate"><span class="pre">Oscilloscope</span></code> class provides a cohesive and unified interface for the user. The result is a robust and scalable structure, where the complexity of the instrument’s functionalities is managed with grace and precision.</p>
 <p>The <code class="docutils literal notranslate"><span class="pre">pymetr</span></code> package reflects this architecture, segregating related functionalities into dedicated subsystem classes. This not only enhances code organization but also fosters intuitive and object-oriented control over each aspect of the oscilloscope. Below is a visual representation of the <code class="docutils literal notranslate"><span class="pre">Oscilloscope</span></code> class composition:</p>
-<div class="graphviz"><img src="_images/graphviz-e941b786a9f11ff4245952d95fb3f3426fa0c713.png" alt="digraph architecture {
+<div class="graphviz"><img src="_images/graphviz-b59df5faa97b7d0ca9b0e19e324442839b9d46ab.png" alt="digraph architecture {
    node [shape=record fontname=Helvetica fontsize=10];
    rankdir=UD;
 
-   InstrumentInterface [label=&quot;{InstrumentInterface|+ open()\l+ close()\l+ write(command: str)\l+ read(): str\l+ query(command: str): str\l}&quot;];
+   PyVisa [label=&quot;{PyVisa|+ open()\l+ close()\l+ write(command: str)\l+ read(): str\l+ query(command: str): str\l}&quot;];
 
    Instrument [label=&quot;{Instrument|+ identity()\l+ reset()\l+ status()\l}&quot;];
    Oscilloscope [label=&quot;{Oscilloscope|+ run()\l+ stop()\l+ single()\l+ autoscale()\l}&quot;];
 
-   Acquire [label=&quot;{Acquire|+ sync()\l+ _mode: Mode\l+ _type: Type\l}&quot;];
-   Channel [label=&quot;{Channel|+ sync()\l+ coupling: Coupling\l+ display: DisplayState\l}&quot;];
-   Timebase [label=&quot;{Timebase|+ sync()\l+ mode: Mode\l+ position: float\l}&quot;];
-   Trigger [label=&quot;{Trigger|+ sync()\l+ mode: Mode\l+ level: float\l}&quot;];
-   Waveform [label=&quot;{Waveform|+ sync()\l+ format: Format\l+ source: Source\l}&quot;];
-   WaveGen [label=&quot;{WaveGen|+ sync()\l+ function: Function\l+ output: OutputState\l}&quot;];
+   Acquire [label=&quot;{Acquire|+ _mode: Mode\l+ _type: Type\l}&quot;];
+   Channel [label=&quot;{Channel|+ coupling: Coupling\l+ display: DisplayState\l}&quot;];
+   Timebase [label=&quot;{Timebase|+ mode: Mode\l+ position: float\l}&quot;];
+   Trigger [label=&quot;{Trigger|+ mode: Mode\l+ level: float\l}&quot;];
+   Waveform [label=&quot;{Waveform|+ format: Format\l+ source: Source\l}&quot;];
+   WaveGen [label=&quot;{WaveGen|+ function: Function\l+ output: Output\l}&quot;];
 
-   InstrumentInterface -&gt; Instrument [arrowhead=&quot;onormal&quot;, style=&quot;dashed&quot;];
+   PyVisa -&gt; Instrument [arrowhead=&quot;onormal&quot;, style=&quot;dashed&quot;];
    Instrument -&gt; Oscilloscope [arrowhead=&quot;onormal&quot;, style=&quot;dashed&quot;];
 
    Oscilloscope -&gt; Acquire [arrowhead=&quot;odiamond&quot;];
@@ -134,77 +124,14 @@
 
    {rank=same; Acquire Channel Timebase Trigger Waveform WaveGen}
 }" class="graphviz" /></div>
-<section id="module-pymetr.oscilloscope.Oscilloscope">
-<span id="oscilloscope-core"></span><h2>Oscilloscope Core<a class="headerlink" href="#module-pymetr.oscilloscope.Oscilloscope" title="Link to this heading"></a></h2>
-<p>This class represents an oscilloscope, providing a high-level interface to control and manage its functionalities.</p>
-<dl class="simple">
-<dt>Arguments:</dt><dd><p>resource_string (str): VISA resource string for connecting to the oscilloscope.</p>
-</dd>
-<dt>Attributes:</dt><dd><p>trigger (Trigger): Manages the oscilloscope’s trigger settings.
-timebase (Timebase): Manages the oscilloscope’s timebase settings.
-waveform (Waveform): Manages waveform acquisition and processing.
-wavegen (WaveGen): Controls the oscilloscope’s waveform generator.
-acquire (Acquire): Manages the oscilloscope’s data acquisition settings.
-channels (dict): Represents each oscilloscope channel as a Channel object.
-continuous_fetch (bool): Flag to enable/disable continuous waveform fetching.</p>
-</dd>
-</dl>
-</section>
-<section id="oscilloscope-subsystems">
-<h2>Oscilloscope Subsystems<a class="headerlink" href="#oscilloscope-subsystems" title="Link to this heading"></a></h2>
-<p>The subsystems are instantiated within the <code class="docutils literal notranslate"><span class="pre">Oscilloscope</span></code> class and are accessed through the corresponding attributes.
-Each subsystem class focuses on a specific area of oscilloscope functionality, providing specialized methods and properties for that domain.</p>
-</section>
-<section id="module-pymetr.subsystems.Acquire">
-<span id="acquire-subsystem"></span><h2>Acquire Subsystem<a class="headerlink" href="#module-pymetr.subsystems.Acquire" title="Link to this heading"></a></h2>
-<p>Manages the acquisition settings of an oscilloscope or similar instrument, allowing control over the mode, type,
-sample rate, depth, and count of acquisitions. This subsystem simplifies interaction with the device’s acquisition
-parameters, providing a high-level interface to configure and retrieve acquisition settings.</p>
-<p>The <code class="docutils literal notranslate"><span class="pre">Acquire</span></code> subsystem manages data acquisition settings, offering control over how the oscilloscope captures and processes the signal data.</p>
-</section>
-<section id="module-pymetr.subsystems.Channel">
-<span id="channel-subsystem"></span><h2>Channel Subsystem<a class="headerlink" href="#module-pymetr.subsystems.Channel" title="Link to this heading"></a></h2>
-<p>Represents a single channel on an oscilloscope or similar instrument, providing control over display state,
-vertical scale and offset, coupling mode, and probe attenuation factor. This class allows for fine-tuned control
-of each channel’s visual and electrical input characteristics.</p>
-<p>Each channel of the oscilloscope is represented by a <code class="docutils literal notranslate"><span class="pre">Channel</span></code> object, allowing individual control over display, scaling, and other channel-specific settings.</p>
-</section>
-<section id="module-pymetr.subsystems.Timebase">
-<span id="timebase-subsystem"></span><h2>Timebase Subsystem<a class="headerlink" href="#module-pymetr.subsystems.Timebase" title="Link to this heading"></a></h2>
-<p>Controls the timebase settings of an oscilloscope, including mode, reference position, scale, position,
-and range. This subsystem is essential for adjusting how waveform data is displayed over time, affecting
-the horizontal scale and positioning of waveforms on the screen.</p>
-<p>The <code class="docutils literal notranslate"><span class="pre">Timebase</span></code> subsystem governs the horizontal sweep of the oscilloscope, dictating the scale and position of the waveform in time.</p>
-</section>
-<section id="module-pymetr.subsystems.Trigger">
-<span id="trigger-subsystem"></span><h2>Trigger Subsystem<a class="headerlink" href="#module-pymetr.subsystems.Trigger" title="Link to this heading"></a></h2>
-<p>Manages the trigger settings of an oscilloscope or similar instrument, allowing configuration of trigger
-mode, source, level, and slope. This subsystem is crucial for setting up how and when the instrument starts
-capturing data, based on specific signal conditions.</p>
-<p>Trigger settings are crucial for accurate waveform capture. The <code class="docutils literal notranslate"><span class="pre">Trigger</span></code> subsystem provides precise control over when the oscilloscope starts acquiring data.</p>
-</section>
-<section id="module-pymetr.subsystems.Waveform">
-<span id="waveform-subsystem"></span><h2>Waveform Subsystem<a class="headerlink" href="#module-pymetr.subsystems.Waveform" title="Link to this heading"></a></h2>
-<p>Manages waveform data retrieval and configuration settings on an oscilloscope or similar instrument. It provides
-control over the waveform source, data format, points mode, and allows querying of waveform data. This subsystem
-is key for analyzing captured signal data in different formats and resolutions.</p>
-<p>After acquisition, the <code class="docutils literal notranslate"><span class="pre">Waveform</span></code> subsystem takes over, dealing with waveform data retrieval and analysis.</p>
-</section>
-<section id="module-pymetr.subsystems.WaveGen">
-<span id="wavegen-subsystem"></span><h2>WaveGen Subsystem<a class="headerlink" href="#module-pymetr.subsystems.WaveGen" title="Link to this heading"></a></h2>
-<p>Controls the built-in waveform generator (WGEN) of an instrument, managing output waveform function, frequency,
-amplitude, output state, and offset. This subsystem facilitates the generation of various waveform types for
-testing and analysis purposes.</p>
-<p>Some oscilloscopes come with a built-in waveform generator. The <code class="docutils literal notranslate"><span class="pre">WaveGen</span></code> subsystem manages this feature, controlling waveform output and modulation.</p>
-</section>
-</section>
-<section id="root-level-functions">
-<h1>Root-Level Functions<a class="headerlink" href="#root-level-functions" title="Link to this heading"></a></h1>
-<p>Beyond the subsystems, the <code class="docutils literal notranslate"><span class="pre">Oscilloscope</span></code> class includes root-level functions. These include functions like <cite>run</cite>, <cite>stop</cite>, <cite>single</cite>, and <cite>autoscale</cite>.</p>
+<section id="root-functions">
+<h2>Root Functions<a class="headerlink" href="#root-functions" title="Link to this heading"></a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">Oscilloscope</span></code> class also includes root-level functions which do not below to a subsystem. These include functions like <cite>run</cite>, <cite>stop</cite>, <cite>single</cite>, and <cite>autoscale</cite>. As well a high level data acquisition and processing specific further abstracting the use of the instrument.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>The <code class="docutils literal notranslate"><span class="pre">Oscilloscope</span></code> class is designed with the user in mind, abstracting the complexities of the oscilloscope operation and providing a user-friendly interface that reflects the natural workflow of an engineer or technician working with the instrument.</p>
 </div>
+</section>
 <section id="getting-started-with-the-oscilloscope-class">
 <h2>Getting Started with the Oscilloscope Class<a class="headerlink" href="#getting-started-with-the-oscilloscope-class" title="Link to this heading"></a></h2>
 <p>To begin using the <code class="docutils literal notranslate"><span class="pre">Oscilloscope</span></code> class, first ensure that PyVISA is installed and properly configured in your environment. Here’s a quick rundown on creating an instance of the <code class="docutils literal notranslate"><span class="pre">Oscilloscope</span></code> and running basic operations:</p>
@@ -225,7 +152,7 @@ testing and analysis purposes.</p>
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="design.html" class="btn btn-neutral float-left" title="Subsystem Practical Coding Example" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="subsystem_example.html" class="btn btn-neutral float-left" title="Practical Coding Example:" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
         <a href="packaging.html" class="btn btn-neutral float-right" title="Installing the pymetr Package" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 

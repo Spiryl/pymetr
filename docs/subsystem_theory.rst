@@ -6,7 +6,7 @@ Welcome to the deeper dive into our instrumentation framework, focusing on the s
 Overview
 --------
 
-The Subsystem is a foundational concept in our design philosophy, representing a logical component or a distinct functional unit within an instrument. Examples include waveform generators, oscilloscope channels, or power supply modules. Modeling these functions as separate subsystems enables us to encapsulate functionality, thereby simplifying the complex and making the inaccessible readily manageable.
+The `Subsystem` is a foundational concept in our design philosophy, representing a logical component or a distinct functional unit within an instrument. Examples include waveform generators, oscilloscope channels, or power supply modules. Modeling these functions as separate subsystems enables us to encapsulate functionality, thereby simplifying the complex and making the inaccessible readily manageable.
 
 Why Subsystems?
 ---------------

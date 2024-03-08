@@ -31,6 +31,7 @@ System Dependencies
    instruments
    subsystem_theory
    factories
+   subsystem_example
    oscilloscope
    packaging
    doc-build
@@ -38,3 +39,4 @@ System Dependencies
    bible
    logging
    unit-test
+   api

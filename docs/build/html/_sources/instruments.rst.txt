@@ -6,7 +6,7 @@ The ``instrument`` Library is engineered as the foundational framework for inter
 Instrument Base Class
 ---------------------
 
-The ``Instrument`` base class unifies the API for interacting with instruments of diverse nature. It utilizes PyVISA as the backend for communication, covering standard protocols such as GPIB, RS232, USB, and Ethernet. It is designed to be extended for custom interfaces and communication protocols.
+The `Instrument` base class unifies the API for interacting with instruments of diverse nature. It utilizes PyVISA as the backend for communication, covering standard protocols such as GPIB, RS232, USB, and Ethernet. It is designed to be extended for custom interfaces and communication protocols.
 
 **Key Features:**
 
@@ -18,7 +18,7 @@ The ``Instrument`` base class unifies the API for interacting with instruments o
 Class Diagram
 -------------
 
-The class diagram illustrates the relationship between the PyVISA backend and the ``Instrument`` class. It highlights how the ``Instrument`` class extends PyVISA's functionality with additional methods for controlling measurement devices.
+The class diagram illustrates the relationship between the PyVISA backend and the `Instrument` class. It highlights how the ``Instrument`` class extends PyVISA's functionality with additional methods for controlling measurement devices.
 
 .. graphviz::
 
@@ -52,10 +52,3 @@ Below is a succinct example illustrating the application of the library within a
    print(my_instrument.identity())
    print(my_instrument.query('MEAS:VOLT:DC?'))
 
-Instrument Class API
---------------------
-
-.. autoclass:: pymetr.instrument.Instrument
-   :members:
-   :undoc-members:
-   :show-inheritance:
