@@ -6,7 +6,7 @@ The ``pymetr`` library introduces an efficient, streamlined approach to instrume
 Simplifying Property Synchronization
 -------------------------------------
 
-Traditionally, interfacing with instruments involves verbose getters and setters to synchronize object properties with instrument states. This method, while effective, results in extensive boilerplate code, increasing the likelihood of errors and complicating code maintenance.
+Traditionally, creating an object model to synchronize with an instrument involves verbose getters and setters to synchronize object properties with instrument states. This method, while effective, results in extensive boilerplate code, increasing the likelihood of errors and complicating code maintenance.
 
 Consider this conventional approach:
 
@@ -38,7 +38,6 @@ Consider this conventional approach:
             else:
                 raise ValueError("Invalid acquisition type")
 
-        # Similar code for 'depth' property
 
 This example, while functional, involves a lot of repetitive code for defining each property, significantly bloating the class definition.
 
