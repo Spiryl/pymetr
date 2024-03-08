@@ -36,12 +36,12 @@ Consider setting parameters on an oscilloscope. Our subsystem approach abstracts
     # Here `oscope` is an instance of an Oscilloscope class with an Acquire subsystem
 
     oscope.acquire.type = Acquire.Type.NORMAL  # Sets acquisition type to normal
-    # Behind the scenes: scope.acquire.write(":ACQuire:TYPE NORM")
+    # Behind the scenes: oscope.write(":ACQuire:TYPE NORM")
 
     oscope.acquire.sample_rate = 1e6  # Sets sample rate to 1 MSa/s
-    # Behind the scenes: scope.acquire.write(":ACQuire:SRATe 1e6")
+    # Behind the scenes: oscope.write(":ACQuire:SRATe 1e6")
 
     print(scope.acquire.depth)  # Queries the current acquisition depth
-    # Behind the scenes: scope.acquire.query(":ACQuire:DEPTh?")
+    # Behind the scenes: ocope.query(":ACQuire:DEPTh?")
 
-This snippet demonstrates how each property or method call on a subsystem translates into a write or query to the instrument, abstracting the complexity of SCPI commands into user-friendly operations.
+This snippet demonstrates how each property or method call on a subsystem translates into a write or query to the instrument, abstracting the complexity of SCPI commands into user-friendly operations.  This method dramatically simplifies test creation allowing the test designers to focus on test flow without needing to be distracted by the interface to the isntrument.
