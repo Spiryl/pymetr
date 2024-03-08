@@ -49,6 +49,7 @@
 <li class="toctree-l1"><a class="reference internal" href="subsystems.html">Practical Coding Example: WaveGen Subsystem</a></li>
 <li class="toctree-l1"><a class="reference internal" href="subsystems.html#visual-representation-of-property-to-command-translation">Visual Representation of Property to Command Translation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="subsystem_theory.html">Understanding Subsystems</a></li>
+<li class="toctree-l1"><a class="reference internal" href="factories.html">Leveraging Command Parameters and Options for Efficient Instrument Control</a></li>
 <li class="toctree-l1"><a class="reference internal" href="design.html">Subsystem Practical Coding Example</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oscilloscope.html">Oscilloscope Extension</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oscilloscope.html#root-level-functions">Root-Level Functions</a></li>
@@ -94,6 +95,7 @@
  | <a href="#G"><strong>G</strong></a>
  | <a href="#I"><strong>I</strong></a>
  | <a href="#L"><strong>L</strong></a>
+ | <a href="#M"><strong>M</strong></a>
  | <a href="#O"><strong>O</strong></a>
  | <a href="#P"><strong>P</strong></a>
  | <a href="#Q"><strong>Q</strong></a>
@@ -106,13 +108,13 @@
 <h2 id="C">C</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="instruments.html#pymetr.instruments.Instrument.clear_status">clear_status() (pymetr.instruments.Instrument method)</a>
+      <li><a href="instruments.html#pymetr.instrument.Instrument.clear_status">clear_status() (pymetr.instrument.Instrument method)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="instruments.html#pymetr.instruments.Instrument.close">close() (pymetr.instruments.Instrument method)</a>
+      <li><a href="instruments.html#pymetr.instrument.Instrument.close">close() (pymetr.instrument.Instrument method)</a>
 </li>
-      <li><a href="instruments.html#pymetr.instruments.Instrument.Status.CME">CME (pymetr.instruments.Instrument.Status attribute)</a>
+      <li><a href="instruments.html#pymetr.instrument.Instrument.Status.CME">CME (pymetr.instrument.Instrument.Status attribute)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -120,7 +122,7 @@
 <h2 id="D">D</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="instruments.html#pymetr.instruments.Instrument.Status.DDE">DDE (pymetr.instruments.Instrument.Status attribute)</a>
+      <li><a href="instruments.html#pymetr.instrument.Instrument.Status.DDE">DDE (pymetr.instrument.Instrument.Status attribute)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -128,7 +130,7 @@
 <h2 id="E">E</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="instruments.html#pymetr.instruments.Instrument.Status.EXE">EXE (pymetr.instruments.Instrument.Status attribute)</a>
+      <li><a href="instruments.html#pymetr.instrument.Instrument.Status.EXE">EXE (pymetr.instrument.Instrument.Status attribute)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -136,11 +138,11 @@
 <h2 id="G">G</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="instruments.html#pymetr.instruments.Instrument.get_event_status">get_event_status() (pymetr.instruments.Instrument method)</a>
+      <li><a href="instruments.html#pymetr.instrument.Instrument.get_event_status">get_event_status() (pymetr.instrument.Instrument method)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="instruments.html#pymetr.instruments.Instrument.get_service_request">get_service_request() (pymetr.instruments.Instrument method)</a>
+      <li><a href="instruments.html#pymetr.instrument.Instrument.get_service_request">get_service_request() (pymetr.instrument.Instrument method)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -148,13 +150,13 @@
 <h2 id="I">I</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="instruments.html#pymetr.instruments.Instrument.identity">identity() (pymetr.instruments.Instrument method)</a>
+      <li><a href="instruments.html#pymetr.instrument.Instrument.identity">identity() (pymetr.instrument.Instrument method)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="instruments.html#pymetr.instruments.Instrument">Instrument (class in pymetr.instruments)</a>
+      <li><a href="instruments.html#pymetr.instrument.Instrument">Instrument (class in pymetr.instrument)</a>
 </li>
-      <li><a href="instruments.html#pymetr.instruments.Instrument.Status">Instrument.Status (class in pymetr.instruments)</a>
+      <li><a href="instruments.html#pymetr.instrument.Instrument.Status">Instrument.Status (class in pymetr.instrument)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -162,21 +164,34 @@
 <h2 id="L">L</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="instruments.html#pymetr.instruments.Instrument.list_resources">list_resources() (pymetr.instruments.Instrument static method)</a>
+      <li><a href="instruments.html#pymetr.instrument.Instrument.list_resources">list_resources() (pymetr.instrument.Instrument static method)</a>
 </li>
+  </ul></td>
+</tr></table>
+
+<h2 id="M">M</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    module
+
+      <ul>
+        <li><a href="oscilloscope.html#module-pymetr.oscilloscope.Oscilloscope">pymetr.oscilloscope.Oscilloscope</a>
+</li>
+      </ul></li>
   </ul></td>
 </tr></table>
 
 <h2 id="O">O</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="instruments.html#pymetr.instruments.Instrument.Status.OPC">OPC (pymetr.instruments.Instrument.Status attribute)</a>
+      <li><a href="instruments.html#pymetr.instrument.Instrument.Status.OPC">OPC (pymetr.instrument.Instrument.Status attribute)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="instruments.html#pymetr.instruments.Instrument.open">open() (pymetr.instruments.Instrument method)</a>
+      <li><a href="instruments.html#pymetr.instrument.Instrument.open">open() (pymetr.instrument.Instrument method)</a>
 </li>
-      <li><a href="instruments.html#pymetr.instruments.Instrument.operation_complete">operation_complete() (pymetr.instruments.Instrument method)</a>
+      <li><a href="instruments.html#pymetr.instrument.Instrument.operation_complete">operation_complete() (pymetr.instrument.Instrument method)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -184,23 +199,32 @@
 <h2 id="P">P</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="instruments.html#pymetr.instruments.Instrument.Status.PON">PON (pymetr.instruments.Instrument.Status attribute)</a>
+      <li><a href="instruments.html#pymetr.instrument.Instrument.Status.PON">PON (pymetr.instrument.Instrument.Status attribute)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    pymetr.oscilloscope.Oscilloscope
+
+      <ul>
+        <li><a href="oscilloscope.html#module-pymetr.oscilloscope.Oscilloscope">module</a>
+</li>
+      </ul></li>
   </ul></td>
 </tr></table>
 
 <h2 id="Q">Q</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="instruments.html#pymetr.instruments.Instrument.query">query() (pymetr.instruments.Instrument method)</a>
+      <li><a href="instruments.html#pymetr.instrument.Instrument.query">query() (pymetr.instrument.Instrument method)</a>
 </li>
-      <li><a href="instruments.html#pymetr.instruments.Instrument.query_binary">query_binary() (pymetr.instruments.Instrument method)</a>
+      <li><a href="instruments.html#pymetr.instrument.Instrument.query_binary">query_binary() (pymetr.instrument.Instrument method)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="instruments.html#pymetr.instruments.Instrument.query_operation_complete">query_operation_complete() (pymetr.instruments.Instrument method)</a>
+      <li><a href="instruments.html#pymetr.instrument.Instrument.query_operation_complete">query_operation_complete() (pymetr.instrument.Instrument method)</a>
 </li>
-      <li><a href="instruments.html#pymetr.instruments.Instrument.Status.QYE">QYE (pymetr.instruments.Instrument.Status attribute)</a>
+      <li><a href="instruments.html#pymetr.instrument.Instrument.Status.QYE">QYE (pymetr.instrument.Instrument.Status attribute)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -208,13 +232,13 @@
 <h2 id="R">R</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="instruments.html#pymetr.instruments.Instrument.read">read() (pymetr.instruments.Instrument method)</a>
+      <li><a href="instruments.html#pymetr.instrument.Instrument.read">read() (pymetr.instrument.Instrument method)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="instruments.html#pymetr.instruments.Instrument.reset">reset() (pymetr.instruments.Instrument method)</a>
+      <li><a href="instruments.html#pymetr.instrument.Instrument.reset">reset() (pymetr.instrument.Instrument method)</a>
 </li>
-      <li><a href="instruments.html#pymetr.instruments.Instrument.Status.RQL">RQL (pymetr.instruments.Instrument.Status attribute)</a>
+      <li><a href="instruments.html#pymetr.instrument.Instrument.Status.RQL">RQL (pymetr.instrument.Instrument.Status attribute)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -222,15 +246,15 @@
 <h2 id="S">S</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="instruments.html#pymetr.instruments.Instrument.save_setup">save_setup() (pymetr.instruments.Instrument method)</a>
+      <li><a href="instruments.html#pymetr.instrument.Instrument.save_setup">save_setup() (pymetr.instrument.Instrument method)</a>
 </li>
-      <li><a href="instruments.html#pymetr.instruments.Instrument.select_resources">select_resources() (pymetr.instruments.Instrument static method)</a>
+      <li><a href="instruments.html#pymetr.instrument.Instrument.select_resources">select_resources() (pymetr.instrument.Instrument static method)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="instruments.html#pymetr.instruments.Instrument.set_service_request">set_service_request() (pymetr.instruments.Instrument method)</a>
+      <li><a href="instruments.html#pymetr.instrument.Instrument.set_service_request">set_service_request() (pymetr.instrument.Instrument method)</a>
 </li>
-      <li><a href="instruments.html#pymetr.instruments.Instrument.status">status() (pymetr.instruments.Instrument method)</a>
+      <li><a href="instruments.html#pymetr.instrument.Instrument.status">status() (pymetr.instrument.Instrument method)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -238,7 +262,7 @@
 <h2 id="U">U</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="instruments.html#pymetr.instruments.Instrument.Status.URQ">URQ (pymetr.instruments.Instrument.Status attribute)</a>
+      <li><a href="instruments.html#pymetr.instrument.Instrument.Status.URQ">URQ (pymetr.instrument.Instrument.Status attribute)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -246,7 +270,7 @@
 <h2 id="W">W</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="instruments.html#pymetr.instruments.Instrument.write">write() (pymetr.instruments.Instrument method)</a>
+      <li><a href="instruments.html#pymetr.instrument.Instrument.write">write() (pymetr.instrument.Instrument method)</a>
 </li>
   </ul></td>
 </tr></table>

@@ -1,27 +1,41 @@
 .. code-block:: text
 
 pymetr/
+│   ├── .gitignore
+│   ├── .pypirc
+│   ├── .readthedocs.yaml
+│   ├── LICENSE
 │   ├── make.bat
 │   ├── Makefile
 │   ├── README.md
 │   ├── setup.py
+├── dist/
+│   │   ├── PyMetr-0.1.0-py3-none-any.whl
+│   │   ├── PyMetr-0.1.0.tar.gz
 ├── docs/
 │   │   ├── bible.rst
 │   │   ├── conf.py
+│   │   ├── design.rst
 │   │   ├── doc-build.rst
+│   │   ├── factories.rst
 │   │   ├── index.rst
 │   │   ├── instruments.rst
-│   │   ├── interfaces.rst
 │   │   ├── logging.rst
 │   │   ├── oscilloscope.rst
 │   │   ├── packaging.rst
 │   │   ├── quickstart.rst
+│   │   ├── requirements.txt
 │   │   ├── sphinx.rst
+│   │   ├── subsystems.rst
+│   │   ├── subsystem_theory.rst
 │   │   ├── unit-test.rst
-│   ├── _static/
+│   │   ├── _rst_master.txt
 │   ├── _templates/
 ├── examples/
 │   │   ├── instrument_cli.py
+│   │   ├── subsystem.ipynb
+│   │   ├── subsystem_script.py
+│   │   ├── test.py
 │   ├── oscilloscope/
 │   │   │   ├── oscilloscope_controls.py
 │   │   │   ├── oscilloscope_gui.py
@@ -29,28 +43,16 @@ pymetr/
 │   │   │   ├── oscilloscope_script.py
 │   ├── spectroscope/
 ├── pymetr/
-│   │   ├── instruments.py
-│   │   ├── interfaces.py
+│   │   ├── instrument.py
+│   │   ├── oscilloscope.py
+│   │   ├── subsystem.py
+│   │   ├── subsystems.py
 │   │   ├── __init__.py
-│   ├── oscilloscope/
-│   │   │   ├── acquire.py
-│   │   │   ├── channel.py
-│   │   │   ├── core.py
-│   │   │   ├── timebase.py
-│   │   │   ├── trigger.py
-│   │   │   ├── waveform.py
-│   │   │   ├── wavegen.py
-│   │   │   ├── __init__.py
-├── pymetr.egg-info/
+├── PyMetr.egg-info/
 │   │   ├── dependency_links.txt
 │   │   ├── PKG-INFO
 │   │   ├── SOURCES.txt
 │   │   ├── top_level.txt
-├── scratch/
-│   │   ├── instrument_bak.py
-│   │   ├── oscilloscope_bak.py
-│   │   ├── oscilloscope_gui.py
-│   │   ├── oscilloscope_modes.py
 ├── tests/
 │   │   ├── test_instrument.py
 │   ├── oscilloscope/
@@ -59,6 +61,7 @@ pymetr/
 ├── utilities/
 │   │   ├── decorators.py
 │   │   ├── utils.py
+│   │   ├── _init-master.txt
 │   │   ├── _init_dump.py
 │   │   ├── _project-tree.txt
 │   │   ├── _project_tree.py

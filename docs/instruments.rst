@@ -41,7 +41,7 @@ Below is a succinct example illustrating the application of the library within a
 
 .. code-block:: python
 
-   from pymetr.instruments import Instrument
+   from pymetr.instrument import Instrument
 
    # Instrument discovery and selection
    instrument_address = Instrument.select_resources()
@@ -55,7 +55,7 @@ Below is a succinct example illustrating the application of the library within a
 Instrument Class API
 --------------------
 
-.. autoclass:: pymetr.instruments.Instrument
+.. autoclass:: pymetr.instrument.Instrument
    :members:
    :undoc-members:
    :show-inheritance:

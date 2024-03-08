@@ -5,7 +5,8 @@ This example demonstrates how to use the WaveGen subsystem of an instrument to c
 
 .. code-block:: python
 
-    from pymetr.instruments import Instrument, Subsystem, command_property, command_options
+    from pymetr.instrument import Instrument
+    from pymetr.subsystem import Subsystem, command_property, command_options
     import logging
 
     logging.basicConfig(level=logging.INFO)

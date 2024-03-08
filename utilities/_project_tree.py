@@ -26,4 +26,4 @@ def generate_directory_tree(path, filename='_project-tree.txt', exclude=None):
 
 if __name__ == "__main__":
     project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-    generate_directory_tree(project_root, filename='_project-tree.txt', exclude=['__pycache__', '.git', 'build', 'venv'])
+    generate_directory_tree(project_root, filename='_project-tree.txt', exclude=['__pycache__', '.git', 'build', 'venv', '_static', 'scratch'])

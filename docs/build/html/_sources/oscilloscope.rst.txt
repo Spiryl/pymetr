@@ -42,7 +42,7 @@ The ``pymetr`` package reflects this architecture, segregating related functiona
 Oscilloscope Core
 -----------------
 
-.. automodule:: pymetr.oscilloscope.core.Oscilloscope
+.. automodule:: pymetr.oscilloscope.Oscilloscope
    :members:
    :undoc-members:
    :show-inheritance:
@@ -56,7 +56,7 @@ Each subsystem class focuses on a specific area of oscilloscope functionality, p
 Acquire Subsystem
 -----------------
 
-.. automodule:: pymetr.oscilloscope.acquire
+.. automodule:: pymetr.subsystems.acquire
    :members:
    :undoc-members:
    :show-inheritance:
@@ -66,7 +66,7 @@ The ``Acquire`` subsystem manages data acquisition settings, offering control ov
 Channel Subsystem
 -----------------
 
-.. automodule:: pymetr.oscilloscope.channel
+.. automodule:: pymetr.subsystems.channel
    :members:
    :undoc-members:
    :show-inheritance:
@@ -76,7 +76,7 @@ Each channel of the oscilloscope is represented by a ``Channel`` object, allowin
 Timebase Subsystem
 ------------------
 
-.. automodule:: pymetr.oscilloscope.timebase
+.. automodule:: pymetr.subsystems.timebase
    :members:
    :undoc-members:
    :show-inheritance:
@@ -86,7 +86,7 @@ The ``Timebase`` subsystem governs the horizontal sweep of the oscilloscope, dic
 Trigger Subsystem
 -----------------
 
-.. automodule:: pymetr.oscilloscope.trigger
+.. automodule:: pymetr.subsystems.trigger
    :members:
    :undoc-members:
    :show-inheritance:
@@ -96,7 +96,7 @@ Trigger settings are crucial for accurate waveform capture. The ``Trigger`` subs
 Waveform Subsystem
 ------------------
 
-.. automodule:: pymetr.oscilloscope.waveform
+.. automodule:: pymetr.subsystems.waveform
    :members:
    :undoc-members:
    :show-inheritance:
@@ -106,7 +106,7 @@ After acquisition, the ``Waveform`` subsystem takes over, dealing with waveform 
 WaveGen Subsystem
 -----------------
 
-.. automodule:: pymetr.oscilloscope.wavegen
+.. automodule:: pymetr.subsystems.wavegen
    :members:
    :undoc-members:
    :show-inheritance:
@@ -128,7 +128,7 @@ To begin using the ``Oscilloscope`` class, first ensure that PyVISA is installed
 
 .. code-block:: python
 
-   from pymetr.oscilloscope.core import Oscilloscope
+   from pymetr.oscilloscope import Oscilloscope
 
    # Replace with your oscilloscope's VISA resource string
    resource_string = 'TCPIP0::192.168.1.111::hislip0::INSTR'

@@ -52,9 +52,10 @@
 <li class="toctree-l1"><a class="reference internal" href="subsystems.html">Practical Coding Example: WaveGen Subsystem</a></li>
 <li class="toctree-l1"><a class="reference internal" href="subsystems.html#visual-representation-of-property-to-command-translation">Visual Representation of Property to Command Translation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="subsystem_theory.html">Understanding Subsystems</a></li>
+<li class="toctree-l1"><a class="reference internal" href="factories.html">Leveraging Command Parameters and Options for Efficient Instrument Control</a></li>
 <li class="toctree-l1"><a class="reference internal" href="design.html">Subsystem Practical Coding Example</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Oscilloscope Extension</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#oscilloscope-core">Oscilloscope Core</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-pymetr.oscilloscope.Oscilloscope">Oscilloscope Core</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#oscilloscope-subsystems">Oscilloscope Subsystems</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#acquire-subsystem">Acquire Subsystem</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#channel-subsystem">Channel Subsystem</a></li>
@@ -135,8 +136,21 @@
 
    {rank=same; Acquire Channel Timebase Trigger Waveform WaveGen}
 }" class="graphviz" /></div>
-<section id="oscilloscope-core">
-<h2>Oscilloscope Core<a class="headerlink" href="#oscilloscope-core" title="Link to this heading"></a></h2>
+<section id="module-pymetr.oscilloscope.Oscilloscope">
+<span id="oscilloscope-core"></span><h2>Oscilloscope Core<a class="headerlink" href="#module-pymetr.oscilloscope.Oscilloscope" title="Link to this heading"></a></h2>
+<p>This class represents an oscilloscope, providing a high-level interface to control and manage its functionalities.</p>
+<dl class="simple">
+<dt>Arguments:</dt><dd><p>resource_string (str): VISA resource string for connecting to the oscilloscope.</p>
+</dd>
+<dt>Attributes:</dt><dd><p>trigger (Trigger): Manages the oscilloscope’s trigger settings.
+timebase (Timebase): Manages the oscilloscope’s timebase settings.
+waveform (Waveform): Manages waveform acquisition and processing.
+wavegen (WaveGen): Controls the oscilloscope’s waveform generator.
+acquire (Acquire): Manages the oscilloscope’s data acquisition settings.
+channels (dict): Represents each oscilloscope channel as a Channel object.
+continuous_fetch (bool): Flag to enable/disable continuous waveform fetching.</p>
+</dd>
+</dl>
 </section>
 <section id="oscilloscope-subsystems">
 <h2>Oscilloscope Subsystems<a class="headerlink" href="#oscilloscope-subsystems" title="Link to this heading"></a></h2>
@@ -178,7 +192,7 @@ Each subsystem class focuses on a specific area of oscilloscope functionality, p
 <section id="getting-started-with-the-oscilloscope-class">
 <h2>Getting Started with the Oscilloscope Class<a class="headerlink" href="#getting-started-with-the-oscilloscope-class" title="Link to this heading"></a></h2>
 <p>To begin using the <code class="docutils literal notranslate"><span class="pre">Oscilloscope</span></code> class, first ensure that PyVISA is installed and properly configured in your environment. Here’s a quick rundown on creating an instance of the <code class="docutils literal notranslate"><span class="pre">Oscilloscope</span></code> and running basic operations:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pymetr.oscilloscope.core</span> <span class="kn">import</span> <span class="n">Oscilloscope</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pymetr.oscilloscope</span> <span class="kn">import</span> <span class="n">Oscilloscope</span>
 
 <span class="c1"># Replace with your oscilloscope&#39;s VISA resource string</span>
 <span class="n">resource_string</span> <span class="o">=</span> <span class="s1">&#39;TCPIP0::192.168.1.111::hislip0::INSTR&#39;</span>

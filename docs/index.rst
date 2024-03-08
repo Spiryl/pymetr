@@ -36,6 +36,7 @@ System Dependencies
    instruments
    subsystems
    subsystem_theory
+   factories
    design
    oscilloscope
    packaging

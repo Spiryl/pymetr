@@ -316,6 +316,83 @@ You now have a basic Sphinx setup with support for Graphviz diagrams and a profe
 
 # End of c:\Users\Ryan\Documents\GitHub\pymetr\docs\doc-build.rst
 
+# Start of c:\Users\Ryan\Documents\GitHub\pymetr\docs\factories.rst
+Leveraging Command Parameters and Options for Efficient Instrument Control
+===========================================================================
+
+The `pymetr` library introduces an efficient, streamlined approach to instrument control, significantly reducing the complexity traditionally associated with direct device communication. Through the innovative use of factory functions `command_property` and `command_options`, `pymetr` enables developers to define instrument properties with minimal code, enhancing maintainability, readability, and error handling.
+
+Simplifying Property Synchronization
+-------------------------------------
+
+Traditionally, interfacing with instruments involves verbose getters and setters to synchronize object properties with instrument states. This method, while effective, results in extensive boilerplate code, increasing the likelihood of errors and complicating code maintenance.
+
+Consider this conventional approach:
+
+.. code-block:: python
+
+    from enum import Enum
+
+    class Acquire:
+        class Type(Enum):
+            NORMAL = "NORM"
+            AVERAGE = "AVER"
+
+        def __init__(self, parent):
+            self._parent = parent
+            self._type = None
+            self._depth = None
+
+        @property
+        def type(self):
+            response = self._parent.query(":ACQuire:TYPE?")
+            self._type = self.Type(response.strip())
+            return self._type
+
+        @type.setter
+        def type(self, value):
+            if isinstance(value, self.Type):
+                self._parent.write(f":ACQuire:TYPE {value.value}")
+                self._type = value
+            else:
+                raise ValueError("Invalid acquisition type")
+
+        # Similar code for 'depth' property
+
+This example, while functional, involves a lot of repetitive code for defining each property, significantly bloating the class definition.
+
+Introducing `command_property` and `command_options`
+-----------------------------------------------------
+
+`command_property` and `command_options` factory functions dramatically simplify property definition. `command_property` allows for the creation of properties with integrated getters and setters, tailored to specific instrument commands. `command_options` facilitates the definition of valid command parameters, enforcing valid values through enums.
+
+Refactoring the Acquire Subsystem
+----------------------------------
+
+Using `command_property` and `command_options`, we can refactor the `Acquire` subsystem to achieve the same functionality with less code and improved readability:
+
+.. code-block:: python
+
+    from pymetr.instruments import Subsystem, command_property, command_options
+
+    class Acquire(InstrumentSubsystem):
+        Type = command_options('Type', ['NORMAL', 'AVERAGE', 'HRES', 'PEAK'])
+        type = command_property(":TYPE", Type, "Type of acquisition.")
+        mode = command_property(":MODE", Mode, "Current acquisition mode.")
+        
+        def __init__(self, parent):
+            super().__init__(parent, cmd_prefix=":ACQuire")
+
+This refactor significantly reduces the amount of boilerplate code, making the class definition cleaner and more maintainable. The `cmd_prefix` initialization parameter further streamlines command construction, eliminating the need to repeat the command prefix for each property.
+
+Conclusion
+----------
+
+By adopting `command_property` and `command_options`, `pymetr` offers a more efficient and error-resistant method for developing instrument control interfaces. This approach not only simplifies property definition but also ensures type safety and reduces the potential for bugs, making instrument control software development more accessible and maintainable.
+
+
+# End of c:\Users\Ryan\Documents\GitHub\pymetr\docs\factories.rst
+
 # Start of c:\Users\Ryan\Documents\GitHub\pymetr\docs\index.rst
 PyMetr Documentation
 ==========================
@@ -355,6 +432,7 @@ System Dependencies
    instruments
    subsystems
    subsystem_theory
+   factories
    design
    oscilloscope
    packaging
@@ -410,7 +488,7 @@ Below is a succinct example illustrating the application of the library within a
 
 .. code-block:: python
 
-   from pymetr.instruments import Instrument
+   from pymetr.instrument import Instrument
 
    # Instrument discovery and selection
    instrument_address = Instrument.select_resources()
@@ -424,7 +502,7 @@ Below is a succinct example illustrating the application of the library within a
 Instrument Class API
 --------------------
 
-.. autoclass:: pymetr.instruments.Instrument
+.. autoclass:: pymetr.instrument.Instrument
    :members:
    :undoc-members:
    :show-inheritance:
@@ -545,7 +623,7 @@ The ``pymetr`` package reflects this architecture, segregating related functiona
 Oscilloscope Core
 -----------------
 
-.. automodule:: pymetr.oscilloscope.core.Oscilloscope
+.. automodule:: pymetr.oscilloscope.Oscilloscope
    :members:
    :undoc-members:
    :show-inheritance:
@@ -559,7 +637,7 @@ Each subsystem class focuses on a specific area of oscilloscope functionality, p
 Acquire Subsystem
 -----------------
 
-.. automodule:: pymetr.oscilloscope.acquire
+.. automodule:: pymetr.subsystems.acquire
    :members:
    :undoc-members:
    :show-inheritance:
@@ -569,7 +647,7 @@ The ``Acquire`` subsystem manages data acquisition settings, offering control ov
 Channel Subsystem
 -----------------
 
-.. automodule:: pymetr.oscilloscope.channel
+.. automodule:: pymetr.subsystems.channel
    :members:
    :undoc-members:
    :show-inheritance:
@@ -579,7 +657,7 @@ Each channel of the oscilloscope is represented by a ``Channel`` object, allowin
 Timebase Subsystem
 ------------------
 
-.. automodule:: pymetr.oscilloscope.timebase
+.. automodule:: pymetr.subsystems.timebase
    :members:
    :undoc-members:
    :show-inheritance:
@@ -589,7 +667,7 @@ The ``Timebase`` subsystem governs the horizontal sweep of the oscilloscope, dic
 Trigger Subsystem
 -----------------
 
-.. automodule:: pymetr.oscilloscope.trigger
+.. automodule:: pymetr.subsystems.trigger
    :members:
    :undoc-members:
    :show-inheritance:
@@ -599,7 +677,7 @@ Trigger settings are crucial for accurate waveform capture. The ``Trigger`` subs
 Waveform Subsystem
 ------------------
 
-.. automodule:: pymetr.oscilloscope.waveform
+.. automodule:: pymetr.subsystems.waveform
    :members:
    :undoc-members:
    :show-inheritance:
@@ -609,7 +687,7 @@ After acquisition, the ``Waveform`` subsystem takes over, dealing with waveform 
 WaveGen Subsystem
 -----------------
 
-.. automodule:: pymetr.oscilloscope.wavegen
+.. automodule:: pymetr.subsystems.wavegen
    :members:
    :undoc-members:
    :show-inheritance:
@@ -631,7 +709,7 @@ To begin using the ``Oscilloscope`` class, first ensure that PyVISA is installed
 
 .. code-block:: python
 
-   from pymetr.oscilloscope.core import Oscilloscope
+   from pymetr.oscilloscope import Oscilloscope
 
    # Replace with your oscilloscope's VISA resource string
    resource_string = 'TCPIP0::192.168.1.111::hislip0::INSTR'
@@ -865,103 +943,83 @@ reStructuredText is the default plaintext markup language used by Sphinx. It's d
 # End of c:\Users\Ryan\Documents\GitHub\pymetr\docs\sphinx.rst
 
 # Start of c:\Users\Ryan\Documents\GitHub\pymetr\docs\subsystems.rst
+Practical Coding Example: WaveGen Subsystem
+-------------------------------------------
 
-Subsystem Architecture for Instrument Control
-=============================================
-
-The Subsystem architecture is a pivotal foundation for creating and managing test and measurement instruments within a Python-based control environment. Its design promotes a modular, object-oriented approach to instrument control, simplifying the development of instrument drivers and enhancing the efficiency of test script creation.
-
-Introduction
-------------
-
-At the core of effective test and measurement automation lies the need for a structured yet flexible way to communicate with and control instruments. The Subsystem architecture addresses this need by offering a dynamic framework that abstracts the complexity of SCPI command hierarchies into an intuitive, Pythonic interface.
-
-Key Features
-------------
-
-- **Modular Design**: Facilitates the creation of instrument drivers by modularizing control commands into discrete subsystems.
-- **Dynamic Command Generation**: Automates the construction and execution of SCPI commands based on the interaction with subsystem properties.
-- **Ease of Use**: Streamlines the writing of test scripts by providing a clear and simple interface for instrument control.
-
-Subsystem in Action: Building Blocks
-------------------------------------
-
-.. graphviz::
-
-    digraph subsystem_blocks {
-        node [shape=record fontname=Helvetica fontsize=10];
-        
-        Instrument [label="Instrument"];
-        Subsystem [label="Subsystem"];
-        Command [label="Command"];
-        
-        Instrument -> Subsystem;
-        Subsystem -> Command;
-        
-        label="Subsystem Architecture Building Blocks";
-    }
-
-The diagram illustrates the hierarchical relationship between the generic `Instrument` class and its `Subsystem` components, down to individual commands.
-
-Creating a Generic Instrument
-------------------------------
-
-.. graphviz::
-
-    digraph subsystem_blocks_extended {
-        node [shape=record, fontname=Helvetica, fontsize=10];
-
-        Instrument [label="{Instrument|+ open()\l+ close()\l+ write(command: str)\l+ read(): str\l+ query(command: str): str\l|attributes: connection, address}"];
-        Subsystem [label="{Subsystem|+ set_value(val)\l+ query()\l|settings: mode, frequency}"];
-        Command [label="Command SCPI: 'SYStem:STATus?'"];
-
-        Instrument -> Subsystem [label=" aggregates"];
-        Subsystem -> Command [label=" generates"];
-
-        label="Subsystem Architecture: Extended Building Blocks";
-        fontsize=12;
-    }
-
-
-This snippet demonstrates the instantiation of a `GenericInstrument`, showcasing the integration of multiple `Subsystem` instances, each representing a different aspect of the instrument's functionality.
-
-Enhanced Usage Example
-----------------------
-
-Let's delve deeper into how the `Subsystem` architecture empowers engineers to effortlessly configure and control a generic instrument:
+This example demonstrates how to use the WaveGen subsystem of an instrument to control waveform output and modulation. Below, we detail the translation of property settings into SCPI commands.
 
 .. code-block:: python
 
-    # Example: Configuring a generic instrument's subsystem
-    generic_instrument = GenericInstrument()
-    generic_instrument.subsystem1.mode.value = "AUTO"
-    generic_instrument.subsystem2.frequency(1e3)
+    from pymetr.instrument import Instrument
+    from pymetr.subsystem import Subsystem, command_property, command_options
+    import logging
 
-    # Resultant SCPI Commands:
-    # Setting mode: ":SUBSYS1:MODE AUTO"
-    # Setting frequency: ":SUBSYS2:FREQ 1e3"
+    logging.basicConfig(level=logging.INFO)
+
+    class WaveGen(Subsystem):
+        """
+        Manages the built-in waveform generator (WGEN) of an instrument, controlling waveform output and modulation.
+        """
+
+        # Nested enums for clean namespace and easy access
+        Functions = command_options('Functions', ['SIN', 'SQU', 'RAMP', 'PULSE', 'NOISE', 'DC'])
+        OutputState = command_options('OutputState', ['ON', 'OFF'])
+
+        # Updated property definitions without redundant ":WGEN" prefix
+        function = command_property(":FUNC", Functions, "Waveform function")
+        frequency = command_property(":FREQ", doc_str="Waveform frequency")
+        amplitude = command_property(":VOLT", doc_str="Waveform amplitude")
+        output = command_property(":OUTP", OutputState, "Waveform output state")
+        offset = command_property(":VOLT:OFFS", doc_str="Waveform offset")
+
+    def __init__(self, parent):
+        super().__init__(parent, ":WGEN")
+
+    class MyInstrument(Instrument):
+        def __init__(self, resource_string):
+            super().__init__(resource_string)
+            self.wavegen = WaveGen(self)
+
+    if __name__ == "__main__":
+        # We can look for our instrument and select it via command line using the following static function.
+        instrument_address = Instrument.select_resources("TCPIP?*INSTR")
+
+        # We need to create an instance of our instrument and give it a name
+        inst = MyInstrument(instrument_address)
+        
+        inst.open() # Open a connection to the instrument through PyVisa
+
+        # Setting properties triggers SCPI write commands:
+        inst.wavegen.function = WaveGen.Functions.SIN  # Triggers inst.write(":WGEN:FUNC SIN")
+        inst.wavegen.frequency = '1MHz'  # Triggers inst.write(":WGEN:FREQ 1MHz")
+        inst.wavegen.amplitude = 2  # Triggers inst.write(":WGEN:VOLT 2")
+        inst.wavegen.offset = 0.5  # Triggers inst.write(":WGEN:VOLT:OFFS 0.5")
+        inst.wavegen.output = WaveGen.OutputState.ON  # Triggers inst.write(":WGEN:OUTP ON")
+
+        # Accessing properties triggers SCPI query commands:
+        print(inst.wavegen.function)  # Triggers inst.query(":WGEN:FUNC?") and returns the function mode
+        print(inst.wavegen.frequency)  # Triggers inst.query(":WGEN:FREQ?") and returns the frequency
+        print(inst.wavegen.amplitude)  # Triggers inst.query(":WGEN:VOLT?") and returns the amplitude
+        print(inst.wavegen.offset)  # Triggers inst.query(":WGEN:VOLT:OFFS?") and returns the offset
+        print(inst.wavegen.output)  # Triggers inst.query(":WGEN:OUTP?") and returns the output state
+
+        inst.close() # CLoses the instrument connection
+
+Visual Representation of Property to Command Translation
+---------------------------------------------------------
 
 .. graphviz::
 
-    digraph usage_example {
-        node [shape=record fontname=Helvetica fontsize=10];
-        
-        Instrument [label="Instrument"];
-        Subsystem1 [label="setting1(Mode)"];
-        Subsystem2 [label="setting2(Frequency)"];
-        
-        Instrument -> Subsystem1 [label=" :setting1 {value}"];
-        Instrument -> Subsystem2 [label=" :setting2 {value}"];
-        
-        label="Enhanced Usage Example";
+    digraph subsystem {
+        node [shape=record, fontname=Arial];
+
+        WaveGen [label="{WaveGen Subsystem|+ function (SIN)|+ frequency (1MHz)|+ amplitude (2V)|+ output (ON)|+ offset (0.5)}"];
+        SCPI [label="{SCPI Commands|:FUNC SIN|:FREQ 1MHz|:VOLT 2V|:OUTP ON|:VOLT:OFFS 0.5}"];
+
+        WaveGen -> SCPI [label="translates to"];
     }
 
-The diagrams and code snippets illustrate how engineers can use the `Subsystem` architecture to define and interact with the generic instrument's functionalities, leading to straightforward and intuitive test script development.
-
-Conclusion: Empowering Instrumentation with Subsystem
-------------------------------------------------------
-
-The Subsystem architecture revolutionizes the way engineers create, extend, and utilize instrument control libraries. By abstracting the intricacies of SCPI command structures into a coherent, modular framework, it accelerates the development of robust instrument drivers and streamlines the authoring of test scripts. Its emphasis on modularity, dynamic interaction, and ease of use makes it an indispensable tool in the modern test and measurement automation toolkit.
+This Graphviz diagram illustrates how setting properties on the `WaveGen` subsystem translates into specific SCPI commands sent to the instrument.
 
 # End of c:\Users\Ryan\Documents\GitHub\pymetr\docs\subsystems.rst
 
@@ -1001,15 +1059,15 @@ Consider setting parameters on an oscilloscope. Our subsystem approach abstracts
 
 .. code-block:: python
 
-   # Assuming `osc` is an instance of an Oscilloscope class with subsystems
-   osc.channel1.bandwidth_limit = True  # Enables BW limit
-   # Behind the scenes: osc.channel1.write(":CHAN1:BANDWIDTH_LIMIT ON")
+    # Assuming `scope` is an instance of an Oscilloscope class with an Acquire subsystem
+    scope.acquire.type = Acquire.Type.NORMAL  # Sets acquisition type to normal
+    # Behind the scenes: scope.acquire.write("TYPE NORM")
 
-   osc.channel1.scale = 0.05  # Sets channel scale to 50mV/div
-   # Behind the scenes: osc.channel1.write(":CHAN1:SCALE 0.05")
+    scope.acquire.sample_rate = 1e6  # Sets sample rate to 1 MSa/s
+    # Behind the scenes: scope.acquire.write("SRATe 1e6")
 
-   print(osc.channel1.measure.voltage_peak_to_peak())  # Queries the peak-to-peak voltage
-   # Behind the scenes: osc.channel1.query(":MEASure:VPP? CHAN1")
+    print(scope.acquire.depth)  # Queries the current acquisition depth
+    # Behind the scenes: scope.acquire.query("DEPTh?")
 
 This snippet demonstrates how each property or method call on a subsystem translates into a write or query to the instrument, abstracting the complexity of SCPI commands into user-friendly operations.
 

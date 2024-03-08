@@ -1,16 +1,9 @@
-# core.py
+# oscilloscope.py
 import logging
 import sys
-from enum import Enum, auto
-
+from enum import Enum
 from pymetr.instrument import Instrument
 from pymetr.subsystems import Acquire, Trigger, Timebase, Channel, WaveGen, Waveform
-from pymetr.oscilloscope.trigger import Trigger
-from pymetr.oscilloscope.timebase import Timebase
-from pymetr.oscilloscope.channel import Channel
-from pymetr.oscilloscope.wavegen import WaveGen
-from pymetr.oscilloscope.waveform import Waveform
-
 from utilities import debug, timeit
 
 # Create a logger for the oscilloscope module
