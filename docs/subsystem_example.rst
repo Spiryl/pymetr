@@ -15,14 +15,14 @@ This example demonstrates how to use the WaveGen subsystem of an instrument to c
         """
         # We can define options for mode selects here. Convention is to capitalize the property name and add an 's'
         Functions = command_options('Functions', ['SIN', 'SQU', 'RAMP', 'PULSE', 'NOISE', 'DC'])
-        Outputs = command_options('Output', ['ON', 'OFF'])
+        Outputs = command_options('Outputs', ['ON', 'OFF'])
 
         # Updated property definitions without redundant ":WGEN" prefix
         function = command_property(":FUNC", Functions, "Waveform function")
-        frequency = command_property(":FREQ", doc_str="Waveform frequency")
-        amplitude = command_property(":VOLT", doc_str="Waveform amplitude")
-        output = command_property(":OUTP", Outputs, "Waveform output state")
-        offset = command_property(":VOLT:OFFS", doc_str="Waveform offset")
+        frequency = command_property(":FREQ", doc_str="Waveform frequency  (Hz)")
+        amplitude = command_property(":VOLT", doc_str="Waveform amplitude (Vpp)")
+        output = command_property(":OUTP", Outputs, "Waveform output On/Off")
+        offset = command_property(":VOLT:OFFS", doc_str="Waveform offset (V)")
 
         def __init__(self, parent):
             super().__init__(parent, ":WGEN") # Assign a prefix for the subsystem
