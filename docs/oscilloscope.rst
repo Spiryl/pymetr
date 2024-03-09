@@ -18,7 +18,7 @@ The ``pymetr`` package reflects this architecture, segregating related functiona
       Instrument [label="{Instrument|+ identity()\l+ reset()\l+ status()\l}"];
       Oscilloscope [label="{Oscilloscope|+ run()\l+ stop()\l+ single()\l+ autoscale()\l}"];
       
-      Acquire [label="{Acquire|+ _mode: Mode\l+ _type: Type\l}"];
+      Acquire [label="{Acquire|+ mode: Mode\l+ type: Type\l}"];
       Channel [label="{Channel|+ coupling: Coupling\l+ display: DisplayState\l}"];
       Timebase [label="{Timebase|+ mode: Mode\l+ position: float\l}"];
       Trigger [label="{Trigger|+ mode: Mode\l+ level: float\l}"];
