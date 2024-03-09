@@ -44,4 +44,4 @@ Consider setting parameters on an oscilloscope. Our subsystem approach abstracts
     print(scope.acquire.depth)  # Queries the current acquisition depth
     # Behind the scenes: ocope.query(":ACQuire:DEPTh?")
 
-This snippet demonstrates how each property or method call on a subsystem translates into a write or query to the instrument, abstracting the complexity of SCPI commands into user-friendly operations.  This method dramatically simplifies test creation allowing the test designers to focus on test flow without needing to be distracted by the interface to the isntrument.
+This snippet demonstrates how each property or method call on a subsystem translates into a write or query to the instrument, abstracting the complexity of SCPI commands into user-friendly operations.  This method dramatically simplifies test creation allowing the test designers to focus on test flow without needing to be distracted by the interface to the instrument.
