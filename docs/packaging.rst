@@ -1,8 +1,8 @@
 ====================================
-Installing the pymetr Package
+Installing the PyMetr Package
 ====================================
 
-The pymetr package is designed to facilitate advanced instrumentation capabilities in Python, including oscilloscope controls and data acquisition tools. This document outlines how to install the pymetr package, either for development purposes or for use in other projects.
+The pymetr package is designed to simplify the creation of and interaction with test instrumentation using Python. This document outlines how to install the pymetr package, either for development purposes or for use in other projects.
 
 Setup.py File
 -------------
@@ -21,11 +21,11 @@ The `setup.py` file is the build script for setuptools. It tells setuptools abou
        long_description=open('README.md').read(),
        author='Your Name',
        author_email='your.email@example.com',
-       url='https://github.com/yourusername/pymetr',
+       url='https://github.com/pymetr/pymetr',
        license='MIT',
        install_requires=[
            'numpy',
-           'PySide6',
+           'pyside6',
            'vispy',
            # Add other dependencies here
        ],
