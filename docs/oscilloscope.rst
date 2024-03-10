@@ -18,7 +18,7 @@ The ``pymetr`` package reflects this architecture, segregating related functiona
       Instrument [label="{Instrument|+ identity()\l+ reset()\l+ status()\l}"];
       Oscilloscope [label="{Oscilloscope|+ run()\l+ stop()\l+ single()\l+ autoscale()\l}"];
       
-      Acquire [label="{Acquire|+ mode: Mode\l+ type: Type\l}"];
+      Acquire [label="{Acquire|+ _mode: Mode\l+ _type: Type\l}"];
       Channel [label="{Channel|+ coupling: Coupling\l+ display: DisplayState\l}"];
       Timebase [label="{Timebase|+ mode: Mode\l+ position: float\l}"];
       Trigger [label="{Trigger|+ mode: Mode\l+ level: float\l}"];
@@ -42,7 +42,7 @@ The ``pymetr`` package reflects this architecture, segregating related functiona
 Root Functions
 --------------------
 
-The ``Oscilloscope`` class also includes root-level functions which do not below to a subsystem. These include functions like `run`, `stop`, `single`, and `autoscale` as well a high level data acquisition and processing specific further abstracting the use of the instrument.
+The ``Oscilloscope`` class also includes root-level functions which do not below to a subsystem. These include functions like `run`, `stop`, `single`, and `autoscale`. As well a high level data acquisition and processing specific further abstracting the use of the instrument.
 
 .. note:: The ``Oscilloscope`` class is designed with the user in mind, abstracting the complexities of the oscilloscope operation and providing a user-friendly interface that reflects the natural workflow of an engineer or technician working with the instrument.
 

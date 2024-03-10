@@ -8,21 +8,21 @@ This example demonstrates how to use the WaveGen subsystem of an instrument to c
     from pymetr.instrument import Instrument
     from pymetr.subsystem import Subsystem, command_property, command_options
 
-    # Creating a custom waveform generator class by extending the `Subsystem` base class
+    # Creating a custom waveform generator class by subclassing Subsystem
     class WaveGen(Subsystem):
         """
         Manages the built-in waveform generator (WGEN) of an instrument, controlling waveform output and modulation.
         """
         # We can define options for mode selects here. Convention is to capitalize the property name and add an 's'
         Functions = command_options('Functions', ['SIN', 'SQU', 'RAMP', 'PULSE', 'NOISE', 'DC'])
-        Outputs = command_options('Outputs', ['ON', 'OFF'])
+        Outputs = command_options('Output', ['ON', 'OFF'])
 
         # Updated property definitions without redundant ":WGEN" prefix
         function = command_property(":FUNC", Functions, "Waveform function")
-        frequency = command_property(":FREQ", doc_str="Waveform frequency  (Hz)")
-        amplitude = command_property(":VOLT", doc_str="Waveform amplitude (Vpp)")
-        output = command_property(":OUTP", Outputs, "Waveform output On/Off")
-        offset = command_property(":VOLT:OFFS", doc_str="Waveform offset (V)")
+        frequency = command_property(":FREQ", doc_str="Waveform frequency")
+        amplitude = command_property(":VOLT", doc_str="Waveform amplitude")
+        output = command_property(":OUTP", Outputs, "Waveform output state")
+        offset = command_property(":VOLT:OFFS", doc_str="Waveform offset")
 
         def __init__(self, parent):
             super().__init__(parent, ":WGEN") # Assign a prefix for the subsystem
@@ -50,7 +50,7 @@ This example demonstrates how to use the WaveGen subsystem of an instrument to c
         inst.wavegen.frequency = '1MHz'  # Triggers inst.write(":WGEN:FREQ 1MHz")
         inst.wavegen.amplitude = 2  # Triggers inst.write(":WGEN:VOLT 2")
         inst.wavegen.offset = 0.5  # Triggers inst.write(":WGEN:VOLT:OFFS 0.5")
-        inst.wavegen.output = WaveGen.Outputs.ON  # Triggers inst.write(":WGEN:OUTP ON")
+        inst.wavegen.output = WaveGen.OutputState.ON  # Triggers inst.write(":WGEN:OUTP ON")
 
         # Accessing properties triggers SCPI query commands:
         print(inst.wavegen.function)  # Triggers inst.query(":WGEN:FUNC?") and returns the function mode
