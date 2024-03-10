@@ -2,6 +2,7 @@
 import logging
 import sys
 from enum import Enum
+import numpy as np
 from pymetr.instrument import Instrument
 from pymetr.subsystems import Acquire, Trigger, Timebase, Channel, WaveGen, Waveform
 from utilities import debug, timeit
@@ -25,7 +26,7 @@ class Oscilloscope(Instrument):
         channels (dict): Represents each oscilloscope channel as a Channel object.
         continuous_fetch (bool): Flag to enable/disable continuous waveform fetching.
     """
-    class Source(Enum):
+    class Sources(Enum):
         """
         Enumeration for the oscilloscope sources.
 
@@ -41,10 +42,10 @@ class Oscilloscope(Instrument):
             MEMORY: For memory source references.
             EXT: For external source, exclusive to those 2-channel scope ballers.
         """
-        CH1 = 'CH1'
-        CH2 = 'CH2'
-        CH3 = 'CH3'
-        CH4 = 'CH4'
+        CHAN1 = 'CHAN1'
+        CHAN2 = 'CHAN2'
+        CHAN3 = 'CHAN3'
+        CHAN4 = 'CHAN4'
         FUNCTION = 'FUNC'
         MATH = 'FUNC'
         BUS = 'BUS'
@@ -61,9 +62,11 @@ class Oscilloscope(Instrument):
     def __init__(self, resource_string):
         super().__init__(resource_string)
         logger.info("Initializing Oscilloscope with resource string: %s", resource_string)
+        self.data_format = "ASCII"
+        self.waveform = Waveform(self)
+        # self.waveform.format = self.data_format # pass the data format for this instrument.
         self.trigger = Trigger(self)
         self.timebase = Timebase(self)
-        self.waveform = Waveform(self)
         self.wavegen = WaveGen(self)
         self.acquire = Acquire(self)
         self.channels = {ch: Channel(self, ch) for ch in range(1, 5)}
@@ -246,14 +249,35 @@ class Oscilloscope(Instrument):
             logger.debug("Turning off the source: %s", source_str)
             self.write(f":BLANk {source_str}")
 
-# Unit Test
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
 
-    logging.basicConfig(level=logging.DEBUG,
-                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                    datefmt='%Y-%m-%d %H:%M:%S')
-    
     osc = Oscilloscope("TCPIP0::192.168.1.111::hislip0::INSTR")
+    osc.data_format = 'BINARY'  # This would be the overall format (ASCII or BINARY)
+    
     osc.open()
     print(f"Identification string: '{osc.identity()}'")
+
+    # Configuration for waveform fetching
+    osc.waveform.source = osc.Sources.CHAN1
+    osc.waveform.format = "BYTE"  # or 'WORD'
+    osc.waveform.points_mode = Waveform.PointsModes.NORMAL
+    osc.waveform.points = 500
+    osc.waveform.unsigned = False
+
+    # Verify Settings
+    print(osc.waveform.source)
+    print(osc.waveform.points_mode)
+    print(osc.waveform.points)
+
+    # Trigger a single measurement and fetch the waveform data
+    osc.single()
+    osc.digitize()
+    volts = osc.waveform.fetch_data()
+    times = osc.waveform.fetch_time()
+
+    print("Voltages calculated")
+    print("First few voltage values:", volts[:10])
+    print("First few time values:", times[:10])
+
     osc.close()

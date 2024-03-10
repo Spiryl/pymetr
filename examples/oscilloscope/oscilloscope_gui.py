@@ -2,15 +2,15 @@
 import logging
 import numpy as np
 import sys
-from PySide6.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QDockWidget, QTabWidget, QWidget, QCheckBox, QComboBox, QLineEdit, QLabel,QPushButton, QHBoxLayout, QColorDialog)
+
 from PySide6.QtCore import Qt, QThread, Signal
-from PySide6.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QDockWidget, QWidget, QPushButton, QDial, QLabel, QHBoxLayout, QColorDialog, QSlider, QGridLayout, QGroupBox, QSizePolicy)
+from PySide6.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QDockWidget, QTabWidget, QWidget, QPushButton, QHBoxLayout)
+from PySide6.QtWidgets import (QWidget, QHBoxLayout, QGroupBox, QSizePolicy)
 from PySide6.QtGui import QPalette, QColor
 from vispy import scene
 
-from oscilloscope_controls import AcquireControl, WaveformControl, WaveGenControl, TriggerControl, TimebaseControl,  ChannelControl, ControlDock
-from pymetr.oscilloscope.core import Oscilloscope
-from pymetr.oscilloscope import Waveform, Trigger, Timebase, WaveGen, Acquire
+from oscilloscope_controls import AcquireControl, WaveformControl, WaveGenControl, TriggerControl, TimebaseControl,  ChannelControl
+from pymetr.oscilloscope import Oscilloscope
 from pymetr.instrument import Instrument
 from utilities import debug, timeit
 
@@ -32,10 +32,12 @@ class FetchThread(QThread):
 
     def fetch_data(self):
         trace_data_dict = {}
-        for channel_num, channel in self.oscope.channels.items():
-            if channel.display in ['ON', '1']:
-                trace_data = self.oscope.waveform.fetch_trace(channel_num)
-                trace_data_dict[channel_num] = trace_data
+        for channel_num in range(1, 5):  # Assuming 4 channels for simplicity
+            # Assuming you have a method to check if a channel is active...
+            if self.oscope.channels[channel_num].is_active():
+                volts, times = self.oscope.waveform.fetch_data(channel_num)
+                trace_data_dict[channel_num] = {'volts': volts, 'times': times}
+            
         self.data_fetched.emit(trace_data_dict)
 
 class VisPyCanvas(scene.SceneCanvas):
@@ -44,6 +46,7 @@ class VisPyCanvas(scene.SceneCanvas):
         self.unfreeze()
         self.setup_view()
         self.lines = {}  # key: channel name, value: Line object
+        self.colors = {}  # Store original colors
         self.initialize_lines()
 
     def setup_view(self):
@@ -63,48 +66,47 @@ class VisPyCanvas(scene.SceneCanvas):
         self.y_axis.link_view(self.view)
 
     def initialize_lines(self):
-        # Random initial data for visualization
-        N = 10000
+        N = 500
         y_lim = [-0.01, 0.01]
-
-        # Set up initial colors for each channel
         channel_colors = {
-            'CHAN1': (1, 0, 0, 1),  # Red
-            'CHAN2': (0, 1, 0, 1),  # Green
-            'CHAN3': (0, 0, 1, 1),  # Blue
-            'CHAN4': (1, 1, 0, 1)   # Yellow
+            'CHAN1': (1, 1, 0, 1),
+            'CHAN2': (0, 1, 0, 1),
+            'CHAN3': (0, 0, 1, 1),
+            'CHAN4': (1, 0, 0, 1)
         }
 
-        # Initialize line visuals for each channel with random data
         for channel_name, color in channel_colors.items():
             pos = np.empty((N, 2), dtype=np.float32)
-            pos[:, 0] = np.linspace(0, N, N)
+            pos[:, 0] = np.linspace(y_lim[0], y_lim[1], N)
             pos[:, 1] = np.random.uniform(y_lim[0], y_lim[1], N)
-            color_array = np.repeat(np.array(color)[np.newaxis, :], N, axis=0)
-            self.lines[channel_name] = scene.Line(pos, color=color_array, parent=self.view.scene)
+            self.colors[channel_name] = color  # Save original color
+            self.lines[channel_name] = scene.Line(pos, color=color, parent=self.view.scene)
 
-        self.view.camera.set_range()
-
-    @debug
-    def update_trace(self, channel_name, trace_data):
-        # This method updates a specific channel's line visual with new data
+    def update_trace(self, channel_name, trace_data, trace_time, visible):
+        # Ensure this channel is recognized and initialized in your visualization setup
         if channel_name not in self.lines:
-            return  # Skip if the channel is not recognized
+            return
 
-        if trace_data is None:
-            self.lines[channel_name].visible = 0
+        # Prepare the position data
+        N = len(trace_time)
+        pos = np.zeros((N, 2), dtype=np.float32)
+        pos[:, 0] = trace_time
+        pos[:, 1] = trace_data
+
+        # Determine the visibility; if not visible, we might opt to hide the line
+        # by setting its color to fully transparent or by other means like setting
+        # the data off-screen.
+        if visible:
+            # Update the line with actual data and original color
+            color = self.colors[channel_name]
+            self.lines[channel_name].set_data(pos=pos, color=color)
         else:
-            self.lines[channel_name].visible = 1
-            N = len(trace_data)
-            pos = np.zeros((N, 2), dtype=np.float32)
-            pos[:, 0] = np.linspace(0, N, N)  # Adjust these ranges based on your actual data scale
-            pos[:, 1] = trace_data
-            self.lines[channel_name].set_data(pos=pos)
+            # Option 1: Make the line transparent
+            self.lines[channel_name].set_data(pos=pos, color=(0, 0, 0, 0))
 
     def update_multiple_traces(self, trace_data_dict):
-        # This method updates multiple channels based on the incoming dictionary
-        for channel_name, trace_data in trace_data_dict.items():
-            self.update_trace(channel_name, trace_data)
+        for channel_name, data in trace_data_dict.items():
+            self.update_trace(channel_name, data['volts'], data['times'], data['visible'])
         self.view.camera.set_range()
 
 class MainWindow(QMainWindow):
@@ -113,6 +115,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle('Oscilloscope Visualization')
         self.oscope = oscope
         self.setupUI()
+        self.resizeEvent(None)
         
     def setupUI(self):
         self.setupCanvas()
@@ -128,6 +131,10 @@ class MainWindow(QMainWindow):
         self.overlayControlsLayout = QVBoxLayout(self.overlayControls)
         self.overlayControls.setLayout(self.overlayControlsLayout)
         
+        self.autoScaleButton = QPushButton("Auto Scale")
+        self.autoScaleButton.clicked.connect(self.auto_scale)
+        self.overlayControlsLayout.addWidget(self.autoScaleButton)
+
         self.singleButton = QPushButton("Single Acquisition")
         self.singleButton.clicked.connect(self.single_fetch)
         self.overlayControlsLayout.addWidget(self.singleButton)
@@ -135,28 +142,8 @@ class MainWindow(QMainWindow):
         self.overlayControls.move(self.canvas.native.width() - self.overlayControls.width() - 20, 20)
         self.overlayControls.setStyleSheet("background-color: rgba(31, 31, 31, 150); padding: 5px;")
 
-    def single_fetch(self):
-        self.oscope.clear_status()
-        self.oscope.single()  # Trigger a single acquisition
-
-        self.oscope.digitize('CH1')
-        self.oscope.query_operation_complete()
-
-        preamble = self.oscope.waveform.fetch_preamble()
-        self.oscope.query_operation_complete()
-
-        trace_data_dict = {}
-
-        for channel_num in range(1, 5):  # Assuming 4 channels for simplicity
-            self.oscope.channel_number = channel_num
-            if self.oscope.channels[channel_num].display in ['On', '1']:
-                trace_data = self.oscope.waveform.fetch_trace(channel_num)  # Fetch the waveform data for the channel
-                self.oscope.query_operation_complete()
-                if trace_data is not None:
-                    trace_data_dict[f'CHAN{channel_num}'] = trace_data
-            else:
-                trace_data_dict[f'CHAN{channel_num}'] = None
-        self.canvas.update_multiple_traces(trace_data_dict)  # Update the GUI with fetched waveforms
+    def auto_scale(self):
+        self.oscope.autoscale()
         
     def resizeEvent(self, event):
         super(MainWindow, self).resizeEvent(event)
@@ -214,65 +201,50 @@ class MainWindow(QMainWindow):
         # Docking Channel and Advanced Controls together, to the right of WaveGen controls
         self.splitDockWidget(self.wavegen_dock, self.channel_dock, Qt.Horizontal)
         self.tabifyDockWidget(self.channel_dock, combined_controls_dock)  # Tabify Channel with Advanced Controls
-
-    def toggle_continuous_fetch(self, checked):
-        if checked:
-            self.start_continuous_fetch()
-            self.runButton.setText("Stop Continuous")
-        else:
-            self.stop_continuous_fetch()
-            self.runButton.setText("Run Continuous")
-
-    def start_continuous_fetch(self):
-        self.oscope.run()
-        self.continuous_fetch = True
-        if not self.fetch_thread.isRunning():
-            self.fetch_thread.start()
-
-    def stop_continuous_fetch(self):
-        self.oscope.stop()
-        self.continuous_fetch = False
     
+    def single_fetch(self):
+        self.oscope.clear_status()
+        self.oscope.single()
+        self.oscope.digitize()
+        self.oscope.query_operation_complete()
+
+        # Fetch the time base for all traces first, ensuring uniform x-axis across channels
+        times = self.oscope.waveform.fetch_time()
+        print(f"the length of times is : {len(times)}")
+
+        trace_data_dict = {}
+        # Assuming source_mapping and channel display info is correctly configured in your oscilloscope object
+        source_mapping = {1: 'CHAN1', 2: 'CHAN2', 3: 'CHAN3', 4: 'CHAN4'}
+
+        # Loop over all channels to fetch or simulate data based on visibility
+        for channel_num in range(1, 5):
+            source = source_mapping[channel_num]
+            visible = self.oscope.channels[channel_num].display in ['On', '1']
+            
+            if visible:
+                volts = self.oscope.waveform.fetch_data(source)
+            else:
+                # For non-visible channels, simulate zero data with the correct size
+                volts = np.zeros(times.shape)
+            
+            # Regardless of visibility, store data with uniform size and the visibility flag
+            trace_data_dict[source] = {'volts': volts, 'times': times, 'visible': visible}
+
+        # Update visualization with the prepared trace data, all of uniform size
+        self.canvas.update_multiple_traces(trace_data_dict)
+
     def on_data_fetched(self, trace_data_dict):
         self.canvas.update_multiple_traces(trace_data_dict)
 
-def select_instrument(filter):
-    unique_instruments, failed_queries = Instrument.list_resources(filter)
-    
-    if not unique_instruments:
-        print("No instruments found. Check your connections and try again.")
-        sys.exit(1)
-    
-    print("\nConnected Instruments:")
-    for idx, (unique_key, resource) in enumerate(unique_instruments.items(), start=1):
-        print(f"{idx}. {unique_key}")
-
-    if failed_queries:
-        print("\nFailed to query some instruments:")
-        for resource, error in failed_queries:
-            print(f"{resource}: {error}")
-
-    selection = input("\nSelect an instrument by number (or 'exit' to quit): ")
-    if selection.lower() == 'exit':
-        sys.exit(0)
-
-    try:
-        selected_index = int(selection) - 1
-        if selected_index < 0 or selected_index >= len(unique_instruments):
-            raise ValueError
-    except ValueError:
-        print("Invalid selection. Please enter a number from the list.")
-        return select_instrument()
-    
-    selected_key = list(unique_instruments.keys())[selected_index]
-    return unique_instruments[selected_key]
-
 if __name__ == '__main__':
 
-    logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
     # The filter can be removed or changed for different connection types. 
-    resource_string = select_instrument("TCPIP?*::INSTR")
+    resource_string = Instrument.select_instrument("TCPIP?*::INSTR")
     oscope = Oscilloscope(resource_string)
+    oscope.data_format = 'ASCII'  # This would be the overall format (ASCII or BINARY)
+    oscope.data_type = 'b'
+    
     try:
         oscope.open()
         print(f"Successfully connected to {oscope.identity().strip()}")
@@ -280,12 +252,16 @@ if __name__ == '__main__':
         pass
 
     oscope.reset()
+    
+    # Configuration for waveform fetching
+    oscope.waveform.source = oscope.Sources.CHAN1
+    oscope.waveform.format = "ASCII"  # or 'WORD'
+    oscope.waveform.points_mode = oscope.waveform.PointsModes.NORMAL
+    oscope.waveform.points = 500
+    oscope.waveform.unsigned = True
+    oscope.read_termination = '\n'
+    oscope.write_termination = '\n'
 
-    # Set up the trigger subsystem
-    oscope.trigger.source = oscope.Source.CH1
-    oscope.trigger.mode = oscope.trigger.Mode.EDGE
-    oscope.trigger.slope = oscope.trigger.Slope.POSITIVE
-    oscope.trigger.level = 2.0 #V
 
     app = QApplication(sys.argv)
     app.setStyle("Fusion") 

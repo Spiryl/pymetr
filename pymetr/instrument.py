@@ -10,6 +10,7 @@ Authors:
 Designed for developers, engineers, and researchers, `pymetr/instruments.py` encapsulates the diverse world of instrumentation into a coherent, unified Python library. It's about making the complex simple, the inaccessible reachable, and the tedious enjoyable.
 """
 import sys
+import numpy as np
 import logging
 import pyvisa
 from enum import IntFlag
@@ -39,7 +40,12 @@ class Instrument:
         self.resource_string = resource_string
         self.rm = pyvisa.ResourceManager()
         self.instrument = None
+        self.data_format = 'BINARY'  # or BINARY
+        self.data_type = 'B' # Uses same datatype format as struct
         logger.debug(f"Initializing Instrument with resource_string: {resource_string}")
+
+    def set_data_format(self, format):
+        self._data_format = format
 
     def open(self):
         """Opens a connection to the instrument."""
@@ -88,8 +94,25 @@ class Instrument:
         response = self.read()
         logger.debug(f"Query sent: {command}, received: {response}")
         return response
+    
+    def query_ascii_values(self, command, container=np.array, converter='f', separator=','):
+        """
+        Sends a command to the instrument and reads its ASCII response, returning the data in the specified container format.
+        
+        Parameters:
+            command (str): The SCPI command for which a response is expected.
+            container (type, optional): The type of container to store the ASCII data. Defaults to numpy.array.
+            converter (str, callable, optional): Converter used to parse the ASCII data. Defaults to 'f'.
+            separator (str, optional): Separator used in the ASCII data. Defaults to ','.
+        
+        Returns:
+            container: The ASCII data read from the instrument, converted into the specified container format.
+        """
+        response = self.instrument.query_ascii_values(command, container=container, converter=converter, separator=separator)
+        logger.debug(f"ASCII query sent: {command}, received: {response}")
+        return response
 
-    def query_binary(self, command, datatype='f', is_big_endian=False, container=list):
+    def query_binary_values(self, command, datatype='f', is_big_endian=False, container=np.array):
         """
         Sends a command to the instrument and reads a binary response.
         
@@ -102,10 +125,52 @@ class Instrument:
         Returns:
             container: The binary data read from the instrument.
         """
-        endian = '>' if is_big_endian else '<'
-        response = self.instrument.query_binary_values(command, datatype=endian + datatype, container=container)
+        response = self.instrument.query_binary_values(command, datatype=datatype, container=container, is_big_endian=is_big_endian)
         logger.debug(f"Binary query sent: {command}, received: {response}")
         return response
+    
+    def reads_data(self, command, data_format='BYTE', container=np.array):
+        """
+        Reads data from the instrument using the specified command and format.
+
+        Args:
+            command (str): The SCPI command to fetch the data.
+            data_format (str, optional): The format of the data ('ASCII' or 'BYTE'). Defaults to 'BYTE'.
+            container (type, optional): The container type to store the fetched data, e.g., numpy.array.
+
+        Returns:
+            The fetched data, processed into the specified container format.
+        """
+        if data_format == 'BYTE':
+            # For binary data
+            data = self.query_binary_values(command, container=container)
+        elif data_format == 'ASCII':
+            # For ASCII data
+            data = self.query_ascii_values(command, container=container)
+        else:
+            raise ValueError("Unsupported data format specified.")
+
+        return data
+    
+    def write_data(self, command, data, data_format='BYTE', container=np.array):
+        """
+        Sends data to the instrument using the specified command and format.
+
+        Args:
+            command (str): The SCPI command to send the data.
+            data: The data to be sent to the instrument. Could be in various formats (e.g., list, numpy.array).
+            data_format (str, optional): The format of the data being sent ('ASCII' or 'BYTE'). Defaults to 'BYTE'.
+            container (type, optional): The container type of the data being sent, e.g., numpy.array. This is useful for formatting the data before sending.
+
+        """
+        if data_format == 'BYTE':
+            # For binary data
+            self.write_binary_values(command, data, container=container)
+        elif data_format == 'ASCII':
+            # For ASCII data
+            self.write_ascii_values(command, data, container=container)
+        else:
+            raise ValueError("Unsupported data format specified.")
 
     def status(self):
         """
@@ -202,7 +267,7 @@ class Instrument:
         self.write(f"*SAV {value}")
     
     @staticmethod
-    def list_resources(query='?*::INSTR'):
+    def list_instruments(query='?*::INSTR'):
         """
         Lists all the connected instruments matching the query filter.
 
@@ -230,7 +295,7 @@ class Instrument:
         return unique_instruments, failed_queries
     
     @staticmethod
-    def select_resources(filter='?*::INSTR'):
+    def select_instrument(filter='?*::INSTR'):
         """
         Presents a list of connected instruments filtered by the query and prompts the user to select one.
 
@@ -240,7 +305,7 @@ class Instrument:
         Returns:
             str: The selected resource string of the instrument.
         """
-        unique_instruments, failed_queries = Instrument.list_resources(filter)
+        unique_instruments, failed_queries = Instrument.list_instruments(filter)
 
         if not unique_instruments:
             print("No instruments found. Check your connections and try again.")
