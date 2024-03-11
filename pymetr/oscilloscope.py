@@ -4,7 +4,7 @@ import sys
 from enum import Enum
 import numpy as np
 from pymetr.instrument import Instrument
-from pymetr.subsystems import Acquire, Trigger, Timebase, Channel, WaveGen, Waveform
+from examples.oscilloscope.subsystems import Acquire, Trigger, Timebase, Channel, WaveGen, Waveform
 from utilities import debug, timeit
 
 # Create a logger for the oscilloscope module

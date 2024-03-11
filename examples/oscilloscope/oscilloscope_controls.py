@@ -4,7 +4,7 @@ from PySide6.QtWidgets import (QWidget, QPushButton, QDial, QLabel, QHBoxLayout,
 from PySide6.QtGui import QColor
 from utilities import si_str_to_float
 from pymetr.oscilloscope import Oscilloscope
-from pymetr.subsystems import Acquire, Timebase, Trigger, WaveGen, Waveform
+from pymetr.oscilloscope_subsystems import Acquire, Timebase, Trigger, WaveGen, Waveform
 
 class WaveformControl(QWidget):
     def __init__(self, oscope, parent=None):
@@ -122,7 +122,7 @@ class WaveGenControl(QWidget):
 
     def update_frequency(self):
         # Update frequency based on the field's value
-        frequency = si_str_to_float(self.frequency_field.text())
+        frequency = self.frequency_field.text()
         self.oscope.wavegen.frequency = frequency
 
     def update_waveform_type(self):
@@ -132,7 +132,7 @@ class WaveGenControl(QWidget):
 
     def update_amplitude(self):
         # Update amplitude based on the field's value
-        amplitude = si_str_to_float(self.amplitude_field.text())
+        amplitude = self.amplitude_field.text()
         self.oscope.wavegen.amplitude = amplitude
 
     def update_offset(self):
@@ -212,7 +212,7 @@ class TriggerControl(QWidget):
         self.oscope.trigger.slope = edge
 
     def update_trigger_level(self):
-        level = si_str_to_float(self.trigger_level_field.text())
+        level = self.trigger_level_field.text()
         self.oscope.trigger.level = level
 
     def sync(self):
@@ -255,7 +255,7 @@ class AcquireControl(QWidget):
 
     def update_sample_rate(self):
         # Logic to update the sample rate based on the field's value
-        rate = si_str_to_float(self.sample_rate_field.text())
+        rate = self.sample_rate_field.text()
         self.oscope.acquire.sample_rate = rate
 
     def sync(self):

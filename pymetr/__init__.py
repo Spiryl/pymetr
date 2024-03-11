@@ -9,6 +9,6 @@ try:
     from .oscilloscope import Oscilloscope  # Assuming Oscilloscope is a class in the oscilloscope module
     
     # Import all subsystem classes from subsystems.py
-    from .subsystems import Acquire, Channel, Timebase, Trigger, WaveGen, Waveform
+    from .oscilloscope_subsystems import Acquire, Channel, Timebase, Trigger, WaveGen, Waveform
 except ImportError as e:
     print(f"Failed to import within pymetr: {e}")
