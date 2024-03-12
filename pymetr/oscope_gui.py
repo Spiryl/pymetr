@@ -61,14 +61,18 @@ class AcquireControl(QWidget):
     def sync(self):
         # Sync UI with current instrument state
         current_value = str(self.instrument.acquire.mode)
+
         index = self.mode_combo.findText(current_value, Qt.MatchContains)
         self.mode_combo.setCurrentIndex(index)
         current_value = str(self.instrument.acquire.type)
+
         index = self.type_combo.findText(current_value, Qt.MatchContains)
         self.type_combo.setCurrentIndex(index)
         current_text = str(self.instrument.acquire.sample_rate)
+
         self.sample_rate_edit.setText(current_text)
         current_text = str(self.instrument.acquire.count)
+
         self.count_edit.setText(current_text)
 
 class ChannelControl(QWidget):
@@ -88,6 +92,11 @@ class ChannelControl(QWidget):
         self.display_check.setCheckable(True)
         form_layout.addRow(QLabel('   Display   '), self.display_check)
 
+        # 'coupling' Control Widget
+        self.coupling_combo = QComboBox()
+        self.coupling_combo.addItems([item.name for item in Channel.Couplings])
+        form_layout.addRow(QLabel('   Coupling   '), self.coupling_combo)
+
         # 'scale' Control Widget
         self.scale_edit = QLineEdit()
 
@@ -98,11 +107,6 @@ class ChannelControl(QWidget):
 
         form_layout.addRow(QLabel('   Offset   '), self.offset_edit)
 
-        # 'coupling' Control Widget
-        self.coupling_combo = QComboBox()
-        self.coupling_combo.addItems([item.name for item in Channel.Couplings])
-        form_layout.addRow(QLabel('   Coupling   '), self.coupling_combo)
-
         # 'probe_attenuation' Control Widget
         self.probe_attenuation_edit = QLineEdit()
 
@@ -112,14 +116,17 @@ class ChannelControl(QWidget):
 
     def connect_signals(self):
         self.display_check.stateChanged.connect(lambda state: self.update_display(state))
+        self.coupling_combo.currentIndexChanged.connect(lambda: self.update_coupling(self.coupling_combo.currentText()))
         self.scale_edit.editingFinished.connect(lambda: self.update_scale(self.scale_edit.text()))
         self.offset_edit.editingFinished.connect(lambda: self.update_offset(self.offset_edit.text()))
-        self.coupling_combo.currentIndexChanged.connect(lambda: self.update_coupling(self.coupling_combo.currentText()))
         self.probe_attenuation_edit.editingFinished.connect(lambda: self.update_probe_attenuation(self.probe_attenuation_edit.text()))
 
     def update_display(self, value):
         converted_value = '1' if value else '0'
         self.instrument.channel.display = converted_value
+
+    def update_coupling(self, value):
+        self.instrument.channel.coupling = value
 
     def update_scale(self, value):
         self.instrument.channel.scale = value
@@ -127,24 +134,26 @@ class ChannelControl(QWidget):
     def update_offset(self, value):
         self.instrument.channel.offset = value
 
-    def update_coupling(self, value):
-        self.instrument.channel.coupling = value
-
     def update_probe_attenuation(self, value):
         self.instrument.channel.probe_attenuation = value
 
     def sync(self):
         # Sync UI with current instrument state
         current_state = self.instrument.channel.display == '1'
+
         self.display_check.setChecked(current_state)
-        current_text = str(self.instrument.channel.scale)
-        self.scale_edit.setText(current_text)
-        current_text = str(self.instrument.channel.offset)
-        self.offset_edit.setText(current_text)
         current_value = str(self.instrument.channel.coupling)
+
         index = self.coupling_combo.findText(current_value, Qt.MatchContains)
         self.coupling_combo.setCurrentIndex(index)
+        current_text = str(self.instrument.channel.scale)
+
+        self.scale_edit.setText(current_text)
+        current_text = str(self.instrument.channel.offset)
+
+        self.offset_edit.setText(current_text)
         current_text = str(self.instrument.channel.probe_attenuation)
+
         self.probe_attenuation_edit.setText(current_text)
 
 class TimebaseControl(QWidget):
@@ -211,16 +220,21 @@ class TimebaseControl(QWidget):
     def sync(self):
         # Sync UI with current instrument state
         current_value = str(self.instrument.timebase.mode)
+
         index = self.mode_combo.findText(current_value, Qt.MatchContains)
         self.mode_combo.setCurrentIndex(index)
         current_value = str(self.instrument.timebase.reference)
+
         index = self.reference_combo.findText(current_value, Qt.MatchContains)
         self.reference_combo.setCurrentIndex(index)
         current_text = str(self.instrument.timebase.scale)
+
         self.scale_edit.setText(current_text)
         current_text = str(self.instrument.timebase.position)
+
         self.position_edit.setText(current_text)
         current_text = str(self.instrument.timebase.range)
+
         self.range_edit.setText(current_text)
 
 class TriggerControl(QWidget):
@@ -245,11 +259,6 @@ class TriggerControl(QWidget):
         self.source_combo.addItems([item.name for item in Trigger.Sources])
         form_layout.addRow(QLabel('   Source   '), self.source_combo)
 
-        # 'level' Control Widget
-        self.level_edit = QLineEdit()
-
-        form_layout.addRow(QLabel('   Level   '), self.level_edit)
-
         # 'slope' Control Widget
         self.slope_combo = QComboBox()
         self.slope_combo.addItems([item.name for item in Trigger.Slopes])
@@ -260,14 +269,19 @@ class TriggerControl(QWidget):
         self.sweep_combo.addItems([item.name for item in Trigger.Sweeps])
         form_layout.addRow(QLabel('   Sweep   '), self.sweep_combo)
 
+        # 'level' Control Widget
+        self.level_edit = QLineEdit()
+
+        form_layout.addRow(QLabel('   Level   '), self.level_edit)
+
         self.connect_signals()
 
     def connect_signals(self):
         self.mode_combo.currentIndexChanged.connect(lambda: self.update_mode(self.mode_combo.currentText()))
         self.source_combo.currentIndexChanged.connect(lambda: self.update_source(self.source_combo.currentText()))
-        self.level_edit.editingFinished.connect(lambda: self.update_level(self.level_edit.text()))
         self.slope_combo.currentIndexChanged.connect(lambda: self.update_slope(self.slope_combo.currentText()))
         self.sweep_combo.currentIndexChanged.connect(lambda: self.update_sweep(self.sweep_combo.currentText()))
+        self.level_edit.editingFinished.connect(lambda: self.update_level(self.level_edit.text()))
 
     def update_mode(self, value):
         self.instrument.trigger.mode = value
@@ -275,31 +289,36 @@ class TriggerControl(QWidget):
     def update_source(self, value):
         self.instrument.trigger.source = value
 
-    def update_level(self, value):
-        self.instrument.trigger.level = value
-
     def update_slope(self, value):
         self.instrument.trigger.slope = value
 
     def update_sweep(self, value):
         self.instrument.trigger.sweep = value
 
+    def update_level(self, value):
+        self.instrument.trigger.level = value
+
     def sync(self):
         # Sync UI with current instrument state
         current_value = str(self.instrument.trigger.mode)
+
         index = self.mode_combo.findText(current_value, Qt.MatchContains)
         self.mode_combo.setCurrentIndex(index)
         current_value = str(self.instrument.trigger.source)
+
         index = self.source_combo.findText(current_value, Qt.MatchContains)
         self.source_combo.setCurrentIndex(index)
-        current_text = str(self.instrument.trigger.level)
-        self.level_edit.setText(current_text)
         current_value = str(self.instrument.trigger.slope)
+
         index = self.slope_combo.findText(current_value, Qt.MatchContains)
         self.slope_combo.setCurrentIndex(index)
         current_value = str(self.instrument.trigger.sweep)
+
         index = self.sweep_combo.findText(current_value, Qt.MatchContains)
         self.sweep_combo.setCurrentIndex(index)
+        current_text = str(self.instrument.trigger.level)
+
+        self.level_edit.setText(current_text)
 
 class WaveGenControl(QWidget):
     def __init__(self, instrument, parent=None):
@@ -312,6 +331,11 @@ class WaveGenControl(QWidget):
         layout = QVBoxLayout(self)
         form_layout = QFormLayout()
         layout.addLayout(form_layout)
+
+        # 'output' Control Widget
+        self.output_check = QCheckBox()
+        self.output_check.setCheckable(True)
+        form_layout.addRow(QLabel('   Output   '), self.output_check)
 
         # 'function' Control Widget
         self.function_combo = QComboBox()
@@ -328,11 +352,6 @@ class WaveGenControl(QWidget):
 
         form_layout.addRow(QLabel('   Amplitude   '), self.amplitude_edit)
 
-        # 'output' Control Widget
-        self.output_check = QCheckBox()
-        self.output_check.setCheckable(True)
-        form_layout.addRow(QLabel('   Output   '), self.output_check)
-
         # 'offset' Control Widget
         self.offset_edit = QLineEdit()
 
@@ -341,11 +360,15 @@ class WaveGenControl(QWidget):
         self.connect_signals()
 
     def connect_signals(self):
+        self.output_check.stateChanged.connect(lambda state: self.update_output(state))
         self.function_combo.currentIndexChanged.connect(lambda: self.update_function(self.function_combo.currentText()))
         self.frequency_edit.editingFinished.connect(lambda: self.update_frequency(self.frequency_edit.text()))
         self.amplitude_edit.editingFinished.connect(lambda: self.update_amplitude(self.amplitude_edit.text()))
-        self.output_check.stateChanged.connect(lambda state: self.update_output(state))
         self.offset_edit.editingFinished.connect(lambda: self.update_offset(self.offset_edit.text()))
+
+    def update_output(self, value):
+        converted_value = '1' if value else '0'
+        self.instrument.wavegen.output = converted_value
 
     def update_function(self, value):
         self.instrument.wavegen.function = value
@@ -356,25 +379,26 @@ class WaveGenControl(QWidget):
     def update_amplitude(self, value):
         self.instrument.wavegen.amplitude = value
 
-    def update_output(self, value):
-        converted_value = '1' if value else '0'
-        self.instrument.wavegen.output = converted_value
-
     def update_offset(self, value):
         self.instrument.wavegen.offset = value
 
     def sync(self):
         # Sync UI with current instrument state
+        current_state = self.instrument.wavegen.output == '1'
+
+        self.output_check.setChecked(current_state)
         current_value = str(self.instrument.wavegen.function)
+
         index = self.function_combo.findText(current_value, Qt.MatchContains)
         self.function_combo.setCurrentIndex(index)
         current_text = str(self.instrument.wavegen.frequency)
+
         self.frequency_edit.setText(current_text)
         current_text = str(self.instrument.wavegen.amplitude)
+
         self.amplitude_edit.setText(current_text)
-        current_state = self.instrument.wavegen.output == '1'
-        self.output_check.setChecked(current_state)
         current_text = str(self.instrument.wavegen.offset)
+
         self.offset_edit.setText(current_text)
 
 class WaveformControl(QWidget):
@@ -388,6 +412,11 @@ class WaveformControl(QWidget):
         layout = QVBoxLayout(self)
         form_layout = QFormLayout()
         layout.addLayout(form_layout)
+
+        # 'unsigned' Control Widget
+        self.unsigned_check = QCheckBox()
+        self.unsigned_check.setCheckable(True)
+        form_layout.addRow(QLabel('   Unsigned   '), self.unsigned_check)
 
         # 'source' Control Widget
         self.source_combo = QComboBox()
@@ -409,19 +438,18 @@ class WaveformControl(QWidget):
 
         form_layout.addRow(QLabel('   Points   '), self.points_edit)
 
-        # 'unsigned' Control Widget
-        self.unsigned_check = QCheckBox()
-        self.unsigned_check.setCheckable(True)
-        form_layout.addRow(QLabel('   Unsigned   '), self.unsigned_check)
-
         self.connect_signals()
 
     def connect_signals(self):
+        self.unsigned_check.stateChanged.connect(lambda state: self.update_unsigned(state))
         self.source_combo.currentIndexChanged.connect(lambda: self.update_source(self.source_combo.currentText()))
         self.format_combo.currentIndexChanged.connect(lambda: self.update_format(self.format_combo.currentText()))
         self.points_mode_combo.currentIndexChanged.connect(lambda: self.update_points_mode(self.points_mode_combo.currentText()))
         self.points_edit.editingFinished.connect(lambda: self.update_points(self.points_edit.text()))
-        self.unsigned_check.stateChanged.connect(lambda state: self.update_unsigned(state))
+
+    def update_unsigned(self, value):
+        converted_value = '1' if value else '0'
+        self.instrument.waveform.unsigned = converted_value
 
     def update_source(self, value):
         self.instrument.waveform.source = value
@@ -435,25 +463,26 @@ class WaveformControl(QWidget):
     def update_points(self, value):
         self.instrument.waveform.points = value
 
-    def update_unsigned(self, value):
-        converted_value = '1' if value else '0'
-        self.instrument.waveform.unsigned = converted_value
-
     def sync(self):
         # Sync UI with current instrument state
+        current_state = self.instrument.waveform.unsigned == '1'
+
+        self.unsigned_check.setChecked(current_state)
         current_value = str(self.instrument.waveform.source)
+
         index = self.source_combo.findText(current_value, Qt.MatchContains)
         self.source_combo.setCurrentIndex(index)
         current_value = str(self.instrument.waveform.format)
+
         index = self.format_combo.findText(current_value, Qt.MatchContains)
         self.format_combo.setCurrentIndex(index)
         current_value = str(self.instrument.waveform.points_mode)
+
         index = self.points_mode_combo.findText(current_value, Qt.MatchContains)
         self.points_mode_combo.setCurrentIndex(index)
         current_text = str(self.instrument.waveform.points)
+
         self.points_edit.setText(current_text)
-        current_state = self.instrument.waveform.unsigned == '1'
-        self.unsigned_check.setChecked(current_state)
 
 class MyInstrument(Instrument):
     def __init__(self, resource_string):

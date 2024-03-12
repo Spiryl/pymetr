@@ -154,16 +154,16 @@ def generate_gui_code(file_path, classes):
             widget_name = f"self.{prop.name}"
             if prop.widget_type == 'QComboBox':
                 widget_name += "_combo"
-                code += f"        current_value = str(self.instrument.{class_name.lower()}.{prop.name})\n"
+                code += f"        current_value = str(self.instrument.{class_name.lower()}.{prop.name})\n\n"
                 code += f"        index = {widget_name}.findText(current_value, Qt.MatchContains)\n"
                 code += f"        {widget_name}.setCurrentIndex(index)\n"
             elif prop.widget_type == 'QLineEdit':
                 widget_name += "_edit"
-                code += f"        current_text = str(self.instrument.{class_name.lower()}.{prop.name})\n"
+                code += f"        current_text = str(self.instrument.{class_name.lower()}.{prop.name})\n\n"
                 code += f"        {widget_name}.setText(current_text)\n"
             elif prop.widget_type == 'QCheckBox':
                 widget_name += "_check"
-                code += f"        current_state = self.instrument.{class_name.lower()}.{prop.name} == '1'\n"
+                code += f"        current_state = self.instrument.{class_name.lower()}.{prop.name} == '1'\n\n"
                 code += f"        {widget_name}.setChecked(current_state)\n"
 
     # Dynamically instantiate subsystems in MyInstrument class
