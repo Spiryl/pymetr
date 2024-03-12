@@ -8,12 +8,13 @@ class Acquire(Subsystem):
     sample rate, depth, and count of acquisitions. This subsystem simplifies interaction with the device's acquisition
     parameters, providing a high-level interface to configure and retrieve acquisition settings.
     """
-    Modes = Enum('Modes', ['RTIMe', 'SEGMmented'])
-    Types = Enum('Types', ['NORMal', 'AVERage', 'HRESolution', 'PEAK'])
+    Modes = Enum('Modes', ['RTIM', 'SEGM'])
+    Types = Enum('Types', ['NORMAL', 'AVERAGE', 'HRES', 'PEAK'])
 
     mode = command_property(":MODE", Modes, "Acquisition mode")
     type = command_property(":TYPE", Types, "Acquisition type")
     sample_rate = command_property(":SRATe", doc_str="Sample rate in samples per second")
+    depth = command_property(":DEPTh", doc_str="Depth of the acquisition")
     count = command_property(":COUNt", doc_str="Number of acquisitions to combine")
 
     def __init__(self, parent):
@@ -25,16 +26,16 @@ class Channel(Subsystem):
     vertical scale and offset, coupling mode, and probe attenuation factor. This class allows for fine-tuned control
     of each channel's visual and electrical input characteristics.
     """
-    Displays = Enum('DisplayStates', ['1', '0', 'On', 'Off', 'ON', 'OFF'])
+    DisplayStates = Enum('DisplayStates', ['1', '0', 'On', 'Off', 'ON', 'OFF'])
     Couplings = Enum('Couplings', ['AC', 'DC'])
 
-    display = command_property(":DISPlay", Displays, "Display state of the channel")
+    display = command_property(":DISPlay", DisplayStates, "Display state of the channel")
     scale = command_property(":SCALe", doc_str="Vertical scale of the channel")
     offset = command_property(":OFFset", doc_str="Vertical offset of the channel")
     coupling = command_property(":COUPling", Couplings, "Coupling mode of the channel")
     probe_attenuation = command_property(":PROBe", doc_str="Probe attenuation factor")
 
-    def __init__(self, parent, channel_number = 1):
+    def __init__(self, parent, channel_number):
         super().__init__(parent, f":CHAN{channel_number}")
         self.channel_number = channel_number
 
@@ -84,13 +85,13 @@ class WaveGen(Subsystem):
     """
     # Nested enums for clean namespace and easy access
     Functions = Enum('Functions', ['SIN', 'SQU', 'RAMP', 'PULSE', 'NOISE', 'DC'])
-    Outputs = Enum('OutputState', ['ON', 'OFF', '1', '0', 'On', 'Off'])
+    OutputStates = Enum('OutputState', ['ON', 'OFF', '1', '0', 'On', 'Off'])
 
     # Updated property definitions without redundant ":WGEN" prefix
     function = command_property(":FUNC", Functions, "Waveform function")
     frequency = command_property(":FREQ", doc_str="Waveform frequency")
     amplitude = command_property(":VOLT", doc_str="Waveform amplitude")
-    output = command_property(":OUTP", Outputs, "Waveform output state")
+    output = command_property(":OUTP", OutputStates, "Waveform output state")
     offset = command_property(":VOLT:OFFS", doc_str="Waveform offset")
 
     def __init__(self, parent):
@@ -104,13 +105,13 @@ class Waveform(Subsystem):
     TODO: 'WORD' not working properly yet. argg.
     """
     Formats = Enum('Formats', ['ASCII', 'WORD', 'BYTE'])
-    Points_modes = Enum('PointsModes', ['NORMAL', 'MAXIMUM', 'RAW'])
+    PointsModes = Enum('PointsModes', ['NORMAL', 'MAXIMUM', 'RAW'])
     Sources = Enum('Sources', ['CHAN1', 'CHAN2','CHAN3','CHAN4','FUNC', 'MATH', 'FFT', 'WMEM', 'BUS1', 'BUS2', 'EXT'])
     # add Types
 
     source = command_property(":SOURce", Sources, "Waveform source")
     format = command_property(":FORMat", Formats, "Waveform data format")
-    points_mode = command_property(":POINts:MODE", Points_modes, "Waveform points mode")
+    points_mode = command_property(":POINts:MODE", PointsModes, "Waveform points mode")
     points = command_property(":POINts", doc_str="Number of trace points to pull")
     preamble = command_property(":PREamble", access='read')
     unsigned = command_property(":UNSigned", doc_str="This parameter indicated if the returned data is signed or unsigned")

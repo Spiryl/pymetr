@@ -18,6 +18,34 @@ from enum import IntFlag
 # Set up a logger for the Instrument class
 logger = logging.getLogger(__name__)
 
+class Subsystem:
+    """
+    Base class for creating instrument subsystems. This class is designed to be inherited by specific subsystem classes,
+    providing them with the ability to send queries and commands to the instrument.
+
+    This class should not be instantiated directly but extended by specific instrument subsystems.
+    """
+    _options_properties = {}
+
+    def __init__(self, parent, cmd_prefix=""):
+        """
+        Initializes the subsystem with a reference to its parent instrument and an optional command prefix.
+
+        Args:
+            parent (Instrument): The parent instrument object this subsystem belongs to.
+            cmd_prefix (str, optional): The command prefix for this subsystem. Defaults to an empty string.
+        """
+        self._parent = parent
+        self.cmd_prefix = cmd_prefix
+    
+    @classmethod
+    def register_options_property(cls, property_name, enum):
+        cls._options_properties[property_name] = enum
+
+    @classmethod
+    def get_options_for_property(cls, property_name):
+        return cls._options_properties.get(property_name, None)
+
 class Instrument:
     """
     A comprehensive class for interacting with scientific and industrial instruments through VISA, 

@@ -64,7 +64,6 @@ class Oscilloscope(Instrument):
         logger.info("Initializing Oscilloscope with resource string: %s", resource_string)
         self.data_format = "ASCII"
         self.waveform = Waveform(self)
-        # self.waveform.format = self.data_format # pass the data format for this instrument.
         self.trigger = Trigger(self)
         self.timebase = Timebase(self)
         self.wavegen = WaveGen(self)
