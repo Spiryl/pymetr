@@ -44,7 +44,7 @@ Whitespace
 - Keep it clean—no trailing whitespace and use spacing around operators and after commas to improve readability.
 
 File and Directory Naming
-=========================
+-------------------------
 
 - **Files**: Use lowercase with underscores as necessary. For example, `my_script.py` or `my_module.py`.
 - **Directories**: Use lowercase without underscores for package directories. For non-package directories, you can use underscores if it improves readability. For example, `mypackage` and `my_directory`.
