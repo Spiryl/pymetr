@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PyMetr Documentation &mdash; pymetr 3/01/2024 documentation</title>
+  <title>Pymetr Package Overview &mdash; pymetr 3/01/2024 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
       <link rel="stylesheet" type="text/css" href="_static/graphviz.css?v=eafc0fe6" />
@@ -47,16 +47,17 @@
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bible.html">Style Rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bible.html#file-and-directory-naming">File and Directory Naming</a></li>
 <li class="toctree-l1"><a class="reference internal" href="instruments.html">Instrument Control Library</a></li>
 <li class="toctree-l1"><a class="reference internal" href="subsystem_theory.html">Understanding Subsystems</a></li>
-<li class="toctree-l1"><a class="reference internal" href="factories.html">Command Parameters and Options</a></li>
+<li class="toctree-l1"><a class="reference internal" href="properties.html">Command Properties and Selectable Options</a></li>
 <li class="toctree-l1"><a class="reference internal" href="subsystem_example.html">Practical Coding Example:</a></li>
+<li class="toctree-l1"><a class="reference internal" href="instrument_gui.html">Dynamic GUI Generation from Instrument Models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oscilloscope.html">Oscilloscope Extension</a></li>
 <li class="toctree-l1"><a class="reference internal" href="packaging.html">Installing the pymetr Package</a></li>
 <li class="toctree-l1"><a class="reference internal" href="doc-build.html">Rebuilding the Documentation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="sphinx.html">Sphinx Documentation Primer</a></li>
-<li class="toctree-l1"><a class="reference internal" href="bible.html">Style Rules</a></li>
-<li class="toctree-l1"><a class="reference internal" href="bible.html#file-and-directory-naming">File and Directory Naming</a></li>
 <li class="toctree-l1"><a class="reference internal" href="logging.html">Logging in Python Projects</a></li>
 <li class="toctree-l1"><a class="reference internal" href="unit-test.html">Unit Testing in Python with unittest</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api.html">PyMetr API</a></li>
@@ -76,7 +77,7 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="#" class="icon icon-home" aria-label="Home"></a></li>
-      <li class="breadcrumb-item active">PyMetr Documentation</li>
+      <li class="breadcrumb-item active">Pymetr Package Overview</li>
       <li class="wy-breadcrumbs-aside">
             <a href="_sources/index.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -86,18 +87,50 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="pymetr-documentation">
-<h1>PyMetr Documentation<a class="headerlink" href="#pymetr-documentation" title="Link to this heading"></a></h1>
+  <section id="pymetr-package-overview">
+<h1>Pymetr Package Overview<a class="headerlink" href="#pymetr-package-overview" title="Link to this heading"></a></h1>
 <section id="purpose">
 <h2>Purpose<a class="headerlink" href="#purpose" title="Link to this heading"></a></h2>
-<p>This project empowers engineers to craft their own test routines and software, streamlining design verification automation. By providing a pristine example platform, it serves as the seed for future development, offering a crystalline foundation from which test scripts and virtual front panels for a variety of test equipment can be built.</p>
+<p>Pymetr is a Python package designed to abstract the complexities involved in controlling and interacting with scientific and industrial instruments. By leveraging the power of Pythonic object-oriented programming, Pymetr provides a streamlined approach for engineers and researchers to create automated test scripts without the tedium of managing low-level SCPI command strings. At its core, Pymetr simplifies instrument control through intuitive factory functions, a base instrument class, and a subsystem class.</p>
+</section>
+<section id="base-classes">
+<h2>Base Classes<a class="headerlink" href="#base-classes" title="Link to this heading"></a></h2>
+<p>The <strong>Instrument</strong> class forms the backbone of Pymetr, offering a high-level interface for SCPI-compliant devices. It encapsulates connection management, command transmission, and data retrieval, significantly reducing the boilerplate code typically associated with instrument control. Key features include:</p>
+<ul class="simple">
+<li><p>Connection handling via PyVISA</p></li>
+<li><p>ASCII and binary data query methods</p></li>
+<li><p>SCPI command support for operational control (e.g., reset, clear status)</p></li>
+</ul>
+<p>The <strong>Subsystem</strong> class allows for the creation of instrument-specific subsystems, which can be nested and have properties directly mapped to SCPI commands. This class facilitates the organization and encapsulation of instrument functionalities into coherent units.</p>
+</section>
+<section id="factory-functions">
+<h2>Factory Functions<a class="headerlink" href="#factory-functions" title="Link to this heading"></a></h2>
+<p>Pymetr introduces several factory functions to dynamically generate properties for instrument subsystems. These functions are designed to handle common SCPI patterns, such as switching states, setting numerical values, and selecting from enumerated options. Factory functions include:</p>
+<ul class="simple">
+<li><p><strong>switch_property</strong>: For boolean switches, mapping user-friendly values to “ON”/”OFF” commands.</p></li>
+<li><p><strong>value_property</strong>: For numerical values, with support for range checking.</p></li>
+<li><p><strong>select_property</strong>: For selecting from enumerated options, simplifying interaction with pre-defined instrument settings.</p></li>
+<li><p><strong>data_property</strong>: For handling instrument data in ASCII or binary formats, including IEEE header parsing.</p></li>
+</ul>
+</section>
+<section id="gui-builder">
+<h2>GUI Builder<a class="headerlink" href="#gui-builder" title="Link to this heading"></a></h2>
+<p>The package also offers an <strong>instrument_gui</strong> utility, which automatically generates basic graphical interfaces for instrument control, data acquisition, and plotting. This feature leverages the properties and subsystems defined in the instrument model to provide a quick and easy way to interact with instruments without writing additional GUI code.</p>
+</section>
+<section id="conclusion">
+<h2>Conclusion<a class="headerlink" href="#conclusion" title="Link to this heading"></a></h2>
+<p>Pymetr empowers developers and engineers with a highly abstracted, yet flexible, framework for instrument control, making it easier to focus on the experimental and testing objectives rather than the intricacies of instrument communication.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This package requires PyVISA as a backend for communication with instruments, ensuring wide compatibility with various types of test equipment.</p>
+</div>
 </section>
 <section id="todo">
 <h2>Todo<a class="headerlink" href="#todo" title="Link to this heading"></a></h2>
 <ul class="simple">
-<li><p>Documentation graphics</p></li>
-<li><p>Rework GUI controls layout</p></li>
-<li><p>Refactor Oscilloscope GUI acquisition thread.</p></li>
+<li><p>Documentation/graphics</p></li>
+<li><p>Continue GUI development with trace controls and instrument selection</p></li>
+<li><p>Refactor Instrument GUI acquisition thread.</p></li>
 <li><p>Start spectrum analyzer class.</p></li>
 <li><p>Start power meter class.</p></li>
 </ul>
@@ -106,10 +139,10 @@
 <h2>System Dependencies<a class="headerlink" href="#system-dependencies" title="Link to this heading"></a></h2>
 <ul class="simple">
 <li><p><strong>Python Version</strong>: 3.12.0</p></li>
+<li><p><strong>numpy</strong>: Efficient numerical computations</p></li>
 <li><p><strong>pyvisa</strong>: Instrument communication</p></li>
 <li><p><strong>pyside6</strong>: Qt bindings and GUI application development</p></li>
-<li><p><strong>numpy</strong>: Efficient numerical computations</p></li>
-<li><p><strong>vispy</strong>: High-performance graphics</p></li>
+<li><p><strong>pyqtgraph</strong>: High-performance scientific plotting and controls</p></li>
 </ul>
 <div class="toctree-wrapper compound">
 <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
@@ -119,6 +152,24 @@
 <li class="toctree-l2"><a class="reference internal" href="quickstart.html#ieee-488-2-standard">IEEE 488.2 Standard</a></li>
 <li class="toctree-l2"><a class="reference internal" href="quickstart.html#scpi-protocol">SCPI Protocol</a></li>
 <li class="toctree-l2"><a class="reference internal" href="quickstart.html#getting-started-with-pyvisa">Getting Started with PyVISA</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="bible.html">Style Rules</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="bible.html#module-names">Module Names</a></li>
+<li class="toctree-l2"><a class="reference internal" href="bible.html#package-names">Package Names</a></li>
+<li class="toctree-l2"><a class="reference internal" href="bible.html#class-names">Class Names</a></li>
+<li class="toctree-l2"><a class="reference internal" href="bible.html#function-names">Function Names</a></li>
+<li class="toctree-l2"><a class="reference internal" href="bible.html#constant-names">Constant Names</a></li>
+<li class="toctree-l2"><a class="reference internal" href="bible.html#variable-names">Variable Names</a></li>
+<li class="toctree-l2"><a class="reference internal" href="bible.html#indentation">Indentation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="bible.html#line-length">Line Length</a></li>
+<li class="toctree-l2"><a class="reference internal" href="bible.html#imports">Imports</a></li>
+<li class="toctree-l2"><a class="reference internal" href="bible.html#whitespace">Whitespace</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="bible.html#file-and-directory-naming">File and Directory Naming</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="bible.html#file-names">File Names</a></li>
+<li class="toctree-l2"><a class="reference internal" href="bible.html#directory-names">Directory Names</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="instruments.html">Instrument Control Library</a><ul>
@@ -134,14 +185,18 @@
 <li class="toctree-l2"><a class="reference internal" href="subsystem_theory.html#example-setting-parameters">Example: Setting Parameters</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="factories.html">Command Parameters and Options</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="factories.html#simplifying-property-synchronization">Simplifying Property Synchronization</a></li>
-<li class="toctree-l2"><a class="reference internal" href="factories.html#introducing-command-property-and-command-options">Introducing <cite>command_property</cite> and <cite>command_options</cite></a></li>
-<li class="toctree-l2"><a class="reference internal" href="factories.html#refactoring-the-acquire-subsystem">Refactoring the Acquire Subsystem</a></li>
-<li class="toctree-l2"><a class="reference internal" href="factories.html#conclusion">Conclusion</a></li>
+<li class="toctree-l1"><a class="reference internal" href="properties.html">Command Properties and Selectable Options</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="properties.html#streamlining-property-synchronization">Streamlining Property Synchronization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="properties.html#revamping-with-switch-property-select-property-and-value-property">Revamping with <cite>switch_property</cite>, <cite>select_property</cite>, and <cite>value_property</cite></a></li>
+<li class="toctree-l2"><a class="reference internal" href="properties.html#conclusion">Conclusion</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="subsystem_example.html">Practical Coding Example:</a></li>
+<li class="toctree-l1"><a class="reference internal" href="instrument_gui.html">Dynamic GUI Generation from Instrument Models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="instrument_gui.html#creating-a-live-link-between-gui-and-instrument">Creating a Live Link Between GUI and Instrument</a></li>
+<li class="toctree-l2"><a class="reference internal" href="instrument_gui.html#next-steps">Next Steps</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="oscilloscope.html">Oscilloscope Extension</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="oscilloscope.html#root-functions">Root Functions</a></li>
 <li class="toctree-l2"><a class="reference internal" href="oscilloscope.html#getting-started-with-the-oscilloscope-class">Getting Started with the Oscilloscope Class</a></li>
@@ -173,24 +228,6 @@
 <li class="toctree-l2"><a class="reference internal" href="sphinx.html#introduction-to-restructuredtext-rest">Introduction to reStructuredText (ReST)</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="bible.html">Style Rules</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="bible.html#module-names">Module Names</a></li>
-<li class="toctree-l2"><a class="reference internal" href="bible.html#package-names">Package Names</a></li>
-<li class="toctree-l2"><a class="reference internal" href="bible.html#class-names">Class Names</a></li>
-<li class="toctree-l2"><a class="reference internal" href="bible.html#function-names">Function Names</a></li>
-<li class="toctree-l2"><a class="reference internal" href="bible.html#constant-names">Constant Names</a></li>
-<li class="toctree-l2"><a class="reference internal" href="bible.html#variable-names">Variable Names</a></li>
-<li class="toctree-l2"><a class="reference internal" href="bible.html#indentation">Indentation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="bible.html#line-length">Line Length</a></li>
-<li class="toctree-l2"><a class="reference internal" href="bible.html#imports">Imports</a></li>
-<li class="toctree-l2"><a class="reference internal" href="bible.html#whitespace">Whitespace</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="bible.html#file-and-directory-naming">File and Directory Naming</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="bible.html#file-names">File Names</a></li>
-<li class="toctree-l2"><a class="reference internal" href="bible.html#directory-names">Directory Names</a></li>
-</ul>
-</li>
 <li class="toctree-l1"><a class="reference internal" href="logging.html">Logging in Python Projects</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="logging.html#setting-up-logging">Setting Up Logging</a></li>
 <li class="toctree-l2"><a class="reference internal" href="logging.html#logger-hierarchy-and-effective-level">Logger Hierarchy and Effective Level</a></li>
@@ -208,14 +245,7 @@
 </li>
 <li class="toctree-l1"><a class="reference internal" href="api.html">PyMetr API</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="api.html#instrument-base-class-api">Instrument Base Class API</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api.html#module-pymetr.oscilloscope.Oscilloscope">Oscilloscope</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api.html#oscilloscope-subsystems">Oscilloscope Subsystems</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api.html#module-pymetr.subsystems.Acquire">Acquire Subsystem</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api.html#module-pymetr.subsystems.Channel">Channel Subsystem</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api.html#module-pymetr.subsystems.Timebase">Timebase Subsystem</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api.html#module-pymetr.subsystems.Trigger">Trigger Subsystem</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api.html#module-pymetr.subsystems.Waveform">Waveform Subsystem</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api.html#module-pymetr.subsystems.WaveGen">WaveGen Subsystem</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#subsystem-base-class-api">Subsystem Base Class API</a></li>
 </ul>
 </li>
 </ul>

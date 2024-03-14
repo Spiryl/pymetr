@@ -1,0 +1,59 @@
+/* styles.qss */
+
+QMainWindow {
+    background-color: #333;
+    color: #ddd;
+}
+
+QTabWidget::pane {
+    border: 1px solid #444;
+    background: #222;
+    margin: 6px;
+}
+
+QTabBar::tab {
+    background: #555;
+    color: #ddd;
+    padding: 5px;
+    border: 1px solid #444;
+    border-bottom: none;
+    margin: 0px 2px;
+}
+
+QTabBar::tab:selected {
+    background: #777;
+    color: #fff;
+}
+
+QPushButton {
+    background-color: #444;
+    border: 1px solid #555;
+    padding: 5px;
+    color: #ddd;
+}
+
+QComboBox {
+    background-color: #999;
+    border: 1px solid #000000;
+    padding: 5px;
+    color: #ddd;
+}
+
+QPushButton:hover {
+    border-color: #888;
+}
+
+QTextEdit {
+    background-color: #222;
+    color: #ddd;
+    border: 1px solid #444;
+}
+
+QSplitter::handle {
+    background-color: #555;
+}
+
+QSplitter::handle:hover {
+    background-color: #777;
+}
+

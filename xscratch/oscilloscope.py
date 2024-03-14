@@ -4,7 +4,7 @@ import sys
 from enum import Enum
 import numpy as np
 from pymetr.instrument import Instrument
-from examples.oscilloscope.subsystems import Acquire, Trigger, Timebase, Channel, WaveGen, Waveform
+from pymetr.oscilloscope_subsystems import Acquire, Trigger, Timebase, Channel, WaveGen, Waveform
 from utilities import debug, timeit
 
 # Create a logger for the oscilloscope module
@@ -70,30 +70,6 @@ class Oscilloscope(Instrument):
         self.acquire = Acquire(self)
         self.channels = {ch: Channel(self, ch) for ch in range(1, 5)}
         self.continuous_fetch = False
-
-    def check_instrument_errors(self, command):
-        """
-        Checks the instrument for errors after executing a command.
-
-        Continuously queries the oscilloscope for its error queue until it's empty,
-        printing out any errors encountered. If an error is found, the program exits.
-
-        :param command: The SCPI command that was executed prior to checking for errors.
-        :type command: str
-        """
-        while True:
-            error_string = self.query(":SYSTem:ERRor?")
-            if error_string:  # If there is an error string value
-                if not error_string.startswith("+0,"):  # Not "No error"
-                    print(f"ERROR: {error_string}, command: '{command}'")
-                    print("Exited because of error.")
-                    sys.exit(1)
-                else:  # "No error"
-                    break
-            else:  # :SYSTem:ERRor? should always return a string
-                print(f"ERROR: :SYSTem:ERRor? returned nothing, command: '{command}'")
-                print("Exited because of error.")
-                sys.exit(1)
 
     def run(self):
         """

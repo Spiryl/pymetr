@@ -1,4 +1,4 @@
-
+# properties.py
 from enum import Enum
 import re
 import logging
@@ -7,39 +7,32 @@ logger = logging.getLogger(__name__)
     
 def switch_property(cmd_str, doc_str="", access="read-write"):
     """
-    Creates a property for handling boolean switches. Accepts various expressions for true and false,
-    translating them to "ON" or "OFF" for the instrument commands. This approach simplifies user input
-    while maintaining clear communication with the instrument.
-
-    Args:
-        cmd_str (str): The base command string for the property.
-        doc_str (str): Documentation string for the property.
-        access (str): Specifies the access type for the property ('read', 'write', 'read-write').
-
-    Returns:
-        property: A property object with custom getter and setter for boolean communication.
+    Updated definition to handle boolean values directly and string representations of boolean values.
     """
     true_values = ["on", "1", "true", "yep", "aye", "yes"]
     false_values = ["off", "0", "false", "nope", "nay", "no"]
 
     def normalize_value(value):
-        value_lower = value.lower()
-        if value_lower in true_values:
-            return "ON"
-        elif value_lower in false_values:
-            return "OFF"
-        else:
-            raise ValueError(f"Invalid boolean value: {value}. Use one of 'ON', 'OFF', '1', '0', 'TRUE', 'FALSE', etc.")
+        # Directly handle boolean types
+        if isinstance(value, bool):
+            return "ON" if value else "OFF"
+        
+        # If it's not a boolean, proceed with string normalization
+        try:
+            value_lower = value.lower()
+            if value_lower in true_values:
+                return "ON"
+            elif value_lower in false_values:
+                return "OFF"
+        except AttributeError:
+            pass  # If we're here, the value wasn't a string or bool; fall through to the ValueError
+        
+        raise ValueError(f"Invalid boolean value: {value}. Use True/False or one of 'ON', 'OFF', '1', '0', 'TRUE', 'FALSE', etc.")
 
     def getter(self):
         response = self._parent.query(f"{self.cmd_prefix}{cmd_str}?").strip().upper()
-        logger.info(f"Getting {self.cmd_prefix}{cmd_str}: {response}")
-        if response in ["1", "ON"]:
-            return "ON"
-        elif response in ["0", "OFF"]:
-            return "OFF"
-        else:
-            raise ValueError(f"Unexpected response for {self.cmd_prefix}{cmd_str}? {response}")
+        logger.info(f"Getting {self.cmd_prefix}{cmd_str}? {response}")
+        return response == "ON"
 
     def setter(self, value):
         normalized_value = normalize_value(value)
@@ -53,18 +46,19 @@ def switch_property(cmd_str, doc_str="", access="read-write"):
     elif "write" in access:
         return property(fset=setter, doc=doc_str)
 
-def value_property(cmd_str, min_value=None, max_value=None, doc_str="", access="read-write"):
+def value_property(cmd_str, range=None, doc_str="", access="read-write", type=None):
     """
-    Creates a property for handling numerical values, ensuring they fall within specified ranges if provided.
-    This property simplifies setting and getting numerical values on the instrument, with added validation
-    for range constraints.
+    Creates a property for handling numerical values, ensuring they fall within specified ranges if provided,
+    and optionally enforcing a specific numerical type (float or int).
 
     Args:
         cmd_str (str): The base command string for the property.
-        min_value (float, optional): The minimum acceptable value for the property. Defaults to None.
-        max_value (float, optional): The maximum acceptable value for the property. Defaults to None.
+        range (list of float|int, optional): A list specifying the minimum and maximum acceptable values for the property.
+                                             Defaults to None, which means no constraints.
         doc_str (str): Documentation string for the property.
         access (str): Specifies the access type for the property ('read', 'write', 'read-write').
+        type (str, optional): The type of the value ('float', 'int', None). Specifies if the value should be 
+                              explicitly cast or checked against a certain type.
 
     Returns:
         property: A property object with custom getter and setter for numerical communication.
@@ -72,7 +66,8 @@ def value_property(cmd_str, min_value=None, max_value=None, doc_str="", access="
     def getter(self):
         response = self._parent.query(f"{self.cmd_prefix}{cmd_str}?").strip()
         try:
-            value = float(response)
+            # Cast response to specified type if 'type' is not None
+            value = float(response) if type == 'float' else int(response) if type == 'int' else response
             logger.info(f"Getting {self.cmd_prefix}{cmd_str}? {value}")
             return value
         except ValueError:
@@ -80,12 +75,24 @@ def value_property(cmd_str, min_value=None, max_value=None, doc_str="", access="
             raise
 
     def setter(self, value):
-        if not isinstance(value, (int, float)):
-            logger.error(f"Value for {self.cmd_prefix}{cmd_str} must be a number: {value}")
-            raise ValueError(f"Value for {self.cmd_prefix}{cmd_str} must be a number: {value}")
-        if (min_value is not None and value < min_value) or (max_value is not None and value > max_value):
+        # Type checking and conversion if 'type' is specified
+        if type == 'float':
+            try:
+                value = float(value)
+            except ValueError:
+                raise ValueError(f"Value for {self.cmd_prefix}{cmd_str} must be a float: {value}")
+        elif type == 'int':
+            try:
+                value = int(value)
+            except ValueError:
+                raise ValueError(f"Value for {self.cmd_prefix}{cmd_str} must be an int: {value}")
+
+        # Value range checking if 'range' is specified
+        min_value, max_value = range if range else (None, None)
+        if min_value is not None and value < min_value or max_value is not None and value > max_value:
             logger.error(f"Value for {self.cmd_prefix}{cmd_str} must be between {min_value} and {max_value}: {value}")
             raise ValueError(f"Value for {self.cmd_prefix}{cmd_str} must be between {min_value} and {max_value}: {value}")
+        
         logger.info(f"Setting {self.cmd_prefix}{cmd_str} to {value}")
         self._parent.write(f"{self.cmd_prefix}{cmd_str} {value}")
 
@@ -96,40 +103,33 @@ def value_property(cmd_str, min_value=None, max_value=None, doc_str="", access="
     elif "write" in access:
         return property(fset=setter, doc=doc_str)
 
-def select_property(cmd_str, enum, doc_str="", access="read-write"):
+def select_property(cmd_str, choices, doc_str="", access="read-write"):
     """
-    Creates a property for selecting from enumerated options using just the names from an Enum.
-    This simplifies interaction with instrument settings that have a predefined set of acceptable values.
+    Creates a property for selecting from a list of string options.
+    This simplifies interaction with instrument settings by directly specifying acceptable values.
 
     Args:
         cmd_str (str): The command string associated with the property.
-        enum (Enum): An enumeration defining valid options for the property.
+        choices (list of str): A list defining valid options for the property.
         doc_str (str): A brief description of the property.
         access (str): Specifies the property access level ('read', 'write', 'read-write').
 
     Returns:
-        property: A configured property for handling enumerated selection.
+        property: A configured property for handling selection from a list of strings.
     """
     def getter(self):
         response = self._parent.query(f"{self.cmd_prefix}{cmd_str}?").strip()
-        for option in enum:
-            # Check if response is a substring of the option name
-            if response in option.name:
-                logger.info(f"Getting {self.cmd_prefix}{cmd_str}? {option.name}")
-                return option.name
-        logger.error(f"Unexpected response for {self.cmd_prefix}{cmd_str}? {response}")
-        raise ValueError(f"Unexpected response for {self.cmd_prefix}{cmd_str}? {response}")
+        if response in choices:
+            logger.info(f"Getting {self.cmd_prefix}{cmd_str}? {response}")
+            return response
+        else:
+            logger.error(f"Unexpected response for {self.cmd_prefix}{cmd_str}? {response}")
+            raise ValueError(f"Unexpected response for {self.cmd_prefix}{cmd_str}? {response}")
 
     def setter(self, value):
-        # Find the enum by name, assuming `value` matches an enum name's substring
-        selected_option = None
-        for option in enum:
-            if value in option.name:
-                selected_option = option
-                break
-        if selected_option is not None:
-            logger.info(f"Setting {self.cmd_prefix}{cmd_str} to {selected_option.name}")
-            self._parent.write(f"{self.cmd_prefix}{cmd_str} {selected_option.value}")
+        if value in choices:
+            logger.info(f"Setting {self.cmd_prefix}{cmd_str} to {value}")
+            self._parent.write(f"{self.cmd_prefix}{cmd_str} {value}")
         else:
             logger.error(f"Invalid value for {self.cmd_prefix}{cmd_str}: {value}")
             raise ValueError(f"Invalid value for {self.cmd_prefix}{cmd_str}: {value}")
@@ -140,7 +140,7 @@ def select_property(cmd_str, enum, doc_str="", access="read-write"):
         return property(fget=getter, doc=doc_str)
     elif 'write' in access:
         return property(fset=setter, doc=doc_str)
-
+    
 def data_property(cmd_str, access='read-write', doc_str="", container=np.array, converter=float, ieee_header=False):
     """
     Factory function to create a data handling property for SCPI commands that deal with data,

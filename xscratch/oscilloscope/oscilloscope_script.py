@@ -1,4 +1,4 @@
-from pymetr.oscilloscope import Oscilloscope
+from pymetr.instruments import Oscilloscope
 from pymetr.instrument import Instrument
 
 def test_oscilloscope_commands(resource_string):

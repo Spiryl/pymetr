@@ -12,7 +12,7 @@ Why Subsystems?
 ---------------
 
 - **Modularity**: Breaks down complex instruments into manageable units for easier development and upkeep.
-- **Reusability**: Allows for development once and deployment everywhere, reducing code duplication across instruments.
+- **Alignment**: Allows mimicing the instrument control heirarchy making development and use intuitive.
 - **Extensibility**: Facilitates the addition of new features to existing instruments with minimal disruption.
 
 How It Works
@@ -35,7 +35,7 @@ Consider setting parameters on an oscilloscope. Our subsystem approach abstracts
 
     # Here `oscope` is an instance of an Oscilloscope class with an Acquire subsystem
 
-    oscope.acquire.type = Acquire.Type.NORMAL  # Sets acquisition type to normal
+    oscope.acquire.type = 'NORMAL'  # Sets acquisition type to normal
     # Behind the scenes: scope.acquire.write(":ACQuire:TYPE NORM")
 
     oscope.acquire.sample_rate = 1e6  # Sets sample rate to 1 MSa/s
@@ -44,4 +44,4 @@ Consider setting parameters on an oscilloscope. Our subsystem approach abstracts
     print(scope.acquire.depth)  # Queries the current acquisition depth
     # Behind the scenes: scope.acquire.query(":ACQuire:DEPTh?")
 
-This snippet demonstrates how each property or method call on a subsystem translates into a write or query to the instrument, abstracting the complexity of SCPI commands into user-friendly operations.
+This snippet demonstrates how each property or method call on a subsystem translates into a write or query to the instrument, abstracting the complexity of SCPI commands into user-friendly operations. While additionally handling all of the error handing and validation of inputs.

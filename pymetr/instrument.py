@@ -77,8 +77,12 @@ class Instrument:
 
     def open(self):
         """Opens a connection to the instrument."""
-        self.instrument = self.rm.open_resource(self.resource_string)
-        logger.info(f"Connection to instrument {self.resource_string} opened successfully.")
+        try:
+            self.instrument = self.rm.open_resource(self.resource_string)
+            logger.info(f"Connection to instrument {self.resource_string} opened successfully.")
+        except pyvisa.VisaIOError as e:
+            logger.exception(f"Failed to open connection to {self.resource_string}: {e}")
+            raise
 
     def close(self):
         """Closes the connection to the instrument."""
@@ -94,8 +98,12 @@ class Instrument:
         Parameters:
             command (str): The SCPI command to be executed by the instrument.
         """
-        self.instrument.write(command)
-        logger.debug(f"Command sent: {command}")
+        try:
+            self.instrument.write(command)
+            logger.debug(f"Command sent: {command}")
+        except (pyvisa.VisaIOError, AttributeError) as e:
+            logger.exception(f"Failed to send command '{command}' to the instrument: {e}")
+            raise
 
     def read(self):
         """
@@ -104,9 +112,13 @@ class Instrument:
         Returns:
             str: The raw response from the instrument.
         """
-        response = self.instrument.read()
-        logger.debug(f"Response received: {response}")
-        return response
+        try:
+            response = self.instrument.read()
+            logger.debug(f"Response received: {response}")
+            return response
+        except pyvisa.VisaIOError as e:
+            logger.exception("Failed to read response from the instrument: {e}")
+            raise
 
     def query(self, command):
         """
@@ -120,7 +132,7 @@ class Instrument:
         """
         self.write(command)
         response = self.read()
-        logger.debug(f"Query sent: {command}, received: {response}")
+        logger.info(f"Query sent: {command}, received: {response}")
         return response
     
     def query_ascii_values(self, command, container=np.array, converter='f', separator=','):
@@ -153,11 +165,15 @@ class Instrument:
         Returns:
             container: The binary data read from the instrument.
         """
-        response = self.instrument.query_binary_values(command, datatype=datatype, container=container, is_big_endian=is_big_endian)
-        logger.debug(f"Binary query sent: {command}, received: {response}")
-        return response
+        try:
+            response = self.instrument.query_binary_values(command, datatype=datatype, container=container, is_big_endian=is_big_endian)
+            logger.debug(f"Binary query sent: {command}, received: {response}")
+            return response
+        except (pyvisa.VisaIOError, ValueError) as e:
+            logger.exception(f"Failed to query binary values with '{command}': {e}")
+            raise
     
-    def reads_data(self, command, data_format='BYTE', container=np.array):
+    def read_data(self, command, data_format='BINARY', container=np.array):
         """
         Reads data from the instrument using the specified command and format.
 
@@ -169,7 +185,7 @@ class Instrument:
         Returns:
             The fetched data, processed into the specified container format.
         """
-        if data_format == 'BYTE':
+        if data_format == 'BINARY':
             # For binary data
             data = self.query_binary_values(command, container=container)
         elif data_format == 'ASCII':
@@ -180,7 +196,7 @@ class Instrument:
 
         return data
     
-    def write_data(self, command, data, data_format='BYTE', container=np.array):
+    def write_data(self, command, data, data_format='BINARY', container=np.array):
         """
         Sends data to the instrument using the specified command and format.
 
@@ -191,7 +207,7 @@ class Instrument:
             container (type, optional): The container type of the data being sent, e.g., numpy.array. This is useful for formatting the data before sending.
 
         """
-        if data_format == 'BYTE':
+        if data_format == 'BINARY':
             # For binary data
             self.write_binary_values(command, data, container=container)
         elif data_format == 'ASCII':
@@ -199,7 +215,17 @@ class Instrument:
             self.write_ascii_values(command, data, container=container)
         else:
             raise ValueError("Unsupported data format specified.")
+        
+    def identity(self):
+        """
+        Sends a request to the instrument to identify itself. This usually includes the manufacturer, 
+        model number, serial number, and firmware version. It's like asking, "Who are you?"
 
+        Returns:
+            str: The identification string returned by the instrument.
+        """
+        return self.query("*IDN?")
+    
     def status(self):
         """
         Queries the Event Status Register (ESR) to decode and return the current instrument status.
@@ -212,16 +238,6 @@ class Instrument:
         logger.debug(f"Instrument status: {status}")
         return status
     
-    def identity(self):
-        """
-        Sends a request to the instrument to identify itself. This usually includes the manufacturer, 
-        model number, serial number, and firmware version. It's like asking, "Who are you?"
-
-        Returns:
-            str: The identification string returned by the instrument.
-        """
-        return self.query("*IDN?")
-        
     def clear_status(self):
         """
         Resets the instrument's status and error queue to clear out any errors and get it back to its 
@@ -235,6 +251,29 @@ class Instrument:
         want to wipe the slate clean and start over.
         """
         self.write("*RST")
+
+        """
+        Checks the instrument for errors after executing a command.
+
+        Continuously queries the oscilloscope for its error queue until it's empty,
+        printing out any errors encountered. If an error is found, the program exits.
+
+        :param command: The SCPI command that was executed prior to checking for errors.
+        :type command: str
+        """
+        while True:
+            error_string = self.query(":SYSTem:ERRor?")
+            if error_string:  # If there is an error string value
+                if not error_string.startswith("+0,"):  # Not "No error"
+                    print(f"ERROR: {error_string}, command: '{command}'")
+                    print("Exited because of error.")
+                    sys.exit(1)
+                else:  # "No error"
+                    break
+            else:  # :SYSTem:ERRor? should always return a string
+                print(f"ERROR: :SYSTem:ERRor? returned nothing, command: '{command}'")
+                print("Exited because of error.")
+                sys.exit(1)
 
     def set_service_request(self, mask):
         """
