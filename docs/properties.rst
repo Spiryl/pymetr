@@ -1,5 +1,7 @@
-Command Properties and Selectable Options
-=========================================
+Command Properties
+==================
+
+**This document has been updated but needs a lot of work**
 
 The ``pymetr`` library presents a sleek and modernized methodology for instrument communication, cutting down on the traditional complexity associated with direct device interaction. The factory functions `switch_property`, `select_property`, and `value_property` enable developers to define instrument properties efficiently, promoting code clarity, robustness, and easier maintenance.
 

@@ -59,8 +59,8 @@ Todo
    bible
    instruments
    subsystem_theory
-   properties
    subsystem_example
+   properties
    instrument_gui
    oscilloscope
    packaging
