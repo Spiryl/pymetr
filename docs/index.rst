@@ -5,6 +5,14 @@ Purpose
 -------
 Pymetr is a Python package designed to abstract the complexities involved in controlling and interacting with scientific and industrial instruments. By leveraging the power of Pythonic object-oriented programming, Pymetr provides a streamlined approach for engineers and researchers to create automated test scripts without the tedium of managing low-level SCPI command strings. At its core, Pymetr simplifies instrument control through intuitive factory functions, a base instrument class, and a subsystem class.
 
+System Dependencies
+-------------------
+- **Python Version**: 3.12.0
+- **numpy**: Efficient numerical computations
+- **pyvisa**: Instrument communication
+- **pyside6**: Qt bindings and GUI application development
+- **pyqtgraph**: High-performance scientific plotting and controls
+
 Base Classes
 ------------
 The **Instrument** class forms the backbone of Pymetr, offering a high-level interface for SCPI-compliant devices. It encapsulates connection management, command transmission, and data retrieval, significantly reducing the boilerplate code typically associated with instrument control. Key features include:
@@ -42,15 +50,6 @@ Todo
 - Refactor Instrument GUI acquisition thread.
 - Start spectrum analyzer class.
 - Start power meter class.
-
-
-System Dependencies
--------------------
-- **Python Version**: 3.12.0
-- **numpy**: Efficient numerical computations
-- **pyvisa**: Instrument communication
-- **pyside6**: Qt bindings and GUI application development
-- **pyqtgraph**: High-performance scientific plotting and controls
 
 .. toctree::
    :maxdepth: 2
