@@ -4,7 +4,7 @@ from PySide6.QtCore import Qt
 import logging
 from pymetr.instrument import Instrument 
 from scratch.dark_style import get_dark_palette 
-from pymetr.instruments.oscilloscope import Acquire, Channel, Timebase, Trigger, WaveGen, Waveform
+from pymetr.instruments.dsox1204g import Acquire, Channel, Timebase, Trigger, WaveGen, Waveform
 
 class AcquireControl(QWidget):
     def __init__(self, instrument, parent=None):

@@ -241,7 +241,7 @@ class Channel(Subsystem):
     display = switch_property(":DISPlay", "Display state of the channel")
     scale = value_property(":SCALe", type="float", range=[1e-3, 1e3], doc_str="Vertical scale of the channel [V/div]")
     offset = value_property(":OFFset", type="float", range=[-1e2, 1e2], doc_str="Vertical offset of the channel [V]")
-    probe_attenuation = value_property(":PROBe", type="int", range=[1, 1000], doc_str="Probe attenuation factor [n]")
+    probe = select_property(":PROBe", ['1', '10'], doc_str="Probe attenuation factor")
 
     def __init__(self, parent, channel_number=1):
         super().__init__(parent, f":CHAN{channel_number}")
