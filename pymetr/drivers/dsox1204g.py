@@ -70,7 +70,7 @@ class Oscilloscope(Instrument):
         self.acquire = Acquire.build(self, ':ACQuire')
 
         # For indexed subsystems, specify the number of indices in the build call
-        self.channels = Channel.build(self, ':CHANnel', indices=4)
+        self.channel = Channel.build(self, ':CHANnel', indices=4)
 
     def run(self):
         """
@@ -258,7 +258,7 @@ class Trigger(Subsystem):
     """
     Manages the trigger settings of an oscilloscope or similar instrument.
     """
-    mode = select_property(":MODe", ['EDGE', 'GLITch', 'PATTern', 'SHOL'], "Trigger mode")
+    mode = select_property(":MODe", ['EDGE', 'GLITch', 'PATTern', 'SHOL', 'NONE'], "Trigger mode")
     source = select_property(":SOURce", ['CHAN1', 'CHAN2', 'CHAN3', 'CHAN4', 'EXT', 'LINE', 'WGEN'], "Trigger source")
     slope = select_property(":SLOPe", ['POSitive', 'NEGative'], "Trigger slope")
     sweep = select_property(":SWEep", ['AUTO', 'NORMAL'], "This controls the sweep mode")

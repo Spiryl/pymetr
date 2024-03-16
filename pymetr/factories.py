@@ -93,7 +93,7 @@ class GuiFactory:
         method_dict = {
             'name': method_name,
             'type': 'action',
-            'value': 'Execute',  # This will be the button text in the GUI
+            'title': 'Execute',  # For better clarity in the GUI
             'action': action_callback
         }
         return method_dict
@@ -116,7 +116,7 @@ class GuiFactory:
             'name': prop['name'],  # 'name' is expected to always be present
             'type': prop['type'],  # 'type' is also expected to always be present
             'doc': prop.get('doc_str', ''),  # Optional, provide default if missing
-            'property_path': f"{class_name}.{prop['name']}",  # Constructed from always-present 'name'
+            'property_path': f"{class_name.lower()}.{prop['name']}",  # Constructed from always-present 'name'
         }
 
         # Handling for 'select_property'

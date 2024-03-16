@@ -119,20 +119,26 @@ def select_property(cmd_str, choices, doc_str="", access="read-write"):
     """
     def getter(self):
         response = self._parent.query(f"{self.cmd_prefix}{cmd_str}?").strip()
-        if response in choices:
-            logger.info(f"Getting {self.cmd_prefix}{cmd_str}? {response}")
-            return response
-        else:
-            logger.error(f"Unexpected response for {self.cmd_prefix}{cmd_str}? {response}")
-            raise ValueError(f"Unexpected response for {self.cmd_prefix}{cmd_str}? {response}")
+        # Check if the response starts with any of the valid command beginnings
+        for choice in choices:
+            if choice.startswith(response) or response.startswith(choice):
+                logger.info(f"Getting {self.cmd_prefix}{cmd_str}? {response}")
+                return choice  # return the full command string from choices list
+        # If no match is found, raise an error
+        logger.error(f"Unexpected response for {self.cmd_prefix}{cmd_str}? {response}")
+        raise ValueError(f"Unexpected response for {self.cmd_prefix}{cmd_str}? {response}")
 
     def setter(self, value):
-        if value in choices:
-            logger.info(f"Setting {self.cmd_prefix}{cmd_str} to {value}")
-            self._parent.write(f"{self.cmd_prefix}{cmd_str} {value}")
+        # Find the full command string that starts with the given value (allowing abbreviations)
+        match = next((choice for choice in choices if choice.startswith(value)), None)
+        
+        if match is not None:
+            logger.info(f"Setting {self.cmd_prefix}{cmd_str} to {match}")
+            self._parent.write(f"{self.cmd_prefix}{cmd_str} {match}")
         else:
-            logger.error(f"Invalid value for {self.cmd_prefix}{cmd_str}: {value}")
-            raise ValueError(f"Invalid value for {self.cmd_prefix}{cmd_str}: {value}")
+            valid_options = ', '.join(choices)
+            logger.error(f"Invalid value for {self.cmd_prefix}{cmd_str}: {value}. Valid options are: {valid_options}")
+            raise ValueError(f"Invalid value for {self.cmd_prefix}{cmd_str}: {value}. Valid options are: {valid_options}")
 
     if 'read' in access and 'write' in access:
         return property(fget=getter, fset=setter, doc=doc_str)

@@ -10,10 +10,10 @@ from pyqtgraph.Qt import QtCore, QtGui
 from pyqtgraph.parametertree import Parameter, ParameterTree
 from factories import GuiFactory
 from instrument import Instrument
-from PySide6.QtWidgets import QDialog, QVBoxLayout, QListWidget, QDialogButtonBox, QDockWidget, QPushButton, QWidget, QMainWindow, QFileDialog
+from PySide6.QtWidgets import QDialog, QVBoxLayout, QListWidget, QDialogButtonBox, QDockWidget, QPushButton
+from PySide6.QtWidgets import QWidget, QMainWindow, QFileDialog, QComboBox, QTextEdit, QSizePolicy
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.DEBUG)
 
 factory = GuiFactory()
 
@@ -27,19 +27,28 @@ class CentralControlDock(QDockWidget):
         Initializes the control dock.
         """
         super(CentralControlDock, self).__init__("Control Panel", parent)
-        self.setAllowedAreas(QtCore.Qt.BottomDockWidgetArea)
+        self.setAllowedAreas(QtCore.Qt.RightDockWidgetArea)
 
-        # Main control dock widget layout
         self.dockLayout = QVBoxLayout()
         self.dockWidget = QWidget()
         self.dockWidget.setLayout(self.dockLayout)
 
         # Add Instrument Button
         self.addInstrumentButton = QPushButton("Add Instrument")
-        self.addInstrumentButton.clicked.connect(parent.add_instrument_button_clicked)  # Assumes a method in the parent to handle the click
+        self.addInstrumentButton.clicked.connect(parent.add_instrument_button_clicked)
         self.dockLayout.addWidget(self.addInstrumentButton)
 
+        # Log Level ComboBox
+        self.logLevelComboBox = QComboBox()
+        self.logLevelComboBox.addItems(['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL', 'NONE'])
+        self.logLevelComboBox.currentTextChanged.connect(parent.change_log_level)
+        self.dockLayout.addWidget(self.logLevelComboBox)
+
         self.setWidget(self.dockWidget)
+
+        # Adjust the dock's appearance
+        self.dockLayout.addStretch()
+        self.dockWidget.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
 
 class InstrumentSelectionDialog(QDialog):
     """
@@ -48,6 +57,7 @@ class InstrumentSelectionDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Select an Instrument")
+        self.setGeometry(100, 100, 500, 500)
         self.layout = QVBoxLayout(self)
         
         self.listWidget = QListWidget()
@@ -130,11 +140,11 @@ class DynamicInstrumentGUI(QMainWindow):
         
         self.instruments = {} # Instrument Tracker
 
-        self.plotWidget = pg.PlotWidget() # Main plot widget
+        self.plotWidget = pg.PlotWidget() 
         self.setCentralWidget(self.plotWidget)  
         
-        self.centralControlDock = CentralControlDock(self) # Main control dock
-        self.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.centralControlDock)
+        self.centralControlDock = CentralControlDock(self) 
+        self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.centralControlDock)
 
     def add_instrument_button_clicked(self):
         """
@@ -205,29 +215,131 @@ class DynamicInstrumentGUI(QMainWindow):
 
         if instr_class:
             try:
+                # Build the instrument model instance and open it up.
                 instr = instr_class(selected_resource)
                 instr.open()
-                parameters = factory.create_parameters_from_driver(_driver, instr)
 
+                # Look for a driver based on model number and identify and then sync the settings
+                parameters = factory.create_parameters_from_driver(_driver, instr)
+                self.sync_parameters_with_instrument(parameters, instr)
+
+                # Build a new dock for the instrument and load the parameters in to the parameter tree
                 parameter_dock = InstrumentParameterDock(unique_id, self, on_tree_state_changed=self.create_parameter_change_handler(unique_id))
                 parameter_dock.setup_parameters(parameters)
-                self.addDockWidget(QtCore.Qt.RightDockWidgetArea, parameter_dock)
+
+                # Add it to the Captain's log.
                 self.instruments[unique_id]['dock'] = parameter_dock
                 self.instruments[unique_id]['instance'] = instr
                 self.instruments[unique_id]['parameters'] = parameters
+
+                # Send it home!
+                self.addDockWidget(QtCore.Qt.RightDockWidgetArea, parameter_dock)
+                
             except Exception as e:
                 logger.error(f"Failed to initialize instrument {unique_id}: {e}")
         else:
             logger.error("Driver module for {unique_id} does not support instance creation.")
 
+    def sync_parameters_with_instrument(self, parameters, instrument_instance):
+        """
+        Sync the Parameter Tree with the current state of the instrument by fetching the
+        current values of the instrument's properties and updating the Parameter Tree.
+        """
+        def update_param_value(param, instr):
+            property_path = param.opts.get('property_path', None)
+            logger.debug(f"Syncing parameter: {param.name()} using property path: {property_path}")
+            
+            if property_path:
+                parts = property_path.split('.')
+                target = instr
+                # Navigate through the instrument and its subsystems based on the property path
+                for part in parts[:-1]:
+                    logger.debug(f"Checking for subsystem or property: {part} in {target}")
+                    if hasattr(target, part):
+                        target = getattr(target, part)
+                        logger.debug(f"Accessing: {part}")
+                    else:
+                        logger.error(f"Path '{property_path}' not valid: '{part}' not found")
+                        return
+                
+                # Set the final property value
+                property_name = parts[-1]
+                if hasattr(target, property_name):
+                    current_value = getattr(target, property_name)
+                    param.setValue(current_value)
+                    logger.debug(f"Parameter '{property_name}' set to '{current_value}'")
+                else:
+                    logger.error(f"Property '{property_name}' not found in {target}")
+            else:
+                logger.warning(f"No property path for parameter '{param.name()}'")
+
+        # Iterate over all parameters in the tree and update their values
+        for child in parameters.children():
+            update_param_value(child, instrument_instance)
+            # Recurse into groups if they exist
+            if child.hasChildren():
+                for subchild in child.children():
+                    update_param_value(subchild, instrument_instance)
+
+    def get_property_name_from_param(self, param):
+        """
+        Derives the property name from a Parameter.
+
+        Args:
+            param (Parameter): The parameter from which to derive the property name.
+
+        Returns:
+            str: The derived property name, or None if not applicable.
+        """
+        # Example implementation, to be adjusted based on actual parameter structure
+        return param.opts.get('property_path', None).split('.')[-1] if 'property_path' in param.opts else None
+
     def create_parameter_change_handler(self, unique_id):
+        """
+        Creates a closure that captures the unique identifier of an instrument and
+        returns a function that is triggered upon parameter changes in the GUI.
+
+        The returned function serves as a bridge, funneling GUI changes through to
+        the instrument's properties, ensuring the instrument's state reflects the
+        user's input.
+
+        Args:
+            unique_id (str): The unique identifier for the instrument.
+
+        Returns:
+            function: A handler function that takes parameter changes and applies them to the instrument.
+        """
         def parameter_changed(param, changes):
-            # Here, implement what happens when a parameter changes.
-            # This function will have access to 'unique_id' in its closure.
+            """
+            Handles parameter changes by dispatching them to the appropriate method
+            to reflect these changes on the instrument.
+
+            This function is connected to the signal emitted by the parameter tree
+            whenever a user modifies a parameter's value.
+
+            Args:
+                param (Parameter): The parameter that was changed.
+                changes (list): A list of changes, each being a tuple (param, change, data).
+                unique_id (str): Captured unique identifier for the instrument.
+            """
             self.on_tree_state_changed(param, changes, unique_id)
         return parameter_changed
 
     def on_tree_state_changed(self, param, changes, unique_id):
+        """
+        Responds to signals indicating that a parameter's state has changed in the GUI,
+        initiating the process to update the corresponding property in the instrument's
+        driver.
+
+        This method iterates over all signaled changes, translating them into property
+        updates or method calls as necessary to synchronize the instrument's state
+        with the GUI.
+
+        Args:
+            param (Parameter): The parameter that was changed.
+            changes (list): A list of changes, each being a tuple (param, change, data).
+            unique_id (str): The unique identifier for the instrument affected by the changes.
+        """
         logger.info(f"Tree changes detected for instrument {unique_id}.")
         for param, change, data in changes:
             _instrument = self.instruments[unique_id]
@@ -242,34 +354,53 @@ class DynamicInstrumentGUI(QMainWindow):
             logger.info(f"Property '{childName}' updated to '{data}'.")
 
     def navigate_and_update_property(self, path, value, unique_id):
+        """
+        Navigates the hierarchy of the instrument's properties based on the given path,
+        then updates the property or calls the method at the path's end with the provided value.
+
+        This method ensures that GUI changes are accurately reflected within the instrument's
+        driver, maintaining synchronicity between the GUI and the instrument's actual state.
+
+        Args:
+            path (str): The dot-separated path leading to the property or method to be updated.
+            value: The new value to set for the property, or the value to use in the method call.
+            unique_id (str): The unique identifier for the instrument.
+        """
         components = path.split('.')
         target = self.instruments[unique_id]['instance']
 
-        # Navigate to the target component
         for comp in components[:-1]:
-            comp = comp.lower()  # Convert component to lowercase to match instance storage
-            if hasattr(target, comp):
-                target = getattr(target, comp)
-            else:
+            comp = comp.lower()  # Ensure we're navigating correctly
+            target = getattr(target, comp, None)
+            if target is None:
                 logger.error(f"Component '{comp}' not found in path '{path}'. Stopping navigation.")
                 return
 
-        # The last component is the property or method to update/call
-        attribute = components[-1]
-        if hasattr(target, attribute):
-            attr = getattr(target, attribute)
+        property_name = components[-1]
+        if hasattr(target, property_name):
+            attr = getattr(target.__class__, property_name, None)
             if isinstance(attr, property):
-                # If it's a property, update it
-                setattr(target, attribute, value)
-                logger.info(f"Successfully updated '{attribute}' to '{value}'.")
-            elif callable(attr):
-                # If it's a method, call it
-                attr()  # Call the method with no arguments
-                logger.info(f"Successfully called method '{attribute}'.")
+                setattr(target, property_name, value)
+                logger.info(f"Successfully updated '{property_name}' to '{value}'.")
             else:
-                logger.error(f"Attribute '{attribute}' is not callable.")
+                logger.error(f"Attribute '{property_name}' not a property or not found.")
         else:
-            logger.error(f"Attribute '{attribute}' not found on instance of '{target.__class__.__name__}'.")
+            logger.error(f"Attribute '{property_name}' not found on instance of '{target.__class__.__name__}'.")
+
+    def change_log_level(self, level):
+        numeric_level = getattr(logging, level, None)
+        if isinstance(numeric_level, int):
+            logging.basicConfig(level=numeric_level)
+            logger.setLevel(numeric_level)
+            logger.info(f"Log level changed to {level}")
+        else:
+            logger.error(f"Invalid log level: {level}")
+
+    def toggle_logging_dock(self):
+        if self.loggingDock.isVisible():
+            self.loggingDock.hide()
+        else:
+            self.loggingDock.show()
 
 if __name__ == "__main__":
 

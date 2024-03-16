@@ -20,14 +20,11 @@ This example demonstrates how to use the WaveGen subsystem of an instrument to c
         output = switch_property(":OUTP", doc_str="Waveform output state")
         offset = value_property(":VOLT:OFFS", type="float", doc_str="Waveform offset in Volts")
 
-        def __init__(self, parent):
-            super().__init__(parent, ":WGEN") # Assign a prefix for the subsystem
-
     # We can create a custom instrument which includes the wavegen subsystem by inheriting Instrument.
     class MyInstrument(Instrument):
         def __init__(self, resource_string):
             super().__init__(resource_string)
-            self.wavegen = WaveGen(self) # Here we aggregate the subsystem by creating an instance during init
+            self.wavegen = WaveGen(self, ':WGEN') # Here we aggregate the subsystem by creating an instance during init
 
     # This block only executes when the script is run directly and allows for creating tests in the same file as your new classes.
     if __name__ == "__main__":
