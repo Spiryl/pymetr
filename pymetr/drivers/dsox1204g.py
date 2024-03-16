@@ -60,13 +60,17 @@ class Oscilloscope(Instrument):
         super().__init__(resource_string)
         logger.info("Initializing Oscilloscope with resource string: %s", resource_string)
         self.data_format = "ASCII"
-        self.waveform = Waveform(self)
-        self.trigger = Trigger(self)
-        self.timebase = Timebase(self)
-        self.wavegen = WaveGen(self)
-        self.acquire = Acquire(self)
-        self.channels = {ch: Channel(self, ch) for ch in range(1, 5)}
         self.continuous_fetch = False
+
+        # Use the build method to create subsystem instances
+        self.waveform = Waveform.build(self, ':WAVeform')
+        self.trigger = Trigger.build(self, ':TRIGger')
+        self.timebase = Timebase.build(self, ':TIMebase')
+        self.wavegen = WaveGen.build(self, ':WAVegen')
+        self.acquire = Acquire.build(self, ':ACQuire')
+
+        # For indexed subsystems, specify the number of indices in the build call
+        self.channels = Channel.build(self, ':CHANnel', indices=4)
 
     def run(self):
         """
@@ -230,9 +234,6 @@ class Acquire(Subsystem):
     sample_rate = value_property(":SRATe", type="float", range=[0.1, 1e9], doc_str="Sample rate in samples per second [S/s]")
     count = value_property(":COUNt", type="int", range=[1, 10000], doc_str="Number of acquisitions to combine [n]")
 
-    def __init__(self, parent):
-        super().__init__(parent, ":ACQuire")
-
 class Channel(Subsystem):
     """
     Represents a single channel on an oscilloscope or similar instrument.
@@ -242,10 +243,6 @@ class Channel(Subsystem):
     scale = value_property(":SCALe", type="float", range=[1e-3, 1e3], doc_str="Vertical scale of the channel [V/div]")
     offset = value_property(":OFFset", type="float", range=[-1e2, 1e2], doc_str="Vertical offset of the channel [V]")
     probe = select_property(":PROBe", ['1', '10'], doc_str="Probe attenuation factor")
-
-    def __init__(self, parent, channel_number=1):
-        super().__init__(parent, f":CHAN{channel_number}")
-        self.channel_number = channel_number
 
 class Timebase(Subsystem):
     """
@@ -257,9 +254,6 @@ class Timebase(Subsystem):
     position = value_property(":POSition", type="float", range=[-5e0, 5e0], doc_str="Timebase position [s]")
     range = value_property(":RANGe", type="float", range=[2e-9, 50e0], doc_str="Timebase range [s]")
 
-    def __init__(self, parent):
-        super().__init__(parent, ":TIMebase")
-
 class Trigger(Subsystem):
     """
     Manages the trigger settings of an oscilloscope or similar instrument.
@@ -269,9 +263,6 @@ class Trigger(Subsystem):
     slope = select_property(":SLOPe", ['POSitive', 'NEGative'], "Trigger slope")
     sweep = select_property(":SWEep", ['AUTO', 'NORMAL'], "This controls the sweep mode")
     level = value_property(":LEVel", type="float", range=[-5e0, 5e0], doc_str="Trigger level [V]")
-
-    def __init__(self, parent):
-        super().__init__(parent, ":TRIGger")
 
 class WaveGen(Subsystem):
     """
@@ -283,9 +274,6 @@ class WaveGen(Subsystem):
     amplitude = value_property(":VOLT", type="float", range=[1e-3, 10e0], doc_str="Waveform amplitude [V]")
     offset = value_property(":VOLT:OFFS", type="float", range=[-5e0, 5e0], doc_str="Waveform offset [V]")
 
-    def __init__(self, parent):
-        super().__init__(parent, ":WGEN")
-
 class Waveform(Subsystem):
     """
     Manages waveform data retrieval and configuration settings on an oscilloscope or similar instrument.
@@ -294,19 +282,9 @@ class Waveform(Subsystem):
     format = select_property(":FORMat", ['ASCII', 'WORD', 'BYTE'], "Waveform data format")
     points_mode = select_property(":POINts:MODE", ['NORMal', 'MAXiumum', 'RAW'], "Waveform points mode")
     unsigned = switch_property(":UNSigned", "Indicates if the returned data is signed or unsigned")
-    points = value_property(":POINts", doc_str="Number of trace points to pull")
+    points = value_property(":POINts", type="int", doc_str="Number of trace points to pull")
     preamble = data_property(":PREamble", access='read', doc_str="Pre-amble info including scale factors and offsets.")
     data = data_property(":DATa", access='read', ieee_header=True, doc_str="Returns the data array of the waveform as a numpy array.")
-
-    def __init__(self, parent):
-        super().__init__(parent, ":WAVeform")
-        self.x_increment = 1.0
-        self.x_origin = 0.0
-        self.x_reference = 0
-        self.y_increment = 1.0
-        self.y_origin = 0.0
-        self.y_reference = 0
-        self.num_points = 0
 
     def fetch_preamble(self):
         """
@@ -317,9 +295,9 @@ class Waveform(Subsystem):
             preamble_values = [float(val) for val in preamble_str.split(',')]
 
             self.format = preamble_values[0]
-            # self.type is not used here, assuming a typo or legacy. If it's needed, consider adding it properly.
+            self.type = int(preamble_values[1])
             self.num_points = int(preamble_values[2])
-            # Count is not directly used here, assuming part of legacy or specific logic not shown.
+            self.count = int(preamble_values[3])
             self.x_increment, self.x_origin, self.x_reference = preamble_values[4], preamble_values[5], int(preamble_values[6])
             self.y_increment, self.y_origin, self.y_reference = preamble_values[7], preamble_values[8], int(preamble_values[9])
         except Exception as e:

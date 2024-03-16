@@ -207,14 +207,14 @@ class DynamicInstrumentGUI(QMainWindow):
             try:
                 instr = instr_class(selected_resource)
                 instr.open()
-                parameter_tree = factory.create_parameter_tree_from_file(_driver)
+                parameters = factory.create_parameters_from_driver(_driver, instr)
 
                 parameter_dock = InstrumentParameterDock(unique_id, self, on_tree_state_changed=self.create_parameter_change_handler(unique_id))
-                parameter_dock.setup_parameters(parameter_tree)
+                parameter_dock.setup_parameters(parameters)
                 self.addDockWidget(QtCore.Qt.RightDockWidgetArea, parameter_dock)
                 self.instruments[unique_id]['dock'] = parameter_dock
                 self.instruments[unique_id]['instance'] = instr
-                self.instruments[unique_id]['parameters'] = parameter_tree
+                self.instruments[unique_id]['parameters'] = parameters
             except Exception as e:
                 logger.error(f"Failed to initialize instrument {unique_id}: {e}")
         else:
@@ -245,19 +245,31 @@ class DynamicInstrumentGUI(QMainWindow):
         components = path.split('.')
         target = self.instruments[unique_id]['instance']
 
-        for comp in components[:-1]:  # Exclude the last component as it's the property to update
-            if hasattr(target, comp.lower()):
-                target = getattr(target, comp.lower())
+        # Navigate to the target component
+        for comp in components[:-1]:
+            comp = comp.lower()  # Convert component to lowercase to match instance storage
+            if hasattr(target, comp):
+                target = getattr(target, comp)
             else:
-                logger.error(f"Component '{comp}.lower()' not found in path '{path}'. Stopping navigation.")
+                logger.error(f"Component '{comp}' not found in path '{path}'. Stopping navigation.")
                 return
 
-        property_name = components[-1]
-        if hasattr(target, property_name):
-            setattr(target, property_name, value)
-            logger.info(f"Successfully updated '{property_name}' in '{components[:-1]}' to '{value}'.")
+        # The last component is the property or method to update/call
+        attribute = components[-1]
+        if hasattr(target, attribute):
+            attr = getattr(target, attribute)
+            if isinstance(attr, property):
+                # If it's a property, update it
+                setattr(target, attribute, value)
+                logger.info(f"Successfully updated '{attribute}' to '{value}'.")
+            elif callable(attr):
+                # If it's a method, call it
+                attr()  # Call the method with no arguments
+                logger.info(f"Successfully called method '{attribute}'.")
+            else:
+                logger.error(f"Attribute '{attribute}' is not callable.")
         else:
-            logger.error(f"Property '{property_name}' not found in target '{target.__class__.__name__}'.")
+            logger.error(f"Attribute '{attribute}' not found on instance of '{target.__class__.__name__}'.")
 
 if __name__ == "__main__":
 

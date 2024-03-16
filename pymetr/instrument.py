@@ -20,30 +20,66 @@ logger = logging.getLogger(__name__)
 
 class Subsystem:
     """
-    Base class for creating instrument subsystems. This class is designed to be inherited by specific subsystem classes,
-    providing them with the ability to send queries and commands to the instrument.
+    Base class for creating instrument subsystems, supporting both simple and indexed instantiation, 
+    and enabling nested subsystem command prefix cascading.
 
-    This class should not be instantiated directly but extended by specific instrument subsystems.
+    Attributes:
+        _parent (Instrument): Reference to the parent instrument or subsystem. This attribute 
+                              facilitates communication with the parent object.
+        cmd_prefix (str): The SCPI command prefix associated with the subsystem. This prefix is 
+                          used to construct full SCPI commands for property interactions.
     """
-    _options_properties = {}
 
-    def __init__(self, parent, cmd_prefix=""):
+    def __init__(self, parent, cmd_prefix="", index=None):
         """
-        Initializes the subsystem with a reference to its parent instrument and an optional command prefix.
+        Initializes a Subsystem instance.
 
         Args:
-            parent (Instrument): The parent instrument object this subsystem belongs to.
-            cmd_prefix (str, optional): The command prefix for this subsystem. Defaults to an empty string.
+            parent (Instrument or Subsystem): The parent instrument or subsystem this instance belongs to.
+            cmd_prefix (str): The command prefix specific to this subsystem. It's used as the base for constructing SCPI commands.
+            index (int, optional): If provided, it specifies the index of this instance within an indexed subsystem setup. 
+                                   This index is appended to the command prefix.
         """
         self._parent = parent
-        self.cmd_prefix = cmd_prefix
-    
+        # Handle cascading of command prefixes for nested subsystems
+        self.cmd_prefix = f"{parent.cmd_prefix}{cmd_prefix}" if hasattr(parent, 'cmd_prefix') else cmd_prefix
+        if index is not None:
+            self.cmd_prefix += str(index)
+
+    @classmethod
+    def build(cls, parent, cmd_prefix, indices=None):
+        """
+        Class method to instantiate subsystems. This method simplifies the creation process by automatically handling
+        both single and indexed instances of subsystems.
+
+        Args:
+            parent (Instrument or Subsystem): The parent object to which the new subsystem instance(s) will belong.
+            cmd_prefix (str): The SCPI command prefix for the subsystem being created.
+            indices (int, optional): The number of indexed instances to create. If None, a single instance is created without indexing.
+
+        Returns:
+            Subsystem or list of Subsystem: A single instance of the subsystem if 'indices' is None, 
+                                             or a list of indexed subsystem instances if 'indices' is provided.
+        """
+        if indices is None:
+            # Creating a single instance without indexing
+            return cls(parent, cmd_prefix)
+        else:
+            # Creating multiple indexed instances
+            return [cls(parent, cmd_prefix, index=idx) for idx in range(1, indices + 1)]
+
     @classmethod
     def register_options_property(cls, property_name, enum):
+        """
+        Registers an option property for the subsystem.
+        """
         cls._options_properties[property_name] = enum
 
     @classmethod
     def get_options_for_property(cls, property_name):
+        """
+        Retrieves registered option properties.
+        """
         return cls._options_properties.get(property_name, None)
 
 class Instrument:

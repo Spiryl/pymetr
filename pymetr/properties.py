@@ -46,7 +46,7 @@ def switch_property(cmd_str, doc_str="", access="read-write"):
     elif "write" in access:
         return property(fset=setter, doc=doc_str)
 
-def value_property(cmd_str, range=None, doc_str="", access="read-write", type=None):
+def value_property(cmd_str, range=None, doc_str="", access="read-write", type=None, units=None):
     """
     Creates a property for handling numerical values, ensuring they fall within specified ranges if provided,
     and optionally enforcing a specific numerical type (float or int).
@@ -90,11 +90,11 @@ def value_property(cmd_str, range=None, doc_str="", access="read-write", type=No
         # Value range checking if 'range' is specified
         min_value, max_value = range if range else (None, None)
         if min_value is not None and value < min_value or max_value is not None and value > max_value:
-            logger.error(f"Value for {self.cmd_prefix}{cmd_str} must be between {min_value} and {max_value}: {value}")
-            raise ValueError(f"Value for {self.cmd_prefix}{cmd_str} must be between {min_value} and {max_value}: {value}")
+            logger.error(f"Value for {self.cmd_prefix}{cmd_str} must be between {min_value}{units} and {max_value}{units}: {value}{units}")
+            raise ValueError(f"Value for {self.cmd_prefix}{cmd_str} must be between {min_value}{units} and {max_value}{units}: {value}{units}")
         
-        logger.info(f"Setting {self.cmd_prefix}{cmd_str} to {value}")
-        self._parent.write(f"{self.cmd_prefix}{cmd_str} {value}")
+        logger.info(f"Setting {self.cmd_prefix}{cmd_str} to {value}{units}")
+        self._parent.write(f"{self.cmd_prefix}{cmd_str} {value}{units}")
 
     if "read-write" in access:
         return property(fget=getter, fset=setter, doc=doc_str)
