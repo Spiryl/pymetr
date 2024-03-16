@@ -7,7 +7,7 @@ Part of the pymetr framework, this module extends the interface definitions from
 Authors:
 - Ryan C. Smith
 
-Designed for developers, engineers, and researchers, `pymetr/instruments.py` encapsulates the diverse world of instrumentation into a coherent, unified Python library. It's about making the complex simple, the inaccessible reachable, and the tedious enjoyable.
+Designed for developers, engineers, and researchers, `pymetr/instrument.py` encapsulates the diverse world of instrumentation into a coherent, unified Python library. It's about making the complex simple, the inaccessible reachable, and the tedious enjoyable.
 """
 import sys
 import numpy as np

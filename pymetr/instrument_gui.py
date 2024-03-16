@@ -50,7 +50,8 @@ class InstrumentSelectionDialog(QtWidgets.QDialog):
 class DynamicInstrumentGUI(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
-        self.instrumentConnections = {}
+        self.instruments = {}  # Dictionary to hold all instrument-related UI components and data
+        self.instrumentDockCount = 1
         self.setWindowTitle("Dynamic Instrument Control")
         self.setGeometry(100, 100, 1200, 800)
         self.initUI()
@@ -58,23 +59,30 @@ class DynamicInstrumentGUI(QtWidgets.QMainWindow):
     def initUI(self):
 
         self.initPlotWidget()
-        self.initInstrumentDock()
         self.initPlotDock()
         self.initMenu()
 
-    def initMenu(self):
-            # Create actions to toggle the visibility of dock widgets
-            self.viewMenu = self.menuBar().addMenu("&View")
+    def initMenuBar(self):
+        # Create the menu bar and add an 'Instrument' menu
+        instrumentMenu = self.menuBar().addMenu("&Instrument")
 
-            self.togglePlotDockAction = self.viewMenu.addAction("Plot Settings")
-            self.togglePlotDockAction.setCheckable(True)
-            self.togglePlotDockAction.setChecked(True)
-            self.togglePlotDockAction.toggled.connect(self.plotDockWidget.setVisible)
+        # Add an action for adding a new instrument
+        addInstrumentAction = QtWidgets.QAction("Add Instrument", self)
+        addInstrumentAction.setShortcut('Ctrl+N')  # For the hot-key
+        addInstrumentAction.triggered.connect(self.selectAndConnectInstrument)
 
-            self.toggleInstrumentDockAction = self.viewMenu.addAction("Instrument Controls")
-            self.toggleInstrumentDockAction.setCheckable(True)
-            self.toggleInstrumentDockAction.setChecked(True)
-            self.toggleInstrumentDockAction.toggled.connect(self.instrumentDockWidget.setVisible)
+        instrumentMenu.addAction(addInstrumentAction)
+
+    def selectAndConnectInstrument(self):
+        instruments_data = Instrument.list_instruments("TCPIP?*::INSTR")
+        dialog = InstrumentSelectionDialog(instruments_data, self)
+        if dialog.exec_() == QtWidgets.QDialog.Accepted:
+            selected_resource = dialog.selectedInstrument()
+            if selected_resource:
+                selected_key = [key for key, value in instruments_data[0].items() if value == selected_resource][0]
+                idn_response = selected_key.split(": ")[1]
+                # Pass the resource and response to the method that creates the dock
+                self.createAndPopulateInstrumentDock(selected_resource, idn_response)
 
     def initPlotWidget(self):
         self.plotWidget = pg.PlotWidget()
@@ -123,143 +131,217 @@ class DynamicInstrumentGUI(QtWidgets.QMainWindow):
         self.plotDockWidget.setWidget(plotSettingsWidget)
         self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.plotDockWidget)
 
-    def initInstrumentDock(self):
-        self.instrumentDockWidget = QtWidgets.QDockWidget("Instrument Controls", self)
-        self.instrumentDockWidget.setAllowedAreas(QtCore.Qt.AllDockWidgetAreas)
+    def addInstrumentDock(self):
+        unique_id = f"Instrument_{self.instrumentDockCount}"
+        dockWidget = QtWidgets.QDockWidget(f"Instrument Controls {self.instrumentDockCount}", self)
+        dockWidget.setAllowedAreas(QtCore.Qt.AllDockWidgetAreas)
 
         instrumentWidget = QtWidgets.QWidget()
         instrumentLayout = QtWidgets.QVBoxLayout(instrumentWidget)
 
-        # Example: Add a file selection button to load an instrument
-        self.selectInstrumentButton = QtWidgets.QPushButton("Select Instrument")
-        self.selectInstrumentButton.clicked.connect(self.engageInstrument)
-        instrumentLayout.addWidget(self.selectInstrumentButton)
+        selectInstrumentButton = QtWidgets.QPushButton("Select Instrument")
+        # Pass the dockWidget itself to engageInstrument
+        selectInstrumentButton.clicked.connect(lambda: self.engageInstrument(dockWidget))
+        instrumentLayout.addWidget(selectInstrumentButton)
 
-        self.instrumentParamTree = ParameterTree()
-        instrumentLayout.addWidget(self.instrumentParamTree)
+        instrumentParamTree = ParameterTree()
+        instrumentLayout.addWidget(instrumentParamTree)
 
-        self.instrumentDockWidget.setWidget(instrumentWidget)
-        self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.instrumentDockWidget)
+        dockWidget.setWidget(instrumentWidget)
+        self.addDockWidget(QtCore.Qt.RightDockWidgetArea, dockWidget)
 
-    def updateInstrumentConnection(self, model_number, serial_number, connect=True):
-        unique_id = f"{model_number}_{serial_number}"
+        self.instruments[unique_id] = {
+            'dockWidget': dockWidget,
+            'selectButton': selectInstrumentButton,
+            'paramTree': instrumentParamTree,
+            'connection': None
+        }
+
+        self.instrumentDockCount += 1
+
+    def removeInstrumentDock(self, unique_id):
+        if unique_id in self.instruments:
+            _instrument = self.instruments[unique_id]
+            if _instrument["connection"]:
+                try:
+                    _instrument["connection"].close()  # Close the connection if it exists
+                except Exception as e:
+                    logger.error(f"Error closing connection for {unique_id}: {e}")
+            _instrument["dockWidget"].close()  # Close and remove the dock widget
+            del self.instruments[unique_id]  # Remove the entry from the dictionary
+
+    def updateInstrumentConnection(self, unique_id, connect=True):
+        if unique_id not in self.instruments:
+            logger.error(f"Unique ID {unique_id} not found in instrument dictionary.")
+            return
+
+        _instrument = self.instruments[unique_id]
+
         if connect:
             # Connected state: Update UI to show connected status
-            self.selectInstrumentButton.setText(f"{model_number} - {serial_number}".upper())
-            self.selectInstrumentButton.setStyleSheet("background-color: green;")
-            self.instrumentDockWidget.setWindowTitle(f"{model_number} - {serial_number}".upper())
+            _instrument['selectButton'].setText(f"{unique_id.split('_')[0]} - {unique_id.split('_')[1]}".upper())
+            _instrument['selectButton'].setStyleSheet("background-color: green;")
+            _instrument['dockWidget'].setWindowTitle(f"{unique_id.split('_')[0]} - {unique_id.split('_')[1]}".upper())
         else:
             # Disconnected state: Attempt to close the connection and update UI
-            if unique_id in self.instrumentConnections:
-                instrument_handle = self.instrumentConnections[unique_id]
+            if 'connection' in _instrument and _instrument['connection']:
                 try:
-                    instrument_handle.close()
-                    logger.info(f"Disconnected from {model_number} - {serial_number}")
+                    _instrument['connection'].close()
+                    logger.info(f"Disconnected from {unique_id}")
                 except Exception as e:
                     logger.error(f"Error disconnecting from instrument: {e}")
-                del self.instrumentConnections[unique_id]  # Clean up the connection dictionary
-                self.selectInstrumentButton.setText("Select Instrument")  # Reset button text
-                self.selectInstrumentButton.setStyleSheet("")  # Clear any custom styles
-                self.instrumentDockWidget.setWindowTitle("Instrument Controls")  # Reset dock title
-                self.instrumentParamTree.clear()  # Clear the parameter tree
+                _instrument['connection'] = None  # Consider setting connection to None instead of deleting the entry
+            # Reset UI components to default
+            _instrument['selectButton'].setText("Select Instrument")
+            _instrument['selectButton'].setStyleSheet("")
+            _instrument['dockWidget'].setWindowTitle("Instrument Controls")
+            # If your ParameterTree doesn’t have a clear method, consider resetting it in another way
+            _instrument['paramTree'].clear()  # This line might need adjustment
+            del self.instruments[unique_id]
 
-    def addInstrumentDock(self):
-        # This could be connected to a menu action
-        newDock = QtWidgets.QDockWidget(f"Instrument {self.instrumentDockCount}", self)
-        newDock.setAllowedAreas(QtCore.Qt.AllDockWidgetAreas)
-        # Setup similar to initInstrumentDock, tailored for the specific instrument
-        # ...
-        self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, newDock)
-        self.instrumentDockCount += 1  # Keep track of how many you've added
+    def closeInstrument(self, unique_id):
+        _instrument = self.instruments.get(unique_id)
+        if not _instrument:
+            logger.error("Instrument info not found.")
+            return
 
-    def engageInstrument(self):
-        if self.selectInstrumentButton.text() != "Select Instrument":
-            model_serial = self.selectInstrumentButton.text().split(" - ")
-            model_number, serial_number = model_serial[0].lower(), model_serial[1]  # Assuming you want them back in lowercase for IDs
-            unique_id = f"{model_number}_{serial_number}"
-            logger.info(f"Disengage from instrument: {unique_id}")
+        logger.info(f"Disengage from instrument: {unique_id}")
+        try:
+            _instrument['connection'].close()
+            logger.info(f"Disconnected from {unique_id}")
+        except Exception as e:
+            logger.error(f"Error disconnecting from instrument: {e}")
 
-            if unique_id in self.instrumentConnections:
-                instrument_handle = self.instrumentConnections[unique_id]
-                logger.info(f"Attempting to disconnect from instrument: {unique_id}")
-                try:
-                    instrument_handle.close()
-                    logger.info(f"Disconnected from {model_number} - {serial_number}")
-                except Exception as e:
-                    logger.error(f"Error disconnecting from instrument: {e}")
-                del self.instrumentConnections[unique_id]
-                self.updateInstrumentConnection(model_number, serial_number, connect=False)
-            return 
+        # Reset UI components
+        _instrument['selectButton'].setText("Select Instrument")
+        _instrument['selectButton'].setStyleSheet("")
+        _instrument['dockWidget'].setWindowTitle("Instrument Controls")
+        _instrument['paramTree'].clear()
+
+        # Remove the instrument from the dictionary
+        del self.instruments[unique_id]
+
+    def loadInstrumentDriver(self, model_number):
+        filename = f"pymetr/instruments/{model_number}.py"
+        if not os.path.exists(filename):
+            logger.info(f"No driver found for model {model_number}. Please select a driver file.")
+            filename, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Select Instrument Model File", "", "Python Files (*.py)")
+            if not filename:  # User cancelled file selection
+                return None
         
-        instruments_data = Instrument.list_instruments("TCPIP?*::INSTR")
-        dialog = InstrumentSelectionDialog(instruments_data, self)
-        if dialog.exec_() == QtWidgets.QDialog.Accepted:
-            selected_resource = dialog.selectedInstrument()
-            if selected_resource:
-                selected_key = [key for key, value in instruments_data[0].items() if value == selected_resource][0]
-                idn_response = selected_key.split(": ")[1]
-                model_number = idn_response.split(',')[1].strip().lower()
+        logger.info(f"Driver found for model {model_number}. Initializing....")
+        module_name = os.path.splitext(os.path.basename(filename))[0]
+        spec = importlib.util.spec_from_file_location(module_name, filename)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        
+        instrument_class = next(
+            (attr for attr_name, attr in module.__dict__.items() if isinstance(attr, type) and issubclass(attr, Instrument) and attr is not Instrument),
+            None
+        )
+        
+        if instrument_class is None:
+            logger.error("No instrument class found in the selected file.")
+            return None
 
-                filename = f"pymetr/instruments/{model_number}.py"
-                if not os.path.exists(filename):
-                    logger.info(f"No driver found for model {model_number}. Please select a driver file.")
-                    filename, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Select Instrument Model File", "", "Python Files (*.py)")
+        return instrument_class
+    
+    def openInstrumentConnection(self, instrument_class, selected_resource, unique_id):
+        try:
+            instrument = instrument_class(selected_resource)
+            instrument.open()
+            logger.info(f"Connected to instrument: {instrument}")
+            return instrument
+        except Exception as e:
+            logger.error(f"Failed to open and build instrument model: {e}")
+            return None
+        
+    def setupInstrumentParameters(self, filename, unique_id, instrument):
+        _parameters = factory.create_parameter_tree_from_file(filename)
+        _paramTree = self.instruments[unique_id]['paramTree']
+        
+        _paramTree.setParameters(_parameters, showTop=False)
+        _paramTree.setAlternatingRowColors(True)
+        
+        _parameters.sigTreeStateChanged.connect(
+            lambda param, changes, unique_id=unique_id: self.on_tree_state_changed(param, changes, unique_id)
+        )
+    
+    def openInstrument(self, selected_resource, idn_response, temp_unique_id):
+        model_number = idn_response.split(',')[1].strip().lower()
+        instrument_class = self.loadInstrumentDriver(model_number)
+        if instrument_class is None:
+            return  # Stop if no driver is found or selected
+        
+        serial_number = idn_response.split(',')[2].strip()
+        unique_id = f"{model_number}_{serial_number}"
+        
+        instrument = self.openInstrumentConnection(instrument_class, selected_resource, unique_id)
+        if instrument is None:
+            return  # Stop if connection failed
+        
+        # After a successful connection:
+        serial_number = idn_response.split(',')[2].strip()
+        model_number = idn_response.split(',')[1].strip().lower()
+        unique_id = f"{model_number}_{serial_number}"
 
-                if filename:
-                    module_name = os.path.splitext(os.path.basename(filename))[0]
-                    spec = importlib.util.spec_from_file_location(module_name, filename)
-                    module = importlib.util.module_from_spec(spec)
-                    spec.loader.exec_module(module)
+        # Now, you need to update the dock entry to reflect this unique_id
+        # First, get the current dock entry based on its temp_unique_id
+        dock_entry = self.instruments.pop(temp_unique_id, None)
+        
+        if dock_entry:
+            # Update the entry with the actual unique_id
+            self.instruments[unique_id] = dock_entry
+            logger.info(f"Updated dock entry from {temp_unique_id} to {unique_id}.")
+        else:
+            logger.error(f"Failed to find and update dock entry for {temp_unique_id}.")
+        
+        _instrument = self.instruments.get(unique_id, None)
+        if _instrument is None:
+            logger.error(f"No instrument entry found for unique_id: {unique_id}")
+            return
+        
+        _instrument['connection'] = instrument
+        self.setupInstrumentParameters(model_number, unique_id, instrument)
+        
+        self.updateInstrumentConnection(unique_id, connect=True)
 
-                    for attr_name in dir(module):
-                        attr = getattr(module, attr_name)
-                        if isinstance(attr, type) and issubclass(attr, Instrument) and attr is not Instrument:
-                            self.instr = attr(selected_resource)
-                            break
-
-                    if self.instr:
-                        try:
-                            self.instr.open()
-                            serial_number = idn_response.split(',')[2].strip()
-                            unique_id = f"{model_number}_{serial_number}"
-                            self.instrumentConnections[unique_id] = self.instr
-                            logger.info(f"Connected to instrument: {self.instr}")
-                            self.ptree = factory.create_parameter_tree_from_file(filename)
-                            self.ptree.sigTreeStateChanged.connect(self.on_tree_state_changed)
-                            self.instrumentParamTree.setParameters(self.ptree, showTop=False)
-                            self.instrumentParamTree.setAlternatingRowColors(True)
-                            self.updateInstrumentConnection(model_number, serial_number, connect=True)
-                        except Exception as e:
-                            logger.error(f"Failed to open connection to instrument: {e}")
-                    else:
-                        logger.error("No instrument class found in the selected file.")
+    def engageInstrument(self, temp_unique_id):
+        _instrument = self.instruments.get(temp_unique_id, {})
+        if _instrument.get('connection'):  # If an instrument is connected, close it
+            self.closeInstrument(temp_unique_id)
+        else:  # If no instrument is connected, proceed to open a new connection
+            instruments_data = Instrument.list_instruments("TCPIP?*::INSTR")
+            dialog = InstrumentSelectionDialog(instruments_data, self)
+            if dialog.exec_() == QtWidgets.QDialog.Accepted:
+                selected_resource = dialog.selectedInstrument()
+                if selected_resource:
+                    selected_key = [key for key, value in instruments_data[0].items() if value == selected_resource][0]
+                    idn_response = selected_key.split(": ")[1]
+                    # Now pass temp_unique_id along to openInstrument
+                    self.openInstrument(selected_resource, idn_response, temp_unique_id)
                 else:
-                    logger.info("Instrument selection cancelled.")
-            else:
-                logger.info("No instrument selected. Exiting...")
+                    logger.info("No instrument selected. Exiting...")
 
-    def on_tree_state_changed(self, param, changes):
-        logger.info("Tree changes detected.")
+    def on_tree_state_changed(self, param, changes, unique_id):
+        logger.info(f"Tree changes detected for instrument {unique_id}.")
         for param, change, data in changes:
-            # Extract the path to navigate to the right attribute
-            path = self.ptree.childPath(param)
+            # Extract the path to navigate to link to the correct attribute
+            _instrument = self.instruments[unique_id]
+            path = _instrument['paramTree'].childPath(param)
             if path is not None:
                 childName = '.'.join(path)
             else:
                 childName = param.name()
 
-            # Log the change details
             logger.debug(f"Parameter change - Name: {childName}, Change: {change}, Data: {data}")
 
-            # Navigate and update the oscilloscope or its subsystems' property
-            self.navigate_and_update_property(childName, data)
+            self.navigate_and_update_property(childName, data, unique_id)
             logger.info(f"Property '{childName}' updated to '{data}'.")
 
-    def navigate_and_update_property(self, path, value):
-        # Split the path to access specific components, assuming first component can be skipped if it matches the instrument's name
+    def navigate_and_update_property(self, path, value, unique_id):
         components = path.split('.')
-        # components[0] would typically correspond to a subsystem or the instrument itself; start navigation from self.instr
-        target = self.instr
+        target = self.instruments[unique_id]['connection']
 
         for comp in components[:-1]:  # Exclude the last component as it's the property to update
             if hasattr(target, comp.lower()):  # Convert to lowercase to match your naming convention

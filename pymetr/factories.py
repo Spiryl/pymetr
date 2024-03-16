@@ -3,8 +3,6 @@ from pathlib import Path
 from pyqtgraph.parametertree import Parameter
 import logging
 
-# Configure logging at the start of your script
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # TODO This is Subsystem Control Factory. Rename and adjust instrument_gui.
 class GuiFactory:
