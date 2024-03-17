@@ -1,10 +1,11 @@
-# properties.py
+import logging
+logger = logging.getLogger(__name__)
+
 from enum import Enum
 import re
 import logging
 import numpy as np
-logger = logging.getLogger(__name__)
-    
+
 def switch_property(cmd_str, doc_str="", access="read-write"):
     """
     Updated definition to handle boolean values directly and string representations of boolean values.
@@ -12,30 +13,30 @@ def switch_property(cmd_str, doc_str="", access="read-write"):
     true_values = ["on", "1", "true", "yep", "aye", "yes"]
     false_values = ["off", "0", "false", "nope", "nay", "no"]
 
-    def normalize_value(value):
-        # Directly handle boolean types
+    def normalize_value_to_bool(value):
+        """Normalize various representations to Python bool."""
         if isinstance(value, bool):
-            return "ON" if value else "OFF"
-        
-        # If it's not a boolean, proceed with string normalization
+            return value
         try:
-            value_lower = value.lower()
-            if value_lower in true_values:
-                return "ON"
-            elif value_lower in false_values:
-                return "OFF"
-        except AttributeError:
-            pass  # If we're here, the value wasn't a string or bool; fall through to the ValueError
+            value_str = str(value).lower()
+            if value_str in true_values:
+                return True
+            elif value_str in false_values:
+                return False
+        except ValueError:
+            pass  # If we're here, the value conversion failed
         
-        raise ValueError(f"Invalid boolean value: {value}. Use True/False or one of 'ON', 'OFF', '1', '0', 'TRUE', 'FALSE', etc.")
+        raise ValueError("Invalid boolean value: {}. Use True/False or one of 'ON', 'OFF', '1', '0', 'TRUE', 'FALSE', etc.".format(value))
 
     def getter(self):
-        response = self._parent.query(f"{self.cmd_prefix}{cmd_str}?").strip().upper()
+        response = self._parent.query(f"{self.cmd_prefix}{cmd_str}?").strip()
         logger.info(f"Getting {self.cmd_prefix}{cmd_str}? {response}")
-        return response == "ON"
+        # Return True or False based on the response
+        return response == "1"
 
     def setter(self, value):
-        normalized_value = normalize_value(value)
+        # Normalize the input value to boolean and then convert to '1' or '0'
+        normalized_value = "1" if normalize_value_to_bool(value) else "0"
         logger.info(f"Setting {self.cmd_prefix}{cmd_str} to {normalized_value}")
         self._parent.write(f"{self.cmd_prefix}{cmd_str} {normalized_value}")
 
@@ -46,7 +47,7 @@ def switch_property(cmd_str, doc_str="", access="read-write"):
     elif "write" in access:
         return property(fset=setter, doc=doc_str)
 
-def value_property(cmd_str, range=None, doc_str="", access="read-write", type=None, units=None):
+def value_property(cmd_str, range=None, doc_str="", access="read-write", type=None, units=""):
     """
     Creates a property for handling numerical values, ensuring they fall within specified ranges if provided,
     and optionally enforcing a specific numerical type (float or int).

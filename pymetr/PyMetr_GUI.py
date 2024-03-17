@@ -1,19 +1,28 @@
+
+import logging
+logger = logging.getLogger()
+logger.setLevel(logging.DEBUG)
+logging.getLogger('pyvisa').setLevel(logging.CRITICAL)
+handler = logging.StreamHandler()
+formatter = logging.Formatter("%(name)s - %(message)s")
+
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+
 import os
-# Set the environment variable to prefer PySide6
 os.environ['PYQTGRAPH_QT_LIB'] = 'PySide6'
 import sys
+
 import numpy as np
 import importlib.util
-import logging
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtCore, QtGui
 from pyqtgraph.parametertree import Parameter, ParameterTree
-from factories import GuiFactory
-from instrument import Instrument
+from pymetr.factories import GuiFactory
+from pymetr.instrument import Instrument
+from utilities.decorators import debug
 from PySide6.QtWidgets import QDialog, QVBoxLayout, QListWidget, QDialogButtonBox, QDockWidget, QPushButton
-from PySide6.QtWidgets import QWidget, QMainWindow, QFileDialog, QComboBox, QTextEdit, QSizePolicy
-
-logger = logging.getLogger(__name__)
+from PySide6.QtWidgets import QWidget, QMainWindow, QFileDialog, QComboBox, QSizePolicy
 
 factory = GuiFactory()
 
@@ -26,6 +35,7 @@ class CentralControlDock(QDockWidget):
         """
         Initializes the control dock.
         """
+        logger.debug(f"Initializing control dock")
         super(CentralControlDock, self).__init__("Control Panel", parent)
         self.setAllowedAreas(QtCore.Qt.RightDockWidgetArea)
 
@@ -38,12 +48,6 @@ class CentralControlDock(QDockWidget):
         self.addInstrumentButton.clicked.connect(parent.add_instrument_button_clicked)
         self.dockLayout.addWidget(self.addInstrumentButton)
 
-        # Log Level ComboBox
-        self.logLevelComboBox = QComboBox()
-        self.logLevelComboBox.addItems(['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL', 'NONE'])
-        self.logLevelComboBox.currentTextChanged.connect(parent.change_log_level)
-        self.dockLayout.addWidget(self.logLevelComboBox)
-
         self.setWidget(self.dockWidget)
 
         # Adjust the dock's appearance
@@ -55,9 +59,10 @@ class InstrumentSelectionDialog(QDialog):
     Dialog for selecting an instrument from a list of available instruments.
     """
     def __init__(self, parent=None):
+        logger.debug(f"Opening instrument selection dialog")
         super().__init__(parent)
         self.setWindowTitle("Select an Instrument")
-        self.setGeometry(100, 100, 500, 500)
+        self.setGeometry(400, 400, 500, 300)
         self.layout = QVBoxLayout(self)
         
         self.listWidget = QListWidget()
@@ -73,6 +78,7 @@ class InstrumentSelectionDialog(QDialog):
         """
         Populates the list widget with available instruments.
         """
+        logger.debug(f"Populating Instruments")
         instruments_data = Instrument.list_instruments("TCPIP?*::INSTR")
         for unique_key, resource in instruments_data[0].items():
             # Extract the model number from the IDN response in the unique key
@@ -89,6 +95,7 @@ class InstrumentSelectionDialog(QDialog):
         """
         Returns the selected instrument's details from the dialog.
         """
+        logger.debug(f"Getting selected instrument")
         selected_item = self.listWidget.currentItem()
         if selected_item:
             return selected_item.text().split(' - ')[1]  # Returns the resource part of the item text
@@ -102,6 +109,7 @@ class InstrumentParameterDock(QDockWidget):
         """
         Initializes the parameter dock for a specific instrument.
         """
+        logger.debug(f"Creating instrument parameter dock")
         super(InstrumentParameterDock, self).__init__(parent)
         self.setWindowTitle(f"{instrument}".upper())
         self.on_tree_state_changed = on_tree_state_changed
@@ -117,6 +125,7 @@ class InstrumentParameterDock(QDockWidget):
         """
         Receives a parameter tree and displays it within the dock.
         """
+        logger.debug(f"Setting up parameters")
         self.parameters = parameters
         self.parameterTree = ParameterTree()
         self.layout.addWidget(self.parameterTree)
@@ -135,6 +144,7 @@ class DynamicInstrumentGUI(QMainWindow):
         Initializes the main GUI window and its components, including the instruments dictionary and central control dock.
         """
         super().__init__()
+        logger.debug(f"Opening PyMetr Application")
         self.setWindowTitle("Dynamic Instrument Control")
         self.setGeometry(100, 100, 1200, 800)
         
@@ -151,10 +161,10 @@ class DynamicInstrumentGUI(QMainWindow):
         Called when the 'Add Instrument' button is clicked in the CentralControlDock.
         Initiates the instrument selection process.
         """
+        logger.debug(f"Add instrument button clicked")
         dialog = InstrumentSelectionDialog(self)
         if dialog.exec() == QDialog.Accepted:
             selected_resource = dialog.get_selected_instrument()
-            print(f"Selected instrument: {selected_resource}")
             self.setup_instrument(selected_resource)
 
     def setup_instrument(self, selected_resource):
@@ -162,11 +172,18 @@ class DynamicInstrumentGUI(QMainWindow):
         Engages with the selected instrument by loading its driver,
         opening a connection, and setting up its parameters in the UI.
         """
+        logger.debug(f"Setting up instrument")
         selected_key = [key for key, value in Instrument.list_instruments("TCPIP?*::INSTR")[0].items() if value == selected_resource][0]
         idn_response = selected_key.split(": ")[1]
         model_number = idn_response.split(',')[1].strip().lower()
         serial_number = idn_response.split(',')[2].strip()
         unique_id = f"{model_number}_{serial_number}"
+
+        logger.debug(f"Selected_key: {selected_key}")
+        logger.debug(f"IDN String: {idn_response}")
+        logger.debug(f"Model Number: {model_number}")
+        logger.debug(f"Serial Number: {serial_number}")
+        logger.debug(f"Unique Id: {unique_id}")
 
         # Initialize instrument record in the dictionary
         self.instruments[unique_id] = {
@@ -175,13 +192,16 @@ class DynamicInstrumentGUI(QMainWindow):
             # Placeholder for additional details to be added later
         }
 
-        _driver = f"pymetr/drivers/{model_number}.py"
+        _driver = f"pymetr/instruments/{model_number}.py"
+        logger.debug(f"Looking for driver: {_driver}")
         if not os.path.exists(_driver):
             logger.info(f"No driver found for model {model_number}. Please select a driver file.")
             _driver, _ = QFileDialog.getOpenFileName(self, "Select Instrument Model File", "", "Python Files (*.py)")
 
         if _driver:
+            logger.debug(f"Loading driver: {_driver}")
             module = self.load_instrument_driver(_driver)
+            logger.debug(f"Returned module: {module}")
             if module:
                 self.initialize_and_configure_instrument(module, selected_resource, unique_id, _driver)
 
@@ -205,10 +225,12 @@ class DynamicInstrumentGUI(QMainWindow):
         and sets up the instrument parameter UI using the GuiFactory.
         """
         instr_class = None
-        
+        logger.debug(f"Initializing instrument with module: {module}")
+
         # Identify the correct instrument class from the module
         for attr_name in dir(module):
             attr = getattr(module, attr_name)
+            logger.debug(f"Searching: {attr}, {attr_name}")
             if isinstance(attr, type) and issubclass(attr, Instrument) and attr != Instrument:
                 instr_class = attr
                 break
@@ -238,7 +260,7 @@ class DynamicInstrumentGUI(QMainWindow):
             except Exception as e:
                 logger.error(f"Failed to initialize instrument {unique_id}: {e}")
         else:
-            logger.error("Driver module for {unique_id} does not support instance creation.")
+            logger.error(f"Driver module for {unique_id} does not support instance creation.")
 
     def sync_parameters_with_instrument(self, parameters, instrument_instance):
         """
@@ -386,21 +408,6 @@ class DynamicInstrumentGUI(QMainWindow):
                 logger.error(f"Attribute '{property_name}' not a property or not found.")
         else:
             logger.error(f"Attribute '{property_name}' not found on instance of '{target.__class__.__name__}'.")
-
-    def change_log_level(self, level):
-        numeric_level = getattr(logging, level, None)
-        if isinstance(numeric_level, int):
-            logging.basicConfig(level=numeric_level)
-            logger.setLevel(numeric_level)
-            logger.info(f"Log level changed to {level}")
-        else:
-            logger.error(f"Invalid log level: {level}")
-
-    def toggle_logging_dock(self):
-        if self.loggingDock.isVisible():
-            self.loggingDock.hide()
-        else:
-            self.loggingDock.show()
 
 if __name__ == "__main__":
 

@@ -1,22 +1,12 @@
-"""
-pymetr/instruments.py
-===========================
-
-Part of the pymetr framework, this module extends the interface definitions from `pymetr.interfaces.py` to implement a comprehensive instrument control system. It provides classes that represent and manage specific instruments or instrument families, facilitating direct, high-level interactions with test equipment.
-
-Authors:
-- Ryan C. Smith
-
-Designed for developers, engineers, and researchers, `pymetr/instrument.py` encapsulates the diverse world of instrumentation into a coherent, unified Python library. It's about making the complex simple, the inaccessible reachable, and the tedious enjoyable.
-"""
+import logging
+logger = logging.getLogger(__name__)
+logging.getLogger('pyvisa').setLevel(logging.CRITICAL)
 import sys
 import numpy as np
 import logging
 import pyvisa
 from enum import IntFlag
 
-# Set up a logger for the Instrument class
-logger = logging.getLogger(__name__)
 
 class Subsystem:
     """
@@ -41,6 +31,7 @@ class Subsystem:
                                    This index is appended to the command prefix.
         """
         self._parent = parent
+        logger.debug(f"Initializing subsystem with parent {parent}, prefix {cmd_prefix}, and index {index}")
         # Handle cascading of command prefixes for nested subsystems
         self.cmd_prefix = f"{parent.cmd_prefix}{cmd_prefix}" if hasattr(parent, 'cmd_prefix') else cmd_prefix
         if index is not None:
@@ -62,10 +53,12 @@ class Subsystem:
                                              or a list of indexed subsystem instances if 'indices' is provided.
         """
         if indices is None:
+            logger.debug(f"Build method returning single instance")
             # Creating a single instance without indexing
             return cls(parent, cmd_prefix)
         else:
             # Creating multiple indexed instances
+            logger.debug(f"Build method creating {indices} instances")
             return [cls(parent, cmd_prefix, index=idx) for idx in range(1, indices + 1)]
 
     @classmethod
@@ -111,6 +104,9 @@ class Instrument:
     def set_data_format(self, format):
         self._data_format = format
 
+    def set_data_format(self, type):
+        self._data_type = type
+
     def open(self):
         """Opens a connection to the instrument."""
         try:
@@ -149,7 +145,7 @@ class Instrument:
             str: The raw response from the instrument.
         """
         try:
-            response = self.instrument.read()
+            response = self.instrument.read().strip()
             logger.debug(f"Response received: {response}")
             return response
         except pyvisa.VisaIOError as e:

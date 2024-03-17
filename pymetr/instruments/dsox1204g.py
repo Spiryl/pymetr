@@ -1,11 +1,10 @@
-from instrument import Instrument, Subsystem
-from properties import switch_property, select_property, value_property, data_property
+import logging
+logger = logging.getLogger(__name__)
+
+from pymetr import Instrument, Subsystem, switch_property, select_property, value_property, data_property
 from enum import Enum
 import numpy as np
 import logging
-
-# Set up logging
-logger = logging.getLogger(__name__)
 
 class Oscilloscope(Instrument):
     """
@@ -20,53 +19,19 @@ class Oscilloscope(Instrument):
         waveform (Waveform): Manages waveform acquisition and processing.
         wavegen (WaveGen): Controls the oscilloscope's waveform generator.
         acquire (Acquire): Manages the oscilloscope's data acquisition settings.
-        channels (dict): Represents each oscilloscope channel as a Channel object.
-        continuous_fetch (bool): Flag to enable/disable continuous waveform fetching.
+        channel (dict): Represents each oscilloscope channel as a Channel object.
     """
-    class Sources(Enum):
-        """
-        Enumeration for the oscilloscope sources.
-
-        This helps keep source references tight and prevents the chaos of string typos
-        from messing up your slick command flow.
-
-        Attributes:
-            CH1 to CH4: Represent the four channels on the oscilloscope.
-            FUNCTION: For the function source.
-            MATH: Alias for the function source, 'cause math is cool like that.
-            BUS: For the bus source.
-            FFT: For the Fast Fourier Transform source.
-            MEMORY: For memory source references.
-            EXT: For external source, exclusive to those 2-channel scope ballers.
-        """
-        CHAN1 = 'CHAN1'
-        CHAN2 = 'CHAN2'
-        CHAN3 = 'CHAN3'
-        CHAN4 = 'CHAN4'
-        FUNCTION = 'FUNC'
-        MATH = 'FUNC'
-        BUS = 'BUS'
-        FFT = 'FFT'
-        MEMORY = 'MEMORY'
-        EXT = 'EXT'
-
-        def __str__(self):
-            """
-            Return a string representation of the source that's compatible with the oscilloscope command syntax.
-            """
-            return self.name
 
     def __init__(self, resource_string):
         super().__init__(resource_string)
         logger.info("Initializing Oscilloscope with resource string: %s", resource_string)
         self.data_format = "ASCII"
-        self.continuous_fetch = False
 
         # Use the build method to create subsystem instances
         self.waveform = Waveform.build(self, ':WAVeform')
         self.trigger = Trigger.build(self, ':TRIGger')
         self.timebase = Timebase.build(self, ':TIMebase')
-        self.wavegen = WaveGen.build(self, ':WAVegen')
+        self.wavegen = WaveGen.build(self, ':WGEN')
         self.acquire = Acquire.build(self, ':ACQuire')
 
         # For indexed subsystems, specify the number of indices in the build call
@@ -225,6 +190,39 @@ class Oscilloscope(Instrument):
             logger.debug("Turning off the source: %s", source_str)
             self.write(f":BLANk {source_str}")
 
+    class Sources(Enum):
+        """
+        Enumeration for the oscilloscope sources.
+
+        This helps keep source references tight and prevents the chaos of string typos
+        from messing up your slick command flow.
+
+        Attributes:
+            CH1 to CH4: Represent the four channels on the oscilloscope.
+            FUNCTION: For the function source.
+            MATH: Alias for the function source, 'cause math is cool like that.
+            BUS: For the bus source.
+            FFT: For the Fast Fourier Transform source.
+            MEMORY: For memory source references.
+            EXT: For external source, exclusive to those 2-channel scope ballers.
+        """
+        CHAN1 = 'CHAN1'
+        CHAN2 = 'CHAN2'
+        CHAN3 = 'CHAN3'
+        CHAN4 = 'CHAN4'
+        FUNCTION = 'FUNC'
+        MATH = 'FUNC'
+        BUS = 'BUS'
+        FFT = 'FFT'
+        MEMORY = 'MEMORY'
+        EXT = 'EXT'
+
+        def __str__(self):
+            """
+            Return a string representation of the source that's compatible with the oscilloscope command syntax.
+            """
+            return self.name
+
 class Acquire(Subsystem):
     """
     Manages the acquisition settings of an oscilloscope or similar instrument.
@@ -282,55 +280,55 @@ class Waveform(Subsystem):
     format = select_property(":FORMat", ['ASCII', 'WORD', 'BYTE'], "Waveform data format")
     points_mode = select_property(":POINts:MODE", ['NORMal', 'MAXiumum', 'RAW'], "Waveform points mode")
     unsigned = switch_property(":UNSigned", "Indicates if the returned data is signed or unsigned")
-    points = value_property(":POINts", type="int", doc_str="Number of trace points to pull")
-    preamble = data_property(":PREamble", access='read', doc_str="Pre-amble info including scale factors and offsets.")
-    data = data_property(":DATa", access='read', ieee_header=True, doc_str="Returns the data array of the waveform as a numpy array.")
+    points = value_property(":POINts", type="float", doc_str="Number of trace points to pull")
+    # preamble = data_property(":PREamble", access='read', doc_str="Pre-amble info including scale factors and offsets.")
+    # data = data_property(":DATa", access='read', ieee_header=True, doc_str="Returns the data array of the waveform as a numpy array.")
 
-    def fetch_preamble(self):
-        """
-        Fetches and parses the preamble from the instrument, updating class attributes for waveform scaling.
-        """
-        try:
-            preamble_str = self.preamble  # Utilizes the getter from the value_property
-            preamble_values = [float(val) for val in preamble_str.split(',')]
+    # def fetch_preamble(self):
+    #     """
+    #     Fetches and parses the preamble from the instrument, updating class attributes for waveform scaling.
+    #     """
+    #     try:
+    #         preamble_str = self.preamble  # Utilizes the getter from the value_property
+    #         preamble_values = [float(val) for val in preamble_str.split(',')]
 
-            self.format = preamble_values[0]
-            self.type = int(preamble_values[1])
-            self.num_points = int(preamble_values[2])
-            self.count = int(preamble_values[3])
-            self.x_increment, self.x_origin, self.x_reference = preamble_values[4], preamble_values[5], int(preamble_values[6])
-            self.y_increment, self.y_origin, self.y_reference = preamble_values[7], preamble_values[8], int(preamble_values[9])
-        except Exception as e:
-            logger.error(f'Issue fetching preamble: {e}')
+    #         self.format = preamble_values[0]
+    #         self.type = int(preamble_values[1])
+    #         self.num_points = int(preamble_values[2])
+    #         self.count = int(preamble_values[3])
+    #         self.x_increment, self.x_origin, self.x_reference = preamble_values[4], preamble_values[5], int(preamble_values[6])
+    #         self.y_increment, self.y_origin, self.y_reference = preamble_values[7], preamble_values[8], int(preamble_values[9])
+    #     except Exception as e:
+    #         logger.error(f'Issue fetching preamble: {e}')
 
-    def fetch_time(self):
-        """
-        Calculates and returns the time array for the waveform data based on preamble info.
-        """
-        self.fetch_preamble()
-        timestamps = (np.arange(self.num_points) - self.x_reference) * self.x_increment + self.x_origin
-        return timestamps
+    # def fetch_time(self):
+    #     """
+    #     Calculates and returns the time array for the waveform data based on preamble info.
+    #     """
+    #     self.fetch_preamble()
+    #     timestamps = (np.arange(self.num_points) - self.x_reference) * self.x_increment + self.x_origin
+    #     return timestamps
 
-    def fetch_data(self, source=None):
-        """
-        Fetches and returns waveform data in voltage units, performing necessary conversions based on format.
-        """
-        if source:
-            self.source = source
+    # def fetch_data(self, source=None):
+    #     """
+    #     Fetches and returns waveform data in voltage units, performing necessary conversions based on format.
+    #     """
+    #     if source:
+    #         self.source = source
 
-        self.fetch_preamble()
+    #     self.fetch_preamble()
         
-        if self.format in ["BYTE", "WORD"]:
-            data_type = 'B' if self.unsigned else 'b'  # Adjust for BYTE
-            if self.format == "WORD":
-                data_type = 'H' if self.unsigned else 'h'  # Adjust for WORD
-            self._parent.data_type = data_type
+    #     if self.format in ["BYTE", "WORD"]:
+    #         data_type = 'B' if self.unsigned else 'b'  # Adjust for BYTE
+    #         if self.format == "WORD":
+    #             data_type = 'H' if self.unsigned else 'h'  # Adjust for WORD
+    #         self._parent.data_type = data_type
 
-        waveform_data = self.data  # Fetch waveform data
+    #     waveform_data = self.data  # Fetch waveform data
 
-        if self.format in ["BYTE", "WORD"]:
-            voltages = (waveform_data - self.y_reference) * self.y_increment + self.y_origin
-        else:  # ASCII or other formats not requiring conversion
-            voltages = waveform_data
+    #     if self.format in ["BYTE", "WORD"]:
+    #         voltages = (waveform_data - self.y_reference) * self.y_increment + self.y_origin
+    #     else:  # ASCII or other formats not requiring conversion
+    #         voltages = waveform_data
 
-        return voltages
+    #     return voltages
