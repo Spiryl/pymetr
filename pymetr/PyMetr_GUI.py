@@ -21,10 +21,30 @@ from pyqtgraph.parametertree import Parameter, ParameterTree
 from pymetr.factories import GuiFactory
 from pymetr.instrument import Instrument
 from utilities.decorators import debug
+from PySide6.QtCore import QThread, Signal, QObject
 from PySide6.QtWidgets import QDialog, QVBoxLayout, QListWidget, QDialogButtonBox, QDockWidget, QPushButton
 from PySide6.QtWidgets import QWidget, QMainWindow, QFileDialog, QComboBox, QSizePolicy
 
 factory = GuiFactory()
+
+class PlotDataSignal(QObject):
+    data_fetched = Signal(object)  # 'object' can be more specific based on the data structure
+
+class FetchTraceThread(QThread):
+    data_ready = Signal(object)  # Signal to emit fetched trace data
+    fetch_error = Signal(str)  # Signal to emit in case of error
+
+    def __init__(self, instrument):
+        super(FetchTraceThread, self).__init__()
+        self.instrument = instrument
+
+    def run(self):
+        try:
+            # Fetch trace data using the new fetch_trace method
+            trace_data = self.instrument.fetch_trace()
+            self.data_ready.emit(trace_data)  # Emit the fetched trace data
+        except Exception as e:
+            self.fetch_error.emit(str(e))  # Emit the error message
 
 class CentralControlDock(QDockWidget):
     """
@@ -249,11 +269,22 @@ class DynamicInstrumentGUI(QMainWindow):
                 parameter_dock = InstrumentParameterDock(unique_id, self, on_tree_state_changed=self.create_parameter_change_handler(unique_id))
                 parameter_dock.setup_parameters(parameters)
 
-                # Add it to the Captain's log.
-                self.instruments[unique_id]['dock'] = parameter_dock
-                self.instruments[unique_id]['instance'] = instr
-                self.instruments[unique_id]['parameters'] = parameters
+                fetchDataThread = FetchTraceThread(instr)
+                fetchDataThread.dataFetched.connect(lambda data: self.handleDataFetched(data, unique_id))
+                fetchDataThread.fetchFailed.connect(lambda error: self.handleFetchFailed(error, unique_id))
+                fetchDataThread.start()                
 
+                # Add it to the Captain's log.
+                self.instruments[unique_id] = {
+                    'dock': parameter_dock,
+                    'instance': instr,
+                    'parameters': parameters,
+                    'plot_data_signal': PlotDataSignal(),
+                    'fetch_thread': fetchDataThread  # Store the thread reference here
+                }
+
+                self.instruments[unique_id]['plot_data_signal'].data_fetched.connect(self.handle_plot_data)
+                
                 # Send it home!
                 self.addDockWidget(QtCore.Qt.RightDockWidgetArea, parameter_dock)
                 
@@ -265,9 +296,14 @@ class DynamicInstrumentGUI(QMainWindow):
     def sync_parameters_with_instrument(self, parameters, instrument_instance):
         """
         Sync the Parameter Tree with the current state of the instrument by fetching the
-        current values of the instrument's properties and updating the Parameter Tree.
+        current values of the instrument's properties and updating the Parameter Tree, ignoring action parameters.
         """
         def update_param_value(param, instr):
+            # Skip action parameters as they don't represent a state to sync
+            if param.opts.get('type') == 'action':
+                logger.debug(f"Skipping action parameter: {param.name()}")
+                return
+
             property_path = param.opts.get('property_path', None)
             logger.debug(f"Syncing parameter: {param.name()} using property path: {property_path}")
             
@@ -408,6 +444,58 @@ class DynamicInstrumentGUI(QMainWindow):
                 logger.error(f"Attribute '{property_name}' not a property or not found.")
         else:
             logger.error(f"Attribute '{property_name}' not found on instance of '{target.__class__.__name__}'.")
+
+    def handle_plot_data(self, trace_data):
+        # Place holder for later routing. 
+        self.update_plot(trace_data, self.plot_widget)
+
+    def update_plot(data, plot_widget):
+        """
+        Updates the given plot_widget with the provided data.
+        
+        Parameters:
+        - data: Can be a dictionary in the specified trace format, or other data formats compatible with pyqtgraph plotting functions (e.g., lists, np.arrays).
+        - plot_widget: The PyQtGraph plotting widget to update.
+        """
+        
+        # Clear the plot widget for new data
+        plot_widget.clear()
+        logger.debug("Plot widget cleared for new data.")
+
+        # Handle the trace_dictionary format
+        if isinstance(data, dict):
+            logger.info("Processing trace_dictionary format data for plotting.")
+            for trace_id, trace_info in data.items():
+                # Extract the necessary data for each trace
+                trace_data = trace_info.get('data', [])
+                trace_range = trace_info.get('range', np.arange(len(trace_data)))
+                color = trace_info.get('color', 'w')  # Default color white
+                label = trace_info.get('label', None)
+                visible = trace_info.get('visible', True)  # Default visibility to True if not specified
+                
+                # Adjust color for visibility
+                if not visible:
+                    color = (0, 0, 0, 0)  # Set color to transparent for invisible traces
+                    
+                # Plotting the trace data with optional parameters
+                logger.debug(f"Plotting trace ID {trace_id} with label: {label}, color: {color}, visible: {visible}.")
+                plot_widget.plot(trace_range, trace_data, pen=color, name=label)
+
+        # Direct plotting if data isn't in the expected dictionary format
+        elif isinstance(data, (list, np.ndarray, tuple)):
+            logger.info("Processing direct data format for plotting.")
+            if isinstance(data, tuple):
+                # If data comes as a tuple, unpack it assuming it follows the (data, range) format
+                trace_data, trace_range = data
+                logger.debug("Plotting tuple format data.")
+                plot_widget.plot(trace_range, trace_data)
+            else:
+                # Directly plot the data if it's just a list or np.array
+                logger.debug("Plotting list or np.array format data.")
+                plot_widget.plot(data)
+        else:
+            # Log an error for unexpected data formats
+            logger.error(f"Received data in an unexpected format, unable to plot: {data}")
 
 if __name__ == "__main__":
 

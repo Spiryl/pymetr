@@ -1,36 +1,56 @@
 from pymetr.instruments.dsox1204g import Oscilloscope
 from pymetr import Instrument
+import pyqtgraph as pg
 import logging
+import sys
+from itertools import cycle
+from PySide6.QtWidgets import QApplication
 
 logging.basicConfig(level=logging.INFO)
+
+# Initialize the QApplication instance
+app = QApplication(sys.argv)
 
 # Select an instrument
 resource = Instrument.select_instrument("TCPIP?*::INSTR")
 
-# Create an instance using the selected resource string
+# Create an oscilloscope instance with the selected resource string
 oscope = Oscilloscope(resource)
 
 # Open a connection to the instrument
 oscope.open()
 
-# Verify the identity and connection is good.
-print(oscope.identity())
+# Clear any previous status/settings on the oscilloscope
+oscope.clear_status()
+# oscope.autoscale()
+# oscope.query_operation_complete()
 
-# Loop through and turn on the channels. 
-for channel in range (0,4):
-    print(f"Turning on channel {channel+1} display.\n")
-    oscope.channel[channel].display = 'On'
+# Set global sources and data format before fetching data
+oscope.set_data_sources('CHAN1', 'CHAN2', 'CHAN3', 'CHAN4')
+oscope.set_data_format('BYTE')
+oscope.waveform.points = 1000
 
-# Call a different parameter
-print(f"Channel 1 offset: {oscope.channel[0].offset}\n")
+# Initiate a single acquisition
+oscope.single()
+oscope.query_operation_complete()
 
-# Loop through and turn off on the channels. 
-for channel in range (0,4):
-    print(f"Turning off channel {channel+1} display.\n")
-    oscope.channel[channel].display = 'Off'
+# Fetch trace data for the active (globally set) channels
+trace_data = oscope.fetch_trace()
 
-# See if they are off.
-for channel in range (0,4):
-    print(f"Checking channel {channel+1} display {oscope.channel[channel].display}\n")
+# Create a plot window with pyqtgraph
+plot_window = pg.plot(title="Oscilloscope Data")
+
+# Define a list of colors to use for the traces
+colors = ['y', 'g', 'b', 'r']
+color_cycle = cycle(colors)  # Cycle through the colors list
+
+# Plot visible traces
+for trace_id, trace_info in trace_data.items():
+    if trace_info['visible']:
+        color = next(color_cycle)  # Get the next color from the cycle
+        plot_window.plot(trace_info['range'], trace_info['data'], pen=pg.mkPen(color, width=2))
 
 oscope.close()
+
+# Start the QApplication event loop to keep the window open
+sys.exit(app.exec())

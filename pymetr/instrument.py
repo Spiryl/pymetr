@@ -5,8 +5,9 @@ import sys
 import numpy as np
 import logging
 import pyvisa
+from pyvisa.constants import BufferType, StatusCode
 from enum import IntFlag
-
+from abc import ABC, abstractmethod
 
 class Subsystem:
     """
@@ -14,13 +15,13 @@ class Subsystem:
     and enabling nested subsystem command prefix cascading.
 
     Attributes:
-        _parent (Instrument): Reference to the parent instrument or subsystem. This attribute 
+        instr (Instrument): Reference to the parent instrument or subsystem. This attribute 
                               facilitates communication with the parent object.
         cmd_prefix (str): The SCPI command prefix associated with the subsystem. This prefix is 
                           used to construct full SCPI commands for property interactions.
     """
 
-    def __init__(self, parent, cmd_prefix="", index=None):
+    def __init__(self, instr, cmd_prefix="", index=None):
         """
         Initializes a Subsystem instance.
 
@@ -30,15 +31,15 @@ class Subsystem:
             index (int, optional): If provided, it specifies the index of this instance within an indexed subsystem setup. 
                                    This index is appended to the command prefix.
         """
-        self._parent = parent
-        logger.debug(f"Initializing subsystem with parent {parent}, prefix {cmd_prefix}, and index {index}")
+        self.instr = instr
+        logger.debug(f"Initializing subsystem with instrument {instr}, prefix {cmd_prefix}, and index {index}")
         # Handle cascading of command prefixes for nested subsystems
-        self.cmd_prefix = f"{parent.cmd_prefix}{cmd_prefix}" if hasattr(parent, 'cmd_prefix') else cmd_prefix
+        self.cmd_prefix = f"{instr.cmd_prefix}{cmd_prefix}" if hasattr(instr, 'cmd_prefix') else cmd_prefix
         if index is not None:
             self.cmd_prefix += str(index)
 
     @classmethod
-    def build(cls, parent, cmd_prefix, indices=None):
+    def build(cls, instr, cmd_prefix, indices=None):
         """
         Class method to instantiate subsystems. This method simplifies the creation process by automatically handling
         both single and indexed instances of subsystems.
@@ -55,11 +56,11 @@ class Subsystem:
         if indices is None:
             logger.debug(f"Build method returning single instance")
             # Creating a single instance without indexing
-            return cls(parent, cmd_prefix)
+            return cls(instr, cmd_prefix)
         else:
             # Creating multiple indexed instances
             logger.debug(f"Build method creating {indices} instances")
-            return [cls(parent, cmd_prefix, index=idx) for idx in range(1, indices + 1)]
+            return [cls(instr, cmd_prefix, index=idx) for idx in range(1, indices + 1)]
 
     @classmethod
     def register_options_property(cls, property_name, enum):
@@ -86,42 +87,136 @@ class Instrument:
     command support and direct VISA communication capabilities.
     """
 
+    @property
+    def data_mode(self):
+        """
+        Gets the current data format used for instrument communication.
+
+        Returns:
+            str: The data mode, either 'ASCII' or 'BINARY'.
+        """
+        return self._data_mode
+
+    @data_mode.setter
+    def data_mode(self, mode):
+        """
+        Sets the data mode used for instrument communication.
+
+        Args:
+            format (str): The data format to be set. Valid options are 'ASCII' or 'BINARY'.
+
+        Raises:
+            ValueError: If an invalid data format is provided.
+        """
+        if mode.upper() not in ['ASCII', 'BINARY']:
+            raise ValueError("Invalid data format. Only 'ASCII' or 'BINARY' are supported.")
+        self._data_mode = mode.upper()
+
+    @property
+    def data_type(self):
+        """
+        Gets the current data type used for binary data format.
+
+        Returns:
+            str: The data type, corresponding to Python struct module format characters.
+        """
+        return self._data_type
+
+    @data_type.setter
+    def data_type(self, type):
+        """
+        Sets the data type used for binary data format. This type is aligned with Python's struct module format characters.
+
+        Args:
+            type (str): The data type to be set. Valid types are:
+                        'B' (unsigned byte), 'b' (signed byte),
+                        'H' (unsigned short), 'h' (signed short),
+                        'I' (unsigned int), 'i' (signed int),
+                        'Q' (unsigned long long), 'q' (signed long long),
+                        'f' (float), 'd' (double).
+
+        Raises:
+            ValueError: If an invalid data type is provided.
+        """
+        valid_types = ['B', 'b', 'H', 'h', 'I', 'i', 'Q', 'q', 'f', 'd'] 
+        if type not in valid_types:
+            raise ValueError(f"Invalid data type. Supported types are: {', '.join(valid_types)}")
+        self._data_type = type
+
     def __init__(self, resource_string, **kwargs):
         """
         Initializes the instrument connection using the provided VISA resource string.
         
         Parameters:
             resource_string (str): VISA resource string to identify the instrument.
+            timeout (int): Timeout period in milliseconds.
+            input_buffer_size (int): Size of the input buffer.
+            output_buffer_size (int): Size of the output buffer.
             **kwargs: Additional keyword arguments for PyVISA's open_resource method.
         """
         self.resource_string = resource_string
         self.rm = pyvisa.ResourceManager()
         self.instrument = None
-        self.data_format = 'BINARY'  # or BINARY
-        self.data_type = 'B' # Uses same datatype format as struct
+        self.validate = True
+        self._data_mode = 'BINARY'  # Default to BINARY
+        self._data_type = 'B'  # Default data type (e.g., for binary data)
+        self.buffer_size = kwargs.pop('buffer_size', 2^16)  # Default buffer size, can be overridden via kwargs
+        self.buffer_type = kwargs.pop('buffer_type', BufferType.io_in | BufferType.io_out)  # Default buffer type, can be overridden
         logger.debug(f"Initializing Instrument with resource_string: {resource_string}")
 
-    def set_data_format(self, format):
-        self._data_format = format
+    @abstractmethod
+    def fetch_trace(self):
+        """
+        Abstract method designed to fetch trace data from the instrument. Implementations should return data and optionally,
+        a corresponding range or timestamp array that matches the length of the data. The method should support returning 
+        this information in a format compatible with 'pyqtgraph' plotting functions, primarily focusing on arrays or lists.
 
-    def set_data_format(self, type):
-        self._data_type = type
+        The method should be capable of handling non-linear data points and timestamped data, ensuring flexibility in data
+        visualization.
+
+        Returns:
+            tuple: A tuple containing one or more elements depending on what is necessary for plotting:
+                   - data (np.array or list): Mandatory. The primary set of data points to be plotted.
+                   - range (np.array, list, tuple): Optional. If provided, this specifies the x-axis values associated with each data point.
+                                                    This can be a linear range (tuple) or a non-linear range/timestamps (array/list).
+                   
+                    The expected format for simple linear data:
+                    (data, )
+                   
+                    For data with a specific range or timestamps:
+                    (data, range)
+                   
+                    trace_dictionary = {
+                        'trace_id': {  # Unique identifier for each trace
+                            'data': np.array([...]) or list([...]),  # The main data points for plotting. np.array is preferred for performance, but list is also supported.
+                            'range': np.array([...]) or list([...]) or tuple(start, end),  # X-axis values. Can be linear (tuple) or non-linear (array/list).
+                            'color': 'hex_code',  # Optional. Hex code (e.g., '#FF5733') for trace color. If not provided, a default is used.
+                            'label': 'String label',  # Optional. Label for the trace, used in legends or axes.
+                            'markers': 'style',  # Optional. Marker style (e.g., 'o', 's'). Refer to 'pyqtgraph' documentation for supported styles.
+                            'units': 'unit string',  # Optional. Units for the data (e.g., 'V', 'A'). Important for axes labeling and data interpretation.
+                            # Additional metadata as needed
+                        },
+                        # More traces as needed
+                    }
+        """
+        pass
 
     def open(self):
-        """Opens a connection to the instrument."""
-        try:
-            self.instrument = self.rm.open_resource(self.resource_string)
-            logger.info(f"Connection to instrument {self.resource_string} opened successfully.")
-        except pyvisa.VisaIOError as e:
-            logger.exception(f"Failed to open connection to {self.resource_string}: {e}")
-            raise
+        """
+        Opens a connection to the instrument.
+        """
+        self.instrument = self.rm.open_resource(self.resource_string)
+        self.instrument.read_termination = '\n'
+        self.instrument.write_termination = '\n'
+        self.instrument.timeout = 5000
+        logger.debug("Instrument session opened and buffer size set.")
 
     def close(self):
-        """Closes the connection to the instrument."""
-        if self.instrument:
-            self.instrument.close()
-            logger.info("Instrument connection closed.")
-            self.instrument = None
+        """
+        Opens a connection to the instrument.
+        """
+        self.instrument.close()
+        logger.debug("Instrument session closed")
 
     def write(self, command):
         """
@@ -164,7 +259,6 @@ class Instrument:
         """
         self.write(command)
         response = self.read()
-        logger.info(f"Query sent: {command}, received: {response}")
         return response
     
     def query_ascii_values(self, command, container=np.array, converter='f', separator=','):
@@ -181,7 +275,7 @@ class Instrument:
             container: The ASCII data read from the instrument, converted into the specified container format.
         """
         response = self.instrument.query_ascii_values(command, container=container, converter=converter, separator=separator)
-        logger.debug(f"ASCII query sent: {command}, received: {response}")
+        logger.debug(f"ASCII query sent: {command}, received: {response[:10]}")
         return response
 
     def query_binary_values(self, command, datatype='f', is_big_endian=False, container=np.array):
@@ -199,7 +293,7 @@ class Instrument:
         """
         try:
             response = self.instrument.query_binary_values(command, datatype=datatype, container=container, is_big_endian=is_big_endian)
-            logger.debug(f"Binary query sent: {command}, received: {response}")
+            logger.debug(f"Binary query sent: {command}, received: {response[:10]}")
             return response
         except (pyvisa.VisaIOError, ValueError) as e:
             logger.exception(f"Failed to query binary values with '{command}': {e}")
@@ -297,13 +391,11 @@ class Instrument:
             error_string = self.query(":SYSTem:ERRor?")
             if error_string:  # If there is an error string value
                 if not error_string.startswith("+0,"):  # Not "No error"
-                    print(f"ERROR: {error_string}, command: '{command}'")
                     print("Exited because of error.")
                     sys.exit(1)
                 else:  # "No error"
                     break
             else:  # :SYSTem:ERRor? should always return a string
-                print(f"ERROR: :SYSTem:ERRor? returned nothing, command: '{command}'")
                 print("Exited because of error.")
                 sys.exit(1)
 

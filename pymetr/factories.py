@@ -54,6 +54,20 @@ class GuiFactory:
             logger.debug(f"Data fetched for {property_name}: {data_value}")
         return action_callback
 
+    def create_fetch_trace_action_callback(self, unique_id, instance):
+        """
+        Creates a specialized callback for the fetch_trace method that not only executes the method but also handles plotting the returned data.
+        """
+        def action_callback():
+            logger.debug(f"Executing fetch_trace for {unique_id}")
+            trace_data = instance.fetch_trace()
+            if trace_data:
+                # Directly use the plot_data_signal associated with this instrument to emit the trace data
+                self.instruments[unique_id]['plot_data_signal'].data_fetched.emit(trace_data)
+            else:
+                logger.error("fetch_trace did not return data")
+        return action_callback
+
     def create_method_action_callback(self, method_name, instance):
         """
         Creates a callback for executing methods.
@@ -229,7 +243,7 @@ class PyMetrClassVisitor(ast.NodeVisitor):
         Now with enhanced logging for a detailed look at the parsing process.
         Extracts properties and methods from these classes.
         """
-        logger.debug(f"Visiting Class Definition: {node.name}")  # Shout out that we've hit a new class
+        logger.debug(f"\nVisiting Class Definition: {node.name}")  # Shout out that we've hit a new class
         is_target_class = any(base.id in ['Subsystem', 'Instrument'] for base in node.bases if isinstance(base, ast.Name))
         if not is_target_class:
             logger.debug(f"Skipped {node.name} as it's not a Subsystem or Instrument.")  # Letting us know if we're skipping this class

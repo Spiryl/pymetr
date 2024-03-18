@@ -1,10 +1,39 @@
 import logging
-logger = logging.getLogger(__name__)
-
-from pymetr import Instrument, Subsystem, switch_property, select_property, value_property, data_property
 from enum import Enum
 import numpy as np
-import logging
+logger = logging.getLogger(__name__)
+from pymetr import Instrument, Subsystem, switch_property, select_property, value_property, string_property, data_property
+
+def source_command(command_template):
+    """
+    A decorator to handle oscilloscope source-related commands. It determines the correct sources
+    to use (provided or global), converts Enum members to strings, generates the SCPI command,
+    and executes it.
+
+    Args:
+        command_template (str): A template string for the SCPI command, with '{}' placeholder for source(s).
+
+    Returns:
+        A decorated function.
+    """
+    def decorator(func):
+        def wrapper(self, *sources, **kwargs):
+            # If no sources are explicitly provided, use the global sources or default to an empty list
+            sources_to_use = sources if sources else self._sources or []
+
+            # Convert Enums to their string values if necessary
+            cleaned_sources = [source.value if isinstance(source, Enum) else source for source in sources_to_use]
+
+            # Generate and execute the SCPI command
+            command = command_template.format(', '.join(cleaned_sources))
+            logger.debug(f"Executing command: {command}")
+            self.write(command)
+
+            # Call the original function with the cleaned source strings
+            return func(self, *cleaned_sources, **kwargs)
+
+        return wrapper
+    return decorator
 
 class Oscilloscope(Instrument):
     """
@@ -22,10 +51,43 @@ class Oscilloscope(Instrument):
         channel (dict): Represents each oscilloscope channel as a Channel object.
     """
 
+    class Sources(Enum):
+        """
+        Enumeration for the oscilloscope sources.
+
+        This helps keep source references tight and prevents the chaos of string typos
+        from messing up your slick command flow.
+
+        Attributes:
+            CH1 to CH4: Represent the four channels on the oscilloscope.
+            FUNCTION: For the function source.
+            MATH: Alias for the function source, 'cause math is cool like that.
+            BUS: For the bus source.
+            FFT: For the Fast Fourier Transform source.
+            MEMORY: For memory source references.
+            EXT: For external source, exclusive to those 2-channel scope ballers.
+        """
+        CH1 = 'CHAN1'
+        CH2 = 'CHAN2'
+        CH3 = 'CHAN3'
+        CH4 = 'CHAN4'
+        FUNCTION = 'FUNC'
+        MATH = 'FUNC'
+        BUS = 'BUS'
+        FFT = 'FFT'
+        MEMORY = 'MEMORY'
+        EXT = 'EXT'
+
+        def __str__(self):
+            # When the enum is used in a string context, return its value instead of its name
+            return self.value
+
     def __init__(self, resource_string):
         super().__init__(resource_string)
         logger.info("Initializing Oscilloscope with resource string: %s", resource_string)
-        self.data_format = "ASCII"
+
+        self._sources = None
+        self._format = "ASCII"
 
         # Use the build method to create subsystem instances
         self.waveform = Waveform.build(self, ':WAVeform')
@@ -36,6 +98,55 @@ class Oscilloscope(Instrument):
 
         # For indexed subsystems, specify the number of indices in the build call
         self.channel = Channel.build(self, ':CHANnel', indices=4)
+
+    def set_data_format(self, format):
+        self._format = format
+
+    @source_command(":VIEW {}")
+    def set_data_sources(self, *sources):
+        """
+        Sets the data sources to be displayed on the oscilloscope. If sources are specified,
+        it turns off the display for all channels and then turns on the display for the specified sources.
+        If no sources are specified, it uses the global sources set previously.
+        """
+        self.blank()  # Turn off all sources before setting new ones
+        if sources:
+            # If sources are explicitly provided, update the global sources
+            self._sources = sources
+            logger.info(f"Sources set to: {sources}")
+        else:
+            # If no sources are provided, use the global sources
+            if not self._sources:
+                logger.warning("No sources provided and no global sources set. No action taken.")
+                return
+            
+    @source_command(":AUTOScale {}")
+    def autoscale(self, *sources):
+        """
+        Automatically scales the oscilloscope to optimize the display of specified sources.
+        """
+        pass  # The decorator handles command execution
+
+    @source_command(":DIGItize {}")
+    def digitize(self, *sources):
+        """
+        Digitizes the specified sources on the oscilloscope.
+        """
+        pass  # The decorator handles command execution
+
+    @source_command(":VIEW {}")
+    def view(self, *sources):
+        """
+        Turns on the display for specified sources.
+        """
+        pass  # The decorator handles command execution
+
+    @source_command(":BLANk {}")
+    def blank(self, *sources):
+        """
+        Turns off the display for specified sources.
+        """
+        pass  # The decorator handles command execution
 
     def run(self):
         """
@@ -82,146 +193,134 @@ class Oscilloscope(Instrument):
         logger.debug("Initiating single waveform acquisition.")
         self.write(":SINGLE")
 
-    def autoscale(self, *sources):
+    def fetch_preamble(self):
         """
-        Automatically scales the oscilloscope to optimize the display of specified sources.
-
-        This method evaluates all specified input signals and automatically adjusts the oscilloscope's
-        settings to display those signals optimally. If no sources are specified, it autoscales all available
-        sources. It's the code equivalent of pressing the Auto Scale button on the oscilloscope.
-
-        Parameters:
-            *sources (enum.Enum or str): Variable length argument list of sources to autoscale.
-                                        Sources can be specified as either enum members from
-                                        Oscilloscope.Source or as strings. If no sources are
-                                        specified, all sources are autoscaled.
-
-        Examples:
-            osc.autoscale()  # Autoscales all sources
-            osc.autoscale(Oscilloscope.Source.CH1, Oscilloscope.Source.CH2)  # Autoscales CH1 and CH2
-            osc.autoscale('CH1', 'CH2')  # Another way to autoscale CH1 and CH2
+        Fetches and parses the preamble from the instrument, updating class attributes for waveform scaling.
         """
-        source_strings = [str(source.value) if isinstance(source, Enum) else str(source) for source in sources]
-        source_str = ', '.join(source_strings)
+        logger.debug("Attempting to fetch preamble...")
+        try:
+            preamble_str = self.waveform.preamble  # Utilizes the getter from the string_property
+            logger.debug(f"Raw preamble string: {preamble_str}")
+            preamble_values = [float(val) for val in preamble_str.split(',')]
+            
+            # Log each preamble value for debugging
+            logger.debug(f"Format: {preamble_values[0]}")
+            logger.debug(f"Type: {preamble_values[1]}")
+            logger.debug(f"Points: {preamble_values[2]}")
+            logger.debug(f"Count: {preamble_values[3]}")
+            logger.debug(f"X Increment: {preamble_values[4]}")
+            logger.debug(f"X Origin: {preamble_values[5]}")
+            logger.debug(f"X Reference: {preamble_values[6]}")
+            logger.debug(f"Y Increment: {preamble_values[7]}")
+            logger.debug(f"Y Origin: {preamble_values[8]}")
+            logger.debug(f"Y Reference: {preamble_values[9]}")
+            
+            self._x_increment, self._x_origin, self._x_reference = preamble_values[4], preamble_values[5], int(preamble_values[6])
+            self._y_increment, self._y_origin, self._y_reference = preamble_values[7], preamble_values[8], int(preamble_values[9])
+            
+        except Exception as e:
+            logger.error(f'Issue fetching or parsing preamble: {e}')
 
-        if source_str:
-            logger.debug(f"Autoscaling specified sources: {source_str}")
-            self.write(f":AUTOScale {source_str}")
+    def fetch_time(self, source=None):
+        """
+        Calculates and returns the time array for the waveform data based on preamble info.
+        """
+        logger.info(f"Fetching time for source: {source}")
+        if source:
+            self.waveform.source = source  # Set the waveform source if specified.
+            logger.debug(f"Waveform source set to: {source}")
+
+        # Need to set the format to read the preamble
+        self.waveform.format = self._format
+        logger.debug(f"Waveform format set to: {self._format}")
+
+        self.fetch_preamble()
+        timestamps = (np.arange(self.waveform.points) - self._x_reference) * self._x_increment + self._x_origin
+        return timestamps
+
+    def fetch_data(self, source=None):
+        """
+        Fetches and returns waveform data in voltage units, performing necessary conversions based on the selected data format.
+        Adjusts for probe attenuation.
+        """
+        logger.info(f"Fetching data for source: {source}")
+
+        if source:
+            self.waveform.source = source  # Set the waveform source if specified.
+            logger.debug(f"Waveform source set to: {source}")
+
+        # Set the waveform format for the specific channel - We keep them all the same!
+        # What kind of mad man is swapping data formats between sources?!
+        self.waveform.format = self._format
+
+        # Check if the channel data is unsigned and set the format for binary transfer
+        _unsigned = self.waveform.unsigned
+        if self._format == "BYTE":
+            _data_type = 'B' if _unsigned else 'b'
+        elif self._format == "WORD":
+            _data_type = 'H' if _unsigned else 'h'
         else:
-            logger.debug("Autoscaling all sources.")
-            self.write(":AUTOScale")
+            _data_type = None
+ 
+        # Keep the instrument mode synced with the waveform settings
+        self.data_mode = "ASCII" if self._format == "ASCII" else "BINARY"
+        self.data_type = _data_type if _data_type else 'B'
 
-    def digitize(self, *sources):
-        """
-        Digitizes the specified sources on the oscilloscope.
+        logger.debug(f"Instrument data format set to: {self.data_mode}")
+        logger.debug(f"Instrument data type set to: {self.data_type}")
 
-        When called, this method sends a command to the oscilloscope to digitize the specified sources.
-        If no sources are specified, it will digitize all available sources. Sources can be specified
-        as either enum members from Oscilloscope.Source or as strings.
+        # Fetch probe attenuation for the current source if it is a channel
+        probe_attenuation = 1  # Default value for non-channel sources
+        if source.startswith("CHAN"):
+            channel_index = int(source.replace("CHAN", "")) - 1
+            probe_attenuation = int(self.channel[channel_index].probe)
+            logger.debug(f"Probe attenuation for {source}: {probe_attenuation}")
 
-        Parameters:
-            *sources (enum.Enum or str): Variable length argument list of sources to digitize.
-                                        Sources can be specified as either enum members from
-                                        Oscilloscope.Source or as strings. If no sources are
-                                        specified, all sources are digitized.
+        # Ensure preamble attributes are up to date
+        self.fetch_preamble()
 
-        Examples:
-            osc.digitize()  # Digitizes all sources
-            osc.digitize(Oscilloscope.Source.CH1, Oscilloscope.Source.CH2)  # Digitizes CH1 and CH2
-            osc.digitize('CH1', 'CH2')  # Another way to digitize CH1 and CH2
-        """
-        source_strings = [str(source.value) if isinstance(source, Enum) else str(source) for source in sources]
-        source_str = ', '.join(source_strings)
+        # Fetch waveform data
+        waveform_data = self.waveform.data
 
-        if source_str:
-            logger.debug(f"Digitizing specified sources: {source_str}")
-            self.write(f":DIGItize {source_str}")
+        # Convert binary data to voltages using scaling factors from the preamble and adjust for probe attenuation
+        if self._format in ["BYTE", "WORD"]:
+            voltages = ((waveform_data - self._y_reference) * self._y_increment + self._y_origin)  # * probe_attenuation
+            logger.debug(f"Binary data converted to voltages: {voltages}")
+        elif self._format == "ASCII":
+            # ASCII data is assumed to be pre-scaled by the oscilloscope and directly parsed
+            voltages = waveform_data
+            logger.debug(f"ASCII data assigned to voltages directly: {voltages}")
         else:
-            logger.debug("Digitizing all available channels.")
-            self.write(":DIGItize")
+            raise ValueError(f"Unsupported data format: {self.format}")
 
-    def view(self, *sources):
+        return voltages
+
+    def fetch_trace(self):
         """
-        Lights up the specified source(s) on the oscilloscope's display. Whether it's one channel, two, or a full house, this method makes them shine.
-
-        Parameters:
-            *sources (enum | str): A variable-length list of sources to view. Can be either enum members from `Source` or string literals representing the sources.
-
-        Usage:
-            osc.view(osc.Source.CH1) # Show me CH1!
-            osc.view('CH1', osc.Source.CH2) # CH1 and CH2, let's see what you got!
-
-        Returns:
-            None
+        Fetches trace data from the oscilloscope, utilizing global settings for sources
+        and data format if set; otherwise, defaults to fetching from displayed channels.
         """
-        # Convert each source to its string representation.
-        source_strings = [str(source) if isinstance(source, Enum) else source for source in sources]
+        
+        trace_data_dict = {}
+        sources_to_fetch = self._sources if self._sources else [
+            f"CH{num}" for num in range(1, 5) if self.channel[num-1].display == '1'
+        ]
+        logger.info(f"Fetching traces for sources: {sources_to_fetch}")
 
-        # Loop through each source string and write the view command for it.
-        for source_str in source_strings:
-            logger.debug("Turning on the view for source: %s", source_str)
-            self.write(f":VIEW {source_str}")
+        self.digitize(*sources_to_fetch)
+        self.query_operation_complete()  # Ensures the oscilloscope is ready
 
-    def blank(self, *sources):
-        """
-        The master of stealth, this method turns off the display for the specified source(s). Want to clear the screen? Just don't pass any sources.
-
-        Parameters:
-            *sources (enum | str, optional): A variable-length list of sources to hide. If no sources are passed, all will be blanked.
-
-        Usage:
-            osc.blank() # Ninja mode, everything disappears
-            osc.blank(osc.Source.CH1) # Just CH1, go to sleep
-
-        Returns:
-            None
-        """
-        # Check if any sources were passed; if not, turn off all sources.
-        if not sources:
-            logger.debug("Turning off all sources.")
-            self.write(":BLANk")
-            return
-
-        # Convert each source to its string representation.
-        source_strings = [str(source) if isinstance(source, Enum) else source for source in sources]
-
-        # Loop through each source string and write the blank command for it.
-        for source_str in source_strings:
-            logger.debug("Turning off the source: %s", source_str)
-            self.write(f":BLANk {source_str}")
-
-    class Sources(Enum):
-        """
-        Enumeration for the oscilloscope sources.
-
-        This helps keep source references tight and prevents the chaos of string typos
-        from messing up your slick command flow.
-
-        Attributes:
-            CH1 to CH4: Represent the four channels on the oscilloscope.
-            FUNCTION: For the function source.
-            MATH: Alias for the function source, 'cause math is cool like that.
-            BUS: For the bus source.
-            FFT: For the Fast Fourier Transform source.
-            MEMORY: For memory source references.
-            EXT: For external source, exclusive to those 2-channel scope ballers.
-        """
-        CHAN1 = 'CHAN1'
-        CHAN2 = 'CHAN2'
-        CHAN3 = 'CHAN3'
-        CHAN4 = 'CHAN4'
-        FUNCTION = 'FUNC'
-        MATH = 'FUNC'
-        BUS = 'BUS'
-        FFT = 'FFT'
-        MEMORY = 'MEMORY'
-        EXT = 'EXT'
-
-        def __str__(self):
-            """
-            Return a string representation of the source that's compatible with the oscilloscope command syntax.
-            """
-            return self.name
+        for source in sources_to_fetch:
+            data_range = self.fetch_time(source)  # Fetches time base for the source
+            data_values = self.fetch_data(source)  # Fetches waveform data adjusted for probe attenuation
+            
+            trace_data_dict[source] = {
+                'data': data_values,
+                'range': data_range,
+                'visible': True,  # Adjust based on your implementation or the channel's display attribute
+            }
+        
+        return trace_data_dict
 
 class Acquire(Subsystem):
     """
@@ -240,7 +339,7 @@ class Channel(Subsystem):
     display = switch_property(":DISPlay", "Display state of the channel")
     scale = value_property(":SCALe", type="float", range=[1e-3, 1e3], doc_str="Vertical scale of the channel [V/div]")
     offset = value_property(":OFFset", type="float", range=[-1e2, 1e2], doc_str="Vertical offset of the channel [V]")
-    probe = select_property(":PROBe", ['1', '10'], doc_str="Probe attenuation factor")
+    probe = value_property(":PROBe", type="float", doc_str="Probe attenuation factor")
 
 class Timebase(Subsystem):
     """
@@ -281,54 +380,13 @@ class Waveform(Subsystem):
     points_mode = select_property(":POINts:MODE", ['NORMal', 'MAXiumum', 'RAW'], "Waveform points mode")
     unsigned = switch_property(":UNSigned", "Indicates if the returned data is signed or unsigned")
     points = value_property(":POINts", type="float", doc_str="Number of trace points to pull")
-    # preamble = data_property(":PREamble", access='read', doc_str="Pre-amble info including scale factors and offsets.")
-    # data = data_property(":DATa", access='read', ieee_header=True, doc_str="Returns the data array of the waveform as a numpy array.")
+    preamble = string_property(":PREamble", access='read', doc_str="Preamble info including scale factors and offsets.")
+    data = data_property(":DATa", access='read', ieee_header=True, doc_str="Returns the data array of the waveform as a numpy array.")
 
-    # def fetch_preamble(self):
-    #     """
-    #     Fetches and parses the preamble from the instrument, updating class attributes for waveform scaling.
-    #     """
-    #     try:
-    #         preamble_str = self.preamble  # Utilizes the getter from the value_property
-    #         preamble_values = [float(val) for val in preamble_str.split(',')]
-
-    #         self.format = preamble_values[0]
-    #         self.type = int(preamble_values[1])
-    #         self.num_points = int(preamble_values[2])
-    #         self.count = int(preamble_values[3])
-    #         self.x_increment, self.x_origin, self.x_reference = preamble_values[4], preamble_values[5], int(preamble_values[6])
-    #         self.y_increment, self.y_origin, self.y_reference = preamble_values[7], preamble_values[8], int(preamble_values[9])
-    #     except Exception as e:
-    #         logger.error(f'Issue fetching preamble: {e}')
-
-    # def fetch_time(self):
-    #     """
-    #     Calculates and returns the time array for the waveform data based on preamble info.
-    #     """
-    #     self.fetch_preamble()
-    #     timestamps = (np.arange(self.num_points) - self.x_reference) * self.x_increment + self.x_origin
-    #     return timestamps
-
-    # def fetch_data(self, source=None):
-    #     """
-    #     Fetches and returns waveform data in voltage units, performing necessary conversions based on format.
-    #     """
-    #     if source:
-    #         self.source = source
-
-    #     self.fetch_preamble()
-        
-    #     if self.format in ["BYTE", "WORD"]:
-    #         data_type = 'B' if self.unsigned else 'b'  # Adjust for BYTE
-    #         if self.format == "WORD":
-    #             data_type = 'H' if self.unsigned else 'h'  # Adjust for WORD
-    #         self._parent.data_type = data_type
-
-    #     waveform_data = self.data  # Fetch waveform data
-
-    #     if self.format in ["BYTE", "WORD"]:
-    #         voltages = (waveform_data - self.y_reference) * self.y_increment + self.y_origin
-    #     else:  # ASCII or other formats not requiring conversion
-    #         voltages = waveform_data
-
-    #     return voltages
+    # New properties to directly access individual preamble parameters
+    x_increment = value_property(":XINCrement", type="float", doc_str="Waveform X increment")
+    x_origin = value_property(":XORigin", type="float", doc_str="Waveform X origin")
+    x_reference = value_property(":XREFerence", type="int", doc_str="Waveform X reference point")
+    y_increment = value_property(":YINCrement", type="float", doc_str="Waveform Y increment")
+    y_origin = value_property(":YORigin", type="float", doc_str="Waveform Y origin")
+    y_reference = value_property(":YREFerence", type="int", doc_str="Waveform Y reference point")
