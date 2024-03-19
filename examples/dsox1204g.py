@@ -6,7 +6,7 @@ import sys
 from itertools import cycle
 from PySide6.QtWidgets import QApplication
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 
 # Initialize the QApplication instance
 app = QApplication(sys.argv)
@@ -22,13 +22,14 @@ oscope.open()
 
 # Clear any previous status/settings on the oscilloscope
 oscope.clear_status()
-# oscope.autoscale()
-# oscope.query_operation_complete()
 
 # Set global sources and data format before fetching data
 oscope.set_data_sources('CHAN1', 'CHAN2', 'CHAN3', 'CHAN4')
-oscope.set_data_format('BYTE')
+oscope.set_data_format('WORD')
+oscope.waveform.byte_order = 'LSBFirst' # If using 16-bit 'WORD'
+oscope.waveform.points_mode = 'MAX'
 oscope.waveform.points = 1000
+oscope.timebase.range = 0.01 #s
 
 # Initiate a single acquisition
 oscope.single()
@@ -48,7 +49,7 @@ color_cycle = cycle(colors)  # Cycle through the colors list
 for trace_id, trace_info in trace_data.items():
     if trace_info['visible']:
         color = next(color_cycle)  # Get the next color from the cycle
-        plot_window.plot(trace_info['range'], trace_info['data'], pen=pg.mkPen(color, width=2))
+        plot_window.plot(trace_info['range'], trace_info['data'], pen=pg.mkPen(color, width=1))
 
 oscope.close()
 

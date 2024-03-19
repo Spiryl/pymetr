@@ -1,7 +1,6 @@
 import logging
 logger = logging.getLogger(__name__)
 
-from enum import Enum
 import re
 import numpy as np
 
@@ -194,21 +193,18 @@ def data_property(cmd_str, access='read-write', doc_str="", container=np.array, 
         property: A custom property object for instrument communication.
     """
     def getter(self):
-        data_mode = self.instr._data_mode
-        data_type = self.instr._data_type
-        full_cmd_str = f"{self.cmd_prefix}{cmd_str}?"  # Include cmd_prefix
+        data_mode = self.instr._data_mode # Global instrument configuration
+        data_type = self.instr._data_type # Global instrument configuration
         full_cmd_str = f"{self.cmd_prefix}{cmd_str}?"
         logger.debug(f"Getting data with command: {full_cmd_str}, format: {data_mode}, data_type: {data_type}")
         
         try:
             if data_mode == 'ASCII' and not ieee_header:
-                # Directly use query_ascii_values for ASCII data without IEEE header
                 data = self.instr.query_ascii_values(full_cmd_str, converter=converter)
                 logger.debug(f"Data fetched in ASCII format with {len(data)} elements using PyVISA's automatic handling.")
                 return container(data)
 
             elif data_mode == 'ASCII' and ieee_header:
-                # Manually handle the IEEE header for ASCII data
                 raw_response = self.instr.query(full_cmd_str)
                 header_match = re.match(r'#(\d)(\d+)\s', raw_response)
                 if header_match:
@@ -218,7 +214,7 @@ def data_property(cmd_str, access='read-write', doc_str="", container=np.array, 
                     ascii_data = raw_response[data_start:].strip().split(',')
                     data = container([converter(val) for val in ascii_data])
                     logger.debug(f"Data fetched in ASCII format with {len(data)} elements using manual IEEE header parsing.")
-                    return data
+                    return container(data)
                 else:
                     raise ValueError("Failed to parse IEEE header from ASCII response.")
 
@@ -226,7 +222,7 @@ def data_property(cmd_str, access='read-write', doc_str="", container=np.array, 
                 # Use query_binary_values for binary data, specifying the data type dynamically
                 data = self.instr.query_binary_values(full_cmd_str, datatype=data_type, container=container, is_big_endian=False)
                 logger.debug(f"Data fetched in binary format with {len(data)} elements using PyVISA's automatic handling.")
-                return data
+                return container(data)
 
         except Exception as e:
             logger.error(f"Exception while fetching data: {e}")
@@ -239,15 +235,13 @@ def data_property(cmd_str, access='read-write', doc_str="", container=np.array, 
         try:
             data_mode = self.instr.data_mode
             data_type = self.instr.data_type
-            full_cmd_str = f"{self.cmd_prefix}{cmd_str}"  # Include cmd_prefix
+            full_cmd_str = f"{self.cmd_prefix}{cmd_str}" 
             logger.debug(f"Sending data with command: {full_cmd_str}")
 
             if data_mode == 'ASCII':
-                # Use write_ascii_values for ASCII data
                 self.instr.write_ascii_values(full_cmd_str, value, converter=str)
                 logger.debug(f"Data sent in ASCII format: {value}")
             elif data_mode == 'BINARY':
-                # Use write_binary_values for binary data, specifying the data type dynamically
                 self.instr.write_binary_values(full_cmd_str, value, datatype=data_type)
                 logger.debug(f"Data sent in binary format: {value}")
         except Exception as e:
@@ -260,5 +254,15 @@ def data_property(cmd_str, access='read-write', doc_str="", container=np.array, 
 
 # Property Factories in properties.py
 def reg_value_property(minor_offset, size, format='uint', mask=None, access="read-write"):
+    # Factory method logic
+    pass
+
+# Property Factories in properties.py
+def reg_select_property(minor_offset, size, format='uint', mask=None, access="read-write"):
+    # Factory method logic
+    pass
+
+# Property Factories in properties.py
+def reg_switch_property(minor_offset, size, format='uint', mask=None, access="read-write"):
     # Factory method logic
     pass

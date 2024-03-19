@@ -292,7 +292,8 @@ class Oscilloscope(Instrument):
             logger.debug(f"ASCII data assigned to voltages directly: {voltages}")
         else:
             raise ValueError(f"Unsupported data format: {self.format}")
-
+        if self._format in ["WORD"]:
+            voltages = (voltages / 2**16) # ? Only 12 out of 16 bits MSB aligned 
         return voltages
 
     def fetch_trace(self):
@@ -378,6 +379,7 @@ class Waveform(Subsystem):
     source = select_property(":SOURce", ['CHAN1', 'CHAN2', 'CHAN3', 'CHAN4', 'FUNC', 'MATH', 'FFT', 'WMEM', 'BUS1', 'BUS2', 'EXT'], "Waveform source")
     format = select_property(":FORMat", ['ASCII', 'WORD', 'BYTE'], "Waveform data format")
     points_mode = select_property(":POINts:MODE", ['NORMal', 'MAXiumum', 'RAW'], "Waveform points mode")
+    byte_order = select_property(":BYTeorder", ['LSBFirst', 'MSBFirst'], "Byte order for 16 bit data capture")
     unsigned = switch_property(":UNSigned", "Indicates if the returned data is signed or unsigned")
     points = value_property(":POINts", type="float", doc_str="Number of trace points to pull")
     preamble = string_property(":PREamble", access='read', doc_str="Preamble info including scale factors and offsets.")
