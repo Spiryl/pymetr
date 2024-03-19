@@ -2,7 +2,6 @@ import logging
 logger = logging.getLogger(__name__)
 
 import ast
-from pathlib import Path
 from pyqtgraph.parametertree import Parameter
 
 class GuiFactory:
@@ -44,72 +43,92 @@ class GuiFactory:
             logger.debug(f"Class {class_name}:\nProperties:\n{properties_str}\nMethods:\n{methods_str}")
         return visitor.classes
 
-    def create_data_fetch_action_callback(self, property_name, instance):
-        """
-        Creates a callback for fetching data for data properties.
-        """
-        def action_callback():
-            logger.debug(f"Fetching data for {property_name}")
-            data_value = getattr(instance, property_name)()
-            logger.debug(f"Data fetched for {property_name}: {data_value}")
-        return action_callback
+    # def create_data_fetch_action_callback(self, property_name, instance):
+    #     """
+    #     Creates a callback for fetching data for data properties.
+    #     """
+    #     def action_callback():
+    #         logger.debug(f"Fetching data for {property_name}")
+    #         data_value = getattr(instance, property_name)()
+    #         logger.debug(f"Data fetched for {property_name}: {data_value}")
+    #     return action_callback
 
-    def create_fetch_trace_action_callback(self, unique_id, instance):
-        """
-        Creates a specialized callback for the fetch_trace method that not only executes the method but also handles plotting the returned data.
-        """
-        def action_callback():
-            logger.debug(f"Executing fetch_trace for {unique_id}")
-            trace_data = instance.fetch_trace()
-            if trace_data:
-                # Directly use the plot_data_signal associated with this instrument to emit the trace data
-                self.instruments[unique_id]['plot_data_signal'].data_fetched.emit(trace_data)
-            else:
-                logger.error("fetch_trace did not return data")
-        return action_callback
+    # def create_fetch_trace_action_callback(self, instance):
+    #     """
+    #     Creates a callback for the fetch_trace action. This method is triggered when the fetch_trace action is activated in the GUI.
+        
+    #     Args:
+    #         instance (object): The instance of the instrument class.
+    #     """
+    #     def action_callback():
+    #         logger.debug("Fetching trace data...")
+    #         trace_data = instance.fetch_trace()
+    #         # Handle the fetched trace data as needed, e.g., plot it or log it
+    #         # This is where you would integrate with your plotting or data handling mechanism
+    #         logger.debug(f"Fetched trace data: {trace_data}")
+        
+    #     return action_callback
 
-    def create_method_action_callback(self, method_name, instance):
-        """
-        Creates a callback for executing methods.
-        """
-        def action_callback():
-            logger.debug(f"Executing method {method_name}")
-            method = getattr(instance, method_name, None)
-            if callable(method):
-                method()
-                logger.debug(f"Executed method {method_name}")
-            else:
-                logger.error(f"Method {method_name} not callable or does not exist")
-        return action_callback
+    # def create_method_action_callback(self, method_name, instance):
+    #     """
+    #     Creates a callback for executing methods.
+    #     """
+    #     def action_callback():
+    #         logger.debug(f"Executing method {method_name}")
+    #         method = getattr(instance, method_name, None)
+    #         if callable(method):
+    #             method()
+    #             logger.debug(f"Executed method {method_name}")
+    #         else:
+    #             logger.error(f"Method {method_name} not callable or does not exist")
+    #     return action_callback
+ 
+    # def construct_fetch_trace_action(self, instance):
+    #     """
+    #     Construct the action parameter dictionary for the fetch_trace method.
+
+    #     Args:
+    #         instance (object): The instance of the instrument class that contains the fetch_trace method.
+            
+    #     Returns:
+    #         dict: The parameter dictionary for the fetch_trace action.
+    #     """
+    #     return {
+    #         'name': 'fetch_trace',
+    #         'type': 'action',
+    #         'title': 'Fetch Trace',
+    #         'visible': True,
+    #         'action': lambda: self.create_fetch_trace_action_callback(instance)
+    #     }
     
-    def _construct_method_dict(self, method_name, instance):
-        """
-        Construct a dictionary for a method that includes an action button in the GUI.
+    # def _construct_method_dict(self, method_name, instance):
+    #     """
+    #     Construct a dictionary for a method that includes an action button in the GUI.
 
-        Args:
-            method_name (str): Name of the method.
-            instance (object): Instance of the class where the method exists.
+    #     Args:
+    #         method_name (str): Name of the method.
+    #         instance (object): Instance of the class where the method exists.
 
-        Returns:
-            dict: A dictionary representing the action parameter configuration.
-        """
-        # Define the action callback
-        def action_callback():
-            method = getattr(instance, method_name, None)
-            if callable(method):
-                method()
-                logger.debug(f"Executed method {method_name}")
-            else:
-                logger.error(f"Method {method_name} is not callable or does not exist on {instance}")
+    #     Returns:
+    #         dict: A dictionary representing the action parameter configuration.
+    #     """
+    #     # Define the action callback
+    #     def action_callback():
+    #         method = getattr(instance, method_name, None)
+    #         if callable(method):
+    #             method()
+    #             logger.debug(f"Executed method {method_name}")
+    #         else:
+    #             logger.error(f"Method {method_name} is not callable or does not exist on {instance}")
 
-        # Construct the method dictionary
-        method_dict = {
-            'name': method_name,
-            'type': 'action',
-            'title': 'Execute',  # For better clarity in the GUI
-            'action': action_callback
-        }
-        return method_dict
+    #     # Construct the method dictionary
+    #     method_dict = {
+    #         'name': method_name,
+    #         'type': 'action',
+    #         'title': 'Execute',  # For better clarity in the GUI
+    #         'action': action_callback
+    #     }
+    #     return method_dict
     
     def _construct_param_dict(self, prop, class_name, instance):
         """
@@ -196,6 +215,15 @@ class GuiFactory:
             logger.debug(f"Processing class: {class_name}")
             class_dict = {'name': class_name, 'type': 'group', 'children': []}
 
+            # Check if 'fetch_trace' method is present and add an action parameter for it
+            if class_info.get('has_fetch_trace', False):
+                fetch_trace_param = {
+                    'name': 'Fetch Trace',
+                    'type': 'action',
+                    'action': lambda: self.handle_fetch_trace(instance)
+                }
+                class_dict['children'].append(fetch_trace_param)
+
             for prop in class_info.get('properties', []):
                 # Direct handling of indexed subsystems
                 if prop['type'] == 'build' and 'indices' in prop:
@@ -234,55 +262,49 @@ class PyMetrClassVisitor(ast.NodeVisitor):
     Collects properties and methods defined in the classes.
     """
     def __init__(self):
+        super().__init__()
         self.classes = {}
-        logger.debug("Initialized PyMetrClassVisitor")
 
     def visit_ClassDef(self, node):
-        """
-        Visits Class Definitions in the AST and identifies if they represent a Subsystem or Instrument.
-        Now with enhanced logging for a detailed look at the parsing process.
-        Extracts properties and methods from these classes.
-        """
-        logger.debug(f"\nVisiting Class Definition: {node.name}")  # Shout out that we've hit a new class
-        is_target_class = any(base.id in ['Subsystem', 'Instrument'] for base in node.bases if isinstance(base, ast.Name))
-        if not is_target_class:
-            logger.debug(f"Skipped {node.name} as it's not a Subsystem or Instrument.")  # Letting us know if we're skipping this class
-            return
-
+        # Initialize placeholders for properties and methods
         properties = []
         methods = []
-        # Dive into the class body to extract the goodies
+        has_fetch_trace = False
+
+        # Process each item in the class body
         for item in node.body:
             if isinstance(item, ast.Assign):
+                # Process assignments (likely properties)
                 prop_details = self.handle_assignment(item)
                 if prop_details:
                     properties.append(prop_details)
-                    logger.debug(f"Extracted property from {node.name}: {prop_details['name']}")  # Detailing each property picked up
-            elif isinstance(item, ast.FunctionDef) and not item.name.startswith('__'):
+            elif isinstance(item, ast.FunctionDef):
+                # Add method name to the list
                 methods.append(item.name)
-                logger.debug(f"Extracted method from {node.name}: {item.name}")  # And each method too
+                # Check specifically for 'fetch_trace'
+                if item.name == 'fetch_trace':
+                    has_fetch_trace = True
 
-        if properties or methods:
-            self.classes[node.name] = {'properties': properties, 'methods': methods}
-            logger.debug(f"Class {node.name} parsed with {len(properties)} properties and {len(methods)} methods.")  # Recap on what was found
-        else:
-            logger.debug(f"Class {node.name} has no relevant properties or public methods.")  # In case it's all private or irrelevant
+        # Check if the class is a subclass of Instrument or Subsystem (simplified check)
+        is_instrument = any(base.id == 'Instrument' for base in node.bases if isinstance(base, ast.Name))
+
+        # If it's an instrument, add to our classes dict
+        if is_instrument:
+            self.classes[node.name] = {
+                'properties': properties,
+                'methods': methods,
+                'has_fetch_trace': has_fetch_trace
+            }
+
+    def visit_FunctionDef(self, node):
+        # Assuming you already capture methods, just add a check for 'fetch_trace'
+        if node.name == 'fetch_trace':
+            self.current_class_info['has_fetch_trace'] = True
 
     def handle_assignment(self, node):
-        """
-        Handles assignment nodes within the class to identify property definitions.
-        """
-        # Identify property assignment if it's a call to a known property factory function
-        if isinstance(node.value, ast.Call) and hasattr(node.value.func, 'id'):
-            prop_func_id = node.value.func.id
-            if prop_func_id in ['switch_property', 'select_property', 'value_property', 'data_property']:
-                prop_name = node.targets[0].id
-                prop_details = self.parse_property_details(node.value, prop_func_id)
-                if prop_details:
-                    prop_details['name'] = prop_name
-                    logger.debug(f"Identified property {prop_name} of type {prop_func_id}")
-                    return prop_details
-        return None
+        # This is a placeholder for your existing property parsing logic
+        # Return a dictionary with property details
+        return {'name': node.targets[0].id}  # Simplified example
 
     def parse_property_details(self, call_node, prop_func_id):
         """

@@ -382,13 +382,11 @@ class Waveform(Subsystem):
     byte_order = select_property(":BYTeorder", ['LSBFirst', 'MSBFirst'], "Byte order for 16 bit data capture")
     unsigned = switch_property(":UNSigned", "Indicates if the returned data is signed or unsigned")
     points = value_property(":POINts", type="float", doc_str="Number of trace points to pull")
-    preamble = string_property(":PREamble", access='read', doc_str="Preamble info including scale factors and offsets.")
-    data = data_property(":DATa", access='read', ieee_header=True, doc_str="Returns the data array of the waveform as a numpy array.")
-
-    # New properties to directly access individual preamble parameters
     x_increment = value_property(":XINCrement", type="float", doc_str="Waveform X increment")
     x_origin = value_property(":XORigin", type="float", doc_str="Waveform X origin")
     x_reference = value_property(":XREFerence", type="int", doc_str="Waveform X reference point")
     y_increment = value_property(":YINCrement", type="float", doc_str="Waveform Y increment")
     y_origin = value_property(":YORigin", type="float", doc_str="Waveform Y origin")
     y_reference = value_property(":YREFerence", type="int", doc_str="Waveform Y reference point")
+    preamble = string_property(":PREamble", access='read', doc_str="Preamble info including scale factors and offsets.")
+    data = data_property(":DATa", access='read', ieee_header=True, doc_str="Returns the data array of the waveform as a numpy array.")

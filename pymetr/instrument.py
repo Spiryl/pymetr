@@ -5,9 +5,9 @@ import sys
 import numpy as np
 import logging
 import pyvisa
-from pyvisa.constants import BufferType, StatusCode
+from pyvisa.constants import BufferType
 from enum import IntFlag
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 
 class Subsystem:
     """
@@ -62,20 +62,6 @@ class Subsystem:
             logger.debug(f"Build method creating {indices} instances")
             return [cls(instr, cmd_prefix, index=idx) for idx in range(1, indices + 1)]
 
-    @classmethod
-    def register_options_property(cls, property_name, enum):
-        """
-        Registers an option property for the subsystem.
-        """
-        cls._options_properties[property_name] = enum
-
-    @classmethod
-    def get_options_for_property(cls, property_name):
-        """
-        Retrieves registered option properties.
-        """
-        return cls._options_properties.get(property_name, None)
-
 class Instrument:
     """
     A comprehensive class for interacting with scientific and industrial instruments through VISA, 
@@ -86,6 +72,38 @@ class Instrument:
     This class is designed to serve as the foundation for specialized instrument control by providing common SCPI 
     command support and direct VISA communication capabilities.
     """
+
+    class Status(IntFlag):
+        """
+        Event Status Register Bits for SCPI Instruments.
+
+        Each bit in the status register represents a specific status or error condition.
+        These are defined according to the IEEE 488.2 standard for SCPI instruments.
+        """
+
+        OPC = 1 << 0  # Operation Complete
+        """Operation complete bit, set when an operation is finished."""
+
+        RQL = 1 << 1  # Request Control
+        """Request control bit, indicates a device is requesting control."""
+
+        QYE = 1 << 2  # Query Error
+        """Query error bit, set when there is a syntax error in a query command."""
+
+        DDE = 1 << 3  # Device Dependent Error
+        """Device dependent error bit, indicates an error specific to the device's operation."""
+
+        EXE = 1 << 4  # Execution Error
+        """Execution error bit, set when there is an error in executing a command."""
+
+        CME = 1 << 5  # Command Error
+        """Command error bit, set when there is a syntax error in a command."""
+
+        URQ = 1 << 6  # User Request
+        """User request bit, set when there is a user request for service."""
+
+        PON = 1 << 7  # Power On
+        """Power on bit, set when the device is first powered on or reset."""
 
     @property
     def data_mode(self):
@@ -299,6 +317,7 @@ class Instrument:
             logger.exception(f"Failed to query binary values with '{command}': {e}")
             raise
     
+    # TODO: Pull lower level query functions out of the data property and replace with read and write data
     def read_data(self, command, data_format='BINARY', container=np.array):
         """
         Reads data from the instrument using the specified command and format.
@@ -391,12 +410,12 @@ class Instrument:
             error_string = self.query(":SYSTem:ERRor?")
             if error_string:  # If there is an error string value
                 if not error_string.startswith("+0,"):  # Not "No error"
-                    print("Exited because of error.")
+                    logger.error("Exited because of error.")
                     sys.exit(1)
                 else:  # "No error"
                     break
             else:  # :SYSTem:ERRor? should always return a string
-                print("Exited because of error.")
+                logger.error("Exited because of error.")
                 sys.exit(1)
 
     def set_service_request(self, mask):
@@ -499,7 +518,7 @@ class Instrument:
         unique_instruments, failed_queries = Instrument.list_instruments(filter)
 
         if not unique_instruments:
-            print("No instruments found. Check your connections and try again.")
+            logger.error("No instruments found. Check your connections and try again.")
             sys.exit(1)
 
         print("\nConnected Instruments:")
@@ -507,9 +526,9 @@ class Instrument:
             print(f"{idx}. {unique_key}")
 
         if failed_queries:
-            print("\nFailed to query some instruments:")
+            logger.warning("\nFailed to query some instruments:")
             for resource, error in failed_queries:
-                print(f"{resource}: {error}")
+                logger.info(f"{resource}: {error}")
 
         selection = input("\nSelect an instrument by number (or 'exit' to quit): ")
         if selection.lower() == 'exit':
@@ -525,35 +544,3 @@ class Instrument:
 
         selected_key = list(unique_instruments.keys())[selected_index]
         return unique_instruments[selected_key]
-
-    class Status(IntFlag):
-        """
-        Event Status Register Bits for SCPI Instruments.
-
-        Each bit in the status register represents a specific status or error condition.
-        These are defined according to the IEEE 488.2 standard for SCPI instruments.
-        """
-
-        OPC = 1 << 0  # Operation Complete
-        """Operation complete bit, set when an operation is finished."""
-
-        RQL = 1 << 1  # Request Control
-        """Request control bit, indicates a device is requesting control."""
-
-        QYE = 1 << 2  # Query Error
-        """Query error bit, set when there is a syntax error in a query command."""
-
-        DDE = 1 << 3  # Device Dependent Error
-        """Device dependent error bit, indicates an error specific to the device's operation."""
-
-        EXE = 1 << 4  # Execution Error
-        """Execution error bit, set when there is an error in executing a command."""
-
-        CME = 1 << 5  # Command Error
-        """Command error bit, set when there is a syntax error in a command."""
-
-        URQ = 1 << 6  # User Request
-        """User request bit, set when there is a user request for service."""
-
-        PON = 1 << 7  # Power On
-        """Power on bit, set when the device is first powered on or reset."""

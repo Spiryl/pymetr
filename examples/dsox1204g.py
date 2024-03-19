@@ -1,35 +1,25 @@
 from pymetr.instruments.dsox1204g import Oscilloscope
-from pymetr import Instrument
 import pyqtgraph as pg
 import logging
 import sys
 from itertools import cycle
 from PySide6.QtWidgets import QApplication
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.CRITICAL)
 
 # Initialize the QApplication instance
 app = QApplication(sys.argv)
 
-# Select an instrument
-resource = Instrument.select_instrument("TCPIP?*::INSTR")
-
-# Create an oscilloscope instance with the selected resource string
+resource = Oscilloscope.select_instrument("TCPIP?*::INSTR")
 oscope = Oscilloscope(resource)
-
-# Open a connection to the instrument
 oscope.open()
-
-# Clear any previous status/settings on the oscilloscope
 oscope.clear_status()
-
-# Set global sources and data format before fetching data
-oscope.set_data_sources('CHAN1', 'CHAN2', 'CHAN3', 'CHAN4')
+oscope.set_data_sources('CHAN1')
 oscope.set_data_format('WORD')
 oscope.waveform.byte_order = 'LSBFirst' # If using 16-bit 'WORD'
 oscope.waveform.points_mode = 'MAX'
-oscope.waveform.points = 1000
-oscope.timebase.range = 0.01 #s
+oscope.waveform.points = 100000
+oscope.timebase.range = 0.1 #s
 
 # Initiate a single acquisition
 oscope.single()

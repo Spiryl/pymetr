@@ -60,7 +60,6 @@ Todo
    instruments
    subsystem_theory
    subsystem_example
-   properties
    instrument_gui
    oscilloscope
    packaging

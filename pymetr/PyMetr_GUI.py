@@ -27,24 +27,23 @@ from PySide6.QtWidgets import QWidget, QMainWindow, QFileDialog, QComboBox, QSiz
 
 factory = GuiFactory()
 
-class PlotDataSignal(QObject):
-    data_fetched = Signal(object)  # 'object' can be more specific based on the data structure
+class PlotDataEmitter(QObject):
+    plot_data_ready = Signal(object)  # Emits plot data ready for plotting
 
-class FetchTraceThread(QThread):
-    data_ready = Signal(object)  # Signal to emit fetched trace data
-    fetch_error = Signal(str)  # Signal to emit in case of error
+class TraceDataFetcherThread(QThread):
+    trace_data_ready = Signal(object)  # Emits when trace data is ready
+    fetch_error = Signal(str)  # Emits in case of a fetching error
 
     def __init__(self, instrument):
-        super(FetchTraceThread, self).__init__()
+        super(TraceDataFetcherThread, self).__init__()
         self.instrument = instrument
 
     def run(self):
         try:
-            # Fetch trace data using the new fetch_trace method
             trace_data = self.instrument.fetch_trace()
-            self.data_ready.emit(trace_data)  # Emit the fetched trace data
+            self.trace_data_ready.emit(trace_data)
         except Exception as e:
-            self.fetch_error.emit(str(e))  # Emit the error message
+            self.fetch_error.emit(str(e))
 
 class CentralControlDock(QDockWidget):
     """
@@ -269,21 +268,21 @@ class DynamicInstrumentGUI(QMainWindow):
                 parameter_dock = InstrumentParameterDock(unique_id, self, on_tree_state_changed=self.create_parameter_change_handler(unique_id))
                 parameter_dock.setup_parameters(parameters)
 
-                fetchDataThread = FetchTraceThread(instr)
-                fetchDataThread.dataFetched.connect(lambda data: self.handleDataFetched(data, unique_id))
-                fetchDataThread.fetchFailed.connect(lambda error: self.handleFetchFailed(error, unique_id))
-                fetchDataThread.start()                
+                fetchDataThread = TraceDataFetcherThread(instr)
+                fetchDataThread.trace_data_ready.connect(lambda data: self.on_trace_data_ready(data, unique_id))
+                fetchDataThread.fetch_error.connect(lambda error: self.onTraceFetchError(error, unique_id))
+                fetchDataThread.start()
 
                 # Add it to the Captain's log.
                 self.instruments[unique_id] = {
                     'dock': parameter_dock,
                     'instance': instr,
                     'parameters': parameters,
-                    'plot_data_signal': PlotDataSignal(),
-                    'fetch_thread': fetchDataThread  # Store the thread reference here
-                }
-
-                self.instruments[unique_id]['plot_data_signal'].data_fetched.connect(self.handle_plot_data)
+                    'plot_data_emitter': PlotDataEmitter(),  # Updated key and value
+                    'fetch_thread': fetchDataThread  # Keep the fetch thread reference
+}
+                # Send out invitations to the plotting party.
+                self.instruments[unique_id]['plot_data_emitter'].plot_data_ready.connect(self.on_trace_data_ready)
                 
                 # Send it home!
                 self.addDockWidget(QtCore.Qt.RightDockWidgetArea, parameter_dock)
@@ -445,11 +444,14 @@ class DynamicInstrumentGUI(QMainWindow):
         else:
             logger.error(f"Attribute '{property_name}' not found on instance of '{target.__class__.__name__}'.")
 
-    def handle_plot_data(self, trace_data):
-        # Place holder for later routing. 
-        self.update_plot(trace_data, self.plot_widget)
+    def on_trace_data_ready(self, plot_data, unique_id=None):
+        if unique_id is not None:
+            logger.debug(f"Plotting trace data for instrument: {unique_id}.")
+        else:
+            logger.debug("Plotting trace data.")
+        self.update_plot(plot_data)
 
-    def update_plot(data, plot_widget):
+    def update_plot(self,data):
         """
         Updates the given plot_widget with the provided data.
         
@@ -458,9 +460,8 @@ class DynamicInstrumentGUI(QMainWindow):
         - plot_widget: The PyQtGraph plotting widget to update.
         """
         
-        # Clear the plot widget for new data
+        plot_widget = self.plotWidget  # Access the plot widget from the instance
         plot_widget.clear()
-        logger.debug("Plot widget cleared for new data.")
 
         # Handle the trace_dictionary format
         if isinstance(data, dict):
