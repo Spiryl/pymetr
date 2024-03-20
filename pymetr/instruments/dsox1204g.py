@@ -294,7 +294,7 @@ class Oscilloscope(Instrument):
         else:
             raise ValueError(f"Unsupported data format: {self.format}")
         if self._format in ["WORD"]:
-            voltages = (voltages / 2**16) # ? Only 12 out of 16 bits MSB aligned 
+            voltages = (voltages / 2**4) # ? Only 12 out of 16 bits MSB aligned 
         return voltages
 
     def fetch_trace(self):

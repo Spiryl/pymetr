@@ -13,13 +13,16 @@ app = QApplication(sys.argv)
 resource = Oscilloscope.select_instrument("TCPIP?*::INSTR")
 oscope = Oscilloscope(resource)
 oscope.open()
+oscope.reset()
+oscope.autoscale()
 oscope.clear_status()
-oscope.set_data_sources('CHAN1')
+oscope.set_data_sources('CHAN1', 'CHAN2')
 oscope.set_data_format('WORD')
 oscope.waveform.byte_order = 'LSBFirst' # If using 16-bit 'WORD'
 oscope.waveform.points_mode = 'MAX'
-oscope.waveform.points = 100000
+oscope.waveform.points = 10000
 oscope.timebase.range = 0.1 #s
+
 
 # Initiate a single acquisition
 oscope.single()
@@ -40,6 +43,7 @@ for trace_id, trace_info in trace_data.items():
     if trace_info['visible']:
         color = next(color_cycle)  # Get the next color from the cycle
         plot_window.plot(trace_info['range'], trace_info['data'], pen=pg.mkPen(color, width=1))
+
 
 oscope.close()
 

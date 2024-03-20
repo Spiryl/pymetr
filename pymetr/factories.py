@@ -19,7 +19,7 @@ class InstrumentFactory:
         Returns:
             Parameter: A pyqtgraph Parameter object representing the instrument and its properties and actions.
         """
-        logger.debug(f"🚀 Creating parameters from driver: {path}")
+        logger.debug(f"Creating parameters from driver: {path}")
         classes = self.parse_source_file(path)
         logger.debug(f"Generating parameter disctionary from class tree: {instance}")
         parameter_tree_dict = self.generate_parameter_tree_dict(classes, instance)
@@ -32,7 +32,7 @@ class InstrumentFactory:
         Parse a Python source file to extract instrument and subsystem class information.
         Now with more verbose logging to provide detailed insights into the parsing process.
         """
-        logger.debug(f"🚀 Initiating parse of source file: {path}") 
+        logger.debug(f"Initiating parse of source file: {path}") 
         with open(path, 'r') as file:
             source = file.read()
         tree = ast.parse(source, filename=path)
@@ -45,7 +45,7 @@ class InstrumentFactory:
             logger.debug(f"Class {class_name}:\nProperties:\n{properties_str}\nMethods:\n{methods_str}")
         return visitor.classes
 
-    def construct_param_dict(self, prop, class_name, instance, index=None):
+    def _construct_param_dict(self, prop, class_name, instance):
         """
         Construct a parameter dictionary for a given property. This method should handle different types of properties
         including data properties and regular properties.
@@ -58,16 +58,15 @@ class InstrumentFactory:
         Returns:
             dict: A dictionary representing the parameter configuration.
         """
-        logger.debug(f"🚀 Starting parameter dictionary construction for property '{prop['name']}' of class '{class_name}'.")
-
-        # Initializing the param_dict with the property_path taking index into account if provided
+        logger.debug(f"Starting parameter dictionary construction for property '{prop['name']}' of class '{class_name}'.")
+        
         param_dict = {
             'name': prop['name'],
             'type': prop['type'],
             'doc': prop.get('doc_str', ''),
-            'property_path': f"{class_name.lower()}{f'[{index}]' if index is not None else ''}.{prop['name']}",
+            'property_path': f"{class_name.lower()}.{prop['name']}",
         }
-        logger.debug(f"📘 Basic param_dict setup: {param_dict}")
+        logger.debug(f"Basic param_dict setup: {param_dict}")
 
         if prop['type'] == 'select_property':
             choices = prop.get('choices', [])
@@ -76,64 +75,40 @@ class InstrumentFactory:
                 'limits': choices,
                 'value': choices[0] if choices else None,
             })
-            logger.debug(f"📋 'select_property' handled with choices: {choices}")
+            logger.debug(f"'select_property' handled with choices: {choices}")
 
         elif prop['type'] == 'value_property':
             limits = prop.get('range', (None, None))
             limits = [None if v is None else v for v in limits]
             param_dict.update({
-                'type': prop.get('value_type', 'float'),  # Ensuring 'float' is explicitly set for 'value_property'
+                'type': prop.get('value_type', 'float'),
                 'limits': limits,
                 'value': 0,
             })
-            logger.debug(f"📐 'value_property' handled with limits: {limits}")
+            logger.debug(f"'value_property' handled with limits: {limits}")
 
         elif prop['type'] == 'switch_property':
             param_dict.update({
                 'type': 'bool',
                 'value': False,
             })
-            logger.debug(f"🔘 'switch_property' handled with default value: False")
+            logger.debug(f"'switch_property' handled with default value: False")
 
-        elif prop['type'] == 'data_property':
+        if prop['type'] == 'data_property':
             param_dict.update({
                 'type': 'action',
                 'value': 'Fetch Data',
                 'action': self.create_data_fetch_action_callback(prop['name'], instance),
             })
-            logger.debug(f"💾 'data_property' handled with action to fetch data.")
+            logger.debug(f"'data_property' handled with action to fetch data.")
 
-        elif prop.get('is_method', False):
+        if prop.get('is_method', False):
             param_dict.update({
                 'type': 'action',
                 'value': 'Execute',
                 'action': self.create_method_action_callback(prop['name'], instance),
             })
-            logger.debug(f"🏃 Property marked as method handled with execution action.")
-
-        else:
-            # For unrecognized types, don't drop support; instead, handle them appropriately
-            # If the type is specifically 'float' or 'int', you could add specific handling here
-            logger.debug(f"🚫 Property '{prop['name']}' of class '{class_name}' has an unrecognized type '{prop['type']}'.")
-
-        logger.debug(f"✅ Finished constructing parameter dict for {class_name}.{prop['name']}: {param_dict}")
-        return param_dict
-
-        # if prop['type'] == 'data_property':
-        #     param_dict.update({
-        #         'type': 'action',
-        #         'value': 'Fetch Data',
-        #         'action': self.create_data_fetch_action_callback(prop['name'], instance),
-        #     })
-        #     logger.debug(f"'data_property' handled with action to fetch data.")
-
-        # if prop.get('is_method', False):
-        #     param_dict.update({
-        #         'type': 'action',
-        #         'value': 'Execute',
-        #         'action': self.create_method_action_callback(prop['name'], instance),
-        #     })
-        #     logger.debug(f"Property marked as method handled with execution action.")
+            logger.debug(f"Property marked as method handled with execution action.")
 
         logger.debug(f"Finished constructing parameter dict for {class_name}.{prop['name']}: {param_dict}")
         return param_dict
@@ -148,43 +123,74 @@ class InstrumentFactory:
         return action_callback
     
     def generate_parameter_tree_dict(self, classes, instance):
+        """
+        Modify the dictionary generation to handle indexed subsystems by creating a group for each
+        indexed instance and populating it with parameters.
+
+        Args:
+            classes (dict): A dictionary of class names to their properties and methods.
+            instance (object): The instance of the class where the actions will be called.
+
+        Returns:
+            list: A list of dictionaries representing the parameter tree structure, now including indexed subsystems.
+        """
+        logger.debug(f"Generating parameter tree dictionary for {instance}")
         tree_dict = []
 
         for class_name, class_info in classes.items():
-            # Starting off with creating a group for the class itself
-            class_group = {
-                'name': class_name,
-                'type': 'group',
-                'children': []
-            }
+            logger.debug(f"Processing class: {class_name} with info: {class_info}")
+            class_dict = {'name': class_name, 'type': 'group', 'children': []}
 
-            # Check if we're dealing with an indexed subsystem
-            if 'indices' in class_info:
-                # Loop through each index for indexed subsystems
-                for index in range(1, class_info['indices'] + 1):
-                    indexed_group = {
-                        'name': f"{class_name} {index}",
-                        'type': 'group',
-                        'children': []
-                    }
+            # Debugging the detection of fetch_trace method
+            if class_info.get('has_fetch_trace', False):
+                logger.debug(f"'has_fetch_trace' found for class: {class_name}")
+                def make_fetch_trace_callback(instance):
+                    def callback():
+                        trace_data = instance.fetch_trace()
+                        # gui_reference.update_plot(trace_data) This was made up nonse this whole part.
+                    return callback
+                
+                # Create the action with the callback specific to this instrument instance
+                fetch_trace_action = {
+                    'name': 'Fetch Trace',
+                    'type': 'action',
+                    'action': make_fetch_trace_callback(instance)
+                }
+                logger.debug(f"Added 'Fetch Trace' action for class: {class_name}")
 
-                    # Add parameters to each indexed group based on class properties
-                    for prop in class_info.get('properties', []):
-                        # Adjust the construct_param_dict call as necessary to include indexing
-                        # Note: You might need to modify construct_param_dict to accept and handle an index parameter
-                        param_dict = self.construct_param_dict(prop, class_name, instance, index=index)
-                        if param_dict:  # Ensure param_dict is not None or empty
-                            indexed_group['children'].append(param_dict)
-                    
-                    class_group['children'].append(indexed_group)
-            else:
-                # Non-indexed class, directly add properties to the class group
-                for prop in class_info.get('properties', []):
-                    param_dict = self.construct_param_dict(prop, class_name, instance)
-                    if param_dict:  # Ensure param_dict is not None or empty
-                        class_group['children'].append(param_dict)
+            for prop in class_info.get('properties', []):
+                # Direct handling of indexed subsystems
+                if prop['type'] == 'build' and 'indices' in prop:
+                    logger.debug(f"Found indexed subsystem in class {class_name} for property {prop['name']}")
+                    for index in range(1, prop['indices'] + 1):  # Assuming 1-based indexing
+                        indexed_group_name = f"{prop['name']} {index}"
+                        logger.debug(f"Creating indexed group: {indexed_group_name}")
 
-            tree_dict.append(class_group)
+                        indexed_group = {
+                            'name': indexed_group_name,
+                            'type': 'group',
+                            'children': []
+                        }
+
+                        # Populate each indexed group with parameters
+                        for subprop in class_info.get('properties', []):
+                            if subprop['type'] != 'build':  # Avoid recursive builds
+                                logger.debug(f"Adding property {subprop['name']} to indexed group {indexed_group_name}")
+                                param_dict = self._construct_param_dict(subprop, class_name, instance, prefix=indexed_group_name)
+                                indexed_group['children'].append(param_dict)
+
+                        class_dict['children'].append(indexed_group)
+                        logger.debug(f"Completed indexed group {indexed_group_name}")
+                else:
+                    # Handling non-indexed properties as usual
+                    # logger.debug(f"Processing non-indexed property {prop['name']} for class {class_name}")
+                    param_dict = self._construct_param_dict(prop, class_name, instance)
+                    if param_dict:
+                        class_dict['children'].append(param_dict)
+                        # logger.debug(f"Added property {prop['name']} to class {class_name}")
+
+            tree_dict.append(class_dict)
+        logger.debug("Completed parameter tree dictionary generation.")
         
         return tree_dict
 
@@ -200,23 +206,19 @@ class PyMetrClassVisitor(ast.NodeVisitor):
         self.current_class_name = None
 
     def visit_ClassDef(self, node):
-        logger.debug(f"🚀 Visiting ClassDef: {node.name}")
-        self.this = node.name
-        class_info = {
-            'properties': [],
-            'methods': [],
-            'indices': None,  # Initialize 'indices' here; will be set if detected
-        }
-        self.classes[self.this] = class_info
+        logger.debug(f"Visiting ClassDef: {node.name}")
+        self.current_class_name = node.name
+        properties = []
+        methods = []
         has_fetch_trace = False
 
         for item in node.body:
             if isinstance(item, ast.Assign):
                 prop_details = self.handle_assignment(item)
                 if prop_details:
-                    self.classes[self.this]['properties'].append(prop_details)
+                    properties.append(prop_details)
             elif isinstance(item, ast.FunctionDef):
-                self.classes[self.this]['methods'].append(item.name)
+                methods.append(item.name)
                 if item.name == 'fetch_trace':
                     has_fetch_trace = True
 
@@ -235,16 +237,8 @@ class PyMetrClassVisitor(ast.NodeVisitor):
             logger.debug(f"Found __init__ method in {node.name}.")
             self.handle_init_method(init_method)
 
-    def visit_Assign(self, node):
-        # This assumes 'self.channel = Channel.build(self, ':CHANnel', indices=4)' pattern
-        if isinstance(node.value, ast.Call) and getattr(node.value.func, 'attr', '') == 'build':
-            class_name = node.value.func.value.id
-            indices = next((kw.value.n for kw in node.value.keywords if kw.arg == 'indices'), None)
-            if class_name in self.classes and indices:
-                self.classes[class_name]['indices'] = indices
-
     def handle_init_method(self, method_node):
-        logger.debug(f"🚀 Handling __init__ method in class {self.current_class_name}.")
+        logger.debug(f"Handling __init__ method in class {self.current_class_name}.")
         for expr in method_node.body:
             if isinstance(expr, ast.Assign):
                 self.handle_assignment(expr)
@@ -258,13 +252,13 @@ class PyMetrClassVisitor(ast.NodeVisitor):
         # Simplify the debug messages and focus on key events
 
         if isinstance(assign_node.value, ast.Call):
-            func = assign_node.value.func
-            if hasattr(func, 'attr') and func.attr == 'build' or hasattr(func, 'id') and func.id == 'build':
-                logger.debug("🎉 Found 'build' call within assignment.")
-                indices = self.extract_build_call_details(assign_node.value)
-                # Assuming you have a way to track which class or subsystem this belongs to
-                if indices is not None:
-                    logger.debug(f"🔢 Handling indices for subsystem: {indices}")
+            # Check if the function called is 'build' directly or via attribute access
+            if hasattr(assign_node.value.func, 'attr') and assign_node.value.func.attr == 'build':
+                logger.debug("🎉 Found 'build' call directly within assignment.")
+                self.extract_build_call_details(assign_node.value)
+            elif hasattr(assign_node.value.func, 'id') and assign_node.value.func.id == 'build':
+                logger.debug("🎉 Found 'build' call by ID within assignment.")
+                self.extract_build_call_details(assign_node.value)
             else:
                 logger.debug("Call found in assignment, but not a 'build' call.")
         else:
@@ -283,15 +277,39 @@ class PyMetrClassVisitor(ast.NodeVisitor):
                 else:
                     logger.debug("❗ No property details parsed.")
 
+    # Extract build call details specifically designed for 'build' calls
     def extract_build_call_details(self, call_node):
+        args = [self.get_ast_node_value(arg) for arg in call_node.args]
+        logger.debug(f"🎯 Extracted 'args' from 'build' call: {args}")
         keywords = {kw.arg: self.get_ast_node_value(kw.value) for kw in call_node.keywords}
-        indices = keywords.get('indices', None)
-        if indices:
-            logger.debug(f"🎯 Extracted 'indices' from 'build' call: {indices}")
-            return indices  # Returning indices directly for further use
+        
+        # Prepare a details dictionary to return
+        details = {
+            'args': args,
+            'keywords': keywords,
+        }
+        
+        if 'indices' in keywords:
+            logger.debug(f"🎯 Extracted 'indices' from 'build' call: {keywords['indices']}")
         else:
             logger.debug("🚫 'build' call without 'indices'.")
-            return None  # Explicitly returning None when no indices found
+        
+        return details
+
+    def handle_build_call(self, call_node, subsystem_name):
+        # Extract build call details using the modified method
+        build_details = self.extract_build_call_details(call_node)
+        
+        # Access 'indices' from the returned details, default to 1 if not specified
+        indices = build_details['keywords'].get('indices', 1)
+        logger.debug(f"Handling build call for {subsystem_name}, indices: {indices}")
+        
+        # Update class info as indexed with extracted details
+        if self.current_class_name and self.current_class_name in self.classes:
+            class_info = self.classes[self.current_class_name]
+            class_info['indexed'] = True
+            class_info['indices'] = indices
+            self.classes[self.current_class_name] = class_info  # Update class info
 
     def parse_property_details(self, call_node, prop_func_id):
         """
@@ -368,23 +386,3 @@ class PyMetrClassVisitor(ast.NodeVisitor):
         else:
             logger.error(f"Unhandled node type: {type(node).__name__}")
             return None
-        
-if __name__ == "__main__":
-
-    def generate_debug_output(parsed_classes):
-        logger.debug(f"Completed parsing. Extracted classes: {list(parsed_classes.keys())}")
-        for class_name, details in parsed_classes.items():
-            properties_str = "\n".join([f"- {prop}" for prop in details.get('properties', [])])
-            methods_str = "\n".join([f"- {method}" for method in details.get('methods', [])])
-            indices_str = f"index count = {details['indices']}" if details.get('indices') else ""
-            logger.debug(f"Class {class_name}: {indices_str}\nProperties:\n{properties_str}\nMethods:\n{methods_str}")
-
-    path = 'pymetr/instruments/DSOX1204G.py'
-    with open(path, 'r') as file:
-        source = file.read()
-
-    tree = ast.parse(source, filename=path)
-    visitor = PyMetrClassVisitor()
-    visitor.visit(tree)
-
-    generate_debug_output(visitor.classes)
