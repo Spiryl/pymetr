@@ -2,7 +2,7 @@
 import logging
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
-logging.getLogger('pyvisa').setLevel(logging.CRITICAL)
+logging.getLogger('pyvisa').setLevel(logging.DEBUG)
 handler = logging.StreamHandler()
 formatter = logging.Formatter("%(name)s - %(message)s")
 
@@ -108,7 +108,7 @@ class InstrumentSelectionDialog(QDialog):
                 self.listWidget.addItem(display_text)
             except IndexError:
                 # Handle the case where the IDN response is not in the expected format
-                continue
+                continue    
 
     def get_selected_instrument(self):
         """
@@ -194,7 +194,7 @@ class DynamicInstrumentGUI(QMainWindow):
         logger.debug(f"Setting up instrument")
         selected_key = [key for key, value in Instrument.list_instruments("TCPIP?*::INSTR")[0].items() if value == selected_resource][0]
         idn_response = selected_key.split(": ")[1]
-        model_number = idn_response.split(',')[1].strip().lower()
+        model_number = idn_response.split(',')[1].strip().upper()
         serial_number = idn_response.split(',')[2].strip()
         unique_id = f"{model_number}_{serial_number}"
 
@@ -280,7 +280,8 @@ class DynamicInstrumentGUI(QMainWindow):
                     'parameters': parameters,
                     'plot_data_emitter': PlotDataEmitter(),  # Updated key and value
                     'fetch_thread': fetchDataThread  # Keep the fetch thread reference
-}
+                }
+                
                 # Send out invitations to the plotting party.
                 self.instruments[unique_id]['plot_data_emitter'].plot_data_ready.connect(self.on_trace_data_ready)
                 
