@@ -1,11 +1,13 @@
 import logging
 logger = logging.getLogger(__name__)
 logging.getLogger('pyvisa').setLevel(logging.CRITICAL)
+from pyvisa.constants import BufferType
+from PySide6.QtCore import QObject, Signal
 import sys
 import numpy as np
 import logging
 import pyvisa
-from pyvisa.constants import BufferType
+
 from enum import IntFlag
 from abc import abstractmethod
 
@@ -62,7 +64,7 @@ class Subsystem:
             logger.debug(f"Build method creating {indices} instances")
             return [cls(instr, cmd_prefix, index=idx) for idx in range(1, indices + 1)]
 
-class Instrument:
+class Instrument(QObject):
     """
     A comprehensive class for interacting with scientific and industrial instruments through VISA, 
     specifically tailored for devices that support the Standard Commands for Programmable Instruments (SCPI) protocol. 
@@ -72,6 +74,9 @@ class Instrument:
     This class is designed to serve as the foundation for specialized instrument control by providing common SCPI 
     command support and direct VISA communication capabilities.
     """
+
+    # Signal needed to emit for plotting
+    trace_data_ready = Signal(object)
 
     class Status(IntFlag):
         """
@@ -172,10 +177,10 @@ class Instrument:
             output_buffer_size (int): Size of the output buffer.
             **kwargs: Additional keyword arguments for PyVISA's open_resource method.
         """
+        super().__init__()  # Initialize the QObject base class
         self.resource_string = resource_string
         self.rm = pyvisa.ResourceManager()
         self.instrument = None
-        self.validate = True
         self._data_mode = 'BINARY'  # Default to BINARY
         self._data_type = 'B'  # Default data type (e.g., for binary data)
         self.buffer_size = kwargs.pop('buffer_size', 2^16)  # Default buffer size, can be overridden via kwargs

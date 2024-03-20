@@ -18,14 +18,14 @@ import importlib.util
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtCore, QtGui
 from pyqtgraph.parametertree import Parameter, ParameterTree
-from pymetr.factories import GuiFactory
+from pymetr.factories import InstrumentFactory
 from pymetr.instrument import Instrument
 from utilities.decorators import debug
 from PySide6.QtCore import QThread, Signal, QObject
 from PySide6.QtWidgets import QDialog, QVBoxLayout, QListWidget, QDialogButtonBox, QDockWidget, QPushButton
 from PySide6.QtWidgets import QWidget, QMainWindow, QFileDialog, QComboBox, QSizePolicy
 
-factory = GuiFactory()
+factory = InstrumentFactory()
 
 class PlotDataEmitter(QObject):
     plot_data_ready = Signal(object)  # Emits plot data ready for plotting
@@ -262,6 +262,7 @@ class DynamicInstrumentGUI(QMainWindow):
 
                 # Look for a driver based on model number and identify and then sync the settings
                 parameters = factory.create_parameters_from_driver(_driver, instr)
+                instr.trace_data_ready.connect(self.update_plot)
                 self.sync_parameters_with_instrument(parameters, instr)
 
                 # Build a new dock for the instrument and load the parameters in to the parameter tree
@@ -291,7 +292,7 @@ class DynamicInstrumentGUI(QMainWindow):
             except Exception as e:
                 logger.error(f"Failed to initialize instrument {unique_id}: {e}")
         else:
-            logger.error(f"Driver module for {unique_id} does not support instance creation.")
+            logger.error(f"Driver module for {unique_id} does not support instance creation.") 
 
     def sync_parameters_with_instrument(self, parameters, instrument_instance):
         """

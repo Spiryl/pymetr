@@ -1,0 +1,83 @@
+.. code-block:: text
+
+pymetr/
+│   ├── .gitignore
+│   ├── .pypirc
+│   ├── .readthedocs.yaml
+│   ├── LICENSE
+│   ├── make.bat
+│   ├── Makefile
+│   ├── README.md
+│   ├── setup.py
+│   ├── test_controls.py
+├── dist/
+│   │   ├── PyMetr-0.1.0-py3-none-any.whl
+│   │   ├── PyMetr-0.1.0.tar.gz
+├── docs/
+│   │   ├── api.rst
+│   │   ├── bible.rst
+│   │   ├── conf.py
+│   │   ├── design.rst
+│   │   ├── doc-build.rst
+│   │   ├── index.rst
+│   │   ├── instruments.rst
+│   │   ├── instrument_gui.rst
+│   │   ├── logging.rst
+│   │   ├── oscilloscope.rst
+│   │   ├── packaging.rst
+│   │   ├── quickstart.rst
+│   │   ├── requirements.txt
+│   │   ├── sphinx.rst
+│   │   ├── subsystem_example.rst
+│   │   ├── subsystem_theory.rst
+│   │   ├── unit-test.rst
+│   │   ├── _rst_master.txt
+│   ├── _templates/
+├── examples/
+│   │   ├── ast_test.py
+│   │   ├── DSOX1204G_script.py
+│   │   ├── instrument_cli.py
+│   │   ├── subsystem_script.py
+├── pymetr/
+│   │   ├── board.py
+│   │   ├── factories.py
+│   │   ├── instrument.py
+│   │   ├── properties.py
+│   │   ├── PyMetr_GUI.py
+│   │   ├── styles.qss
+│   │   ├── __init__.py
+│   ├── instruments/
+│   │   │   ├── DSOX1204G.py
+│   │   │   ├── __init__.py
+├── PyMetr.egg-info/
+│   │   ├── dependency_links.txt
+│   │   ├── PKG-INFO
+│   │   ├── SOURCES.txt
+│   │   ├── top_level.txt
+├── tests/
+│   │   ├── test_instrument.py
+├── utilities/
+│   │   ├── decorators.py
+│   │   ├── utils.py
+│   │   ├── _init_dump.py
+│   │   ├── _project_tree.py
+│   │   ├── _rst_dump.py
+│   │   ├── __init__.py
+├── xscratch/
+│   │   ├── control_factory.py
+│   │   ├── dark_style.py
+│   │   ├── gui_builder.py
+│   │   ├── instrument_gui.py
+│   │   ├── oscilloscope.py
+│   │   ├── oscilloscope_gui.py
+│   │   ├── oscilloscope_old.py
+│   │   ├── oscilloscope_script.py
+│   │   ├── oscilloscope_subsystems.py
+│   │   ├── oscope_gui.py
+│   │   ├── subsystem_bak.py
+│   │   ├── test.py
+│   │   ├── test_gui.py
+│   ├── oscilloscope/
+│   │   │   ├── oscilloscope_gui.py
+│   │   │   ├── oscilloscope_notebook.ipynb
+│   │   │   ├── subsystems.py

@@ -4,6 +4,7 @@ import numpy as np
 logger = logging.getLogger(__name__)
 from pymetr import Instrument, Subsystem, switch_property, select_property, value_property, string_property, data_property
 
+
 def source_command(command_template):
     """
     A decorator to handle oscilloscope source-related commands. It determines the correct sources
@@ -321,7 +322,8 @@ class Oscilloscope(Instrument):
                 'visible': True,  # Adjust based on your implementation or the channel's display attribute
             }
         
-        return trace_data_dict
+        self.trace_data_ready.emit(trace_data_dict) # We meed o include this to use the GUI
+        return trace_data_dict # This is for using a script
 
 class Acquire(Subsystem):
     """
