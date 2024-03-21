@@ -263,7 +263,7 @@ class DynamicInstrumentGUI(QMainWindow):
                 # Look for a driver based on model number and identify and then sync the settings
                 parameters = factory.create_parameters_from_driver(_driver, instr)
                 instr.trace_data_ready.connect(self.update_plot)
-                # self.sync_parameters_with_instrument(parameters, instr)
+                self.sync_parameters_with_instrument(parameters, instr)
 
                 # Build a new dock for the instrument and load the parameters in to the parameter tree
                 parameter_dock = InstrumentParameterDock(unique_id, self, on_tree_state_changed=self.create_parameter_change_handler(unique_id))

@@ -16,7 +16,7 @@ oscope.open()
 oscope.reset()
 oscope.autoscale()
 oscope.clear_status()
-oscope.set_data_sources('CHAN1', 'CHAN2')
+oscope.set_data_sources('CHAN1')
 oscope.set_data_format('WORD')
 oscope.waveform.byte_order = 'LSBFirst' # If using 16-bit 'WORD'
 oscope.waveform.points_mode = 'MAX'
