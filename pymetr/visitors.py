@@ -15,7 +15,19 @@ class InstrumentVisitor(ast.NodeVisitor):
         bases = [base.id for base in node.bases if isinstance(base, ast.Name)]
         if 'Instrument' in bases:
             self.current_instrument = node.name
-            self.instruments[node.name] = {'subsystems': {}, 'properties': [], 'methods': []}
+            self.instruments[node.name] = {
+                'subsystems': {}, 
+                'properties': [], 
+                'methods': [],
+                'action_parameters': {}  # Preparing to capture special methods like fetch_trace
+            }
+            
+            # Look for the fetch_trace method directly in the current class definition
+            for item in node.body:
+                if isinstance(item, ast.FunctionDef) and item.name == 'fetch_trace':
+                    self.instruments[self.current_instrument]['action_parameters']['fetch_trace'] = True
+                    break  # Assuming only one fetch_trace method per class
+            
         elif 'Subsystem' in bases and self.current_instrument:
             subsystem_visitor = SubsystemVisitor()
             subsystem_visitor.visit(node)
@@ -43,6 +55,8 @@ class InstrumentVisitor(ast.NodeVisitor):
                 'methods': [],
                 'instances': {} if indices > 1 else None  # Prepare 'instances' only for indexed subsystems
             }
+            
+        super().generic_visit(node)  # Continue walking the AST to visit other nodes
             
     def get_ast_node_value(self, node):
         """
@@ -145,6 +159,9 @@ if __name__ == "__main__":
     def print_consolidated_view(instrument):
         for instrument_name, instrument_info in instrument.items():
             print(f"{instrument_name}/")
+
+            if instrument_info.get('action_parameters', {}).get('fetch_trace', False):
+                print(f"├── fetch_trace()")
             subsystems = instrument_info['subsystems'].items()
             
             for subsystem_name, subsystem_info in subsystems:
