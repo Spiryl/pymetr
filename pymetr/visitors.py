@@ -48,15 +48,15 @@ class InstrumentVisitor(ast.NodeVisitor):
             indices = next((self.get_ast_node_value(kw.value) for kw in node.value.keywords if kw.arg == 'indices'), 1)
 
             # Initialize the subsystem with indexing information and an 'instances' dictionary
-            self.instruments[self.current_instrument]['subsystems'][subsystem_class_name] = {
+            subsystem_info = {
                 'indices': indices,
-                'needs_indexing': indices > 1,  # True if more than one instance is needed
+                'needs_indexing': indices > 1,
                 'properties': [],
                 'methods': [],
-                'instances': {} if indices > 1 else None  # Prepare 'instances' only for indexed subsystems
+                'instances': {} if indices > 1 else None
             }
-            
-        super().generic_visit(node)  # Continue walking the AST to visit other nodes
+            self.instruments[self.current_instrument]['subsystems'][subsystem_class_name] = subsystem_info
+        super().generic_visit(node)
             
     def get_ast_node_value(self, node):
         """
@@ -208,9 +208,6 @@ if __name__ == "__main__":
             return prop_summary
         return f"{prop['name']} ({prop['type']})"
     
-
-if __name__ == "__main__":
-
     # Load a test driver
     path = 'pymetr/instruments/DSOX1204G.py'  
     with open(path, 'r') as file:
@@ -223,4 +220,4 @@ if __name__ == "__main__":
     visitor.visit(tree)  # First pass to identify structure
 
     print_consolidated_view(visitor.instruments)
-    # print(visitor.instruments)
+    print(visitor.instruments)
