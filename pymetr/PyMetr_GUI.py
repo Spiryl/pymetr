@@ -453,7 +453,7 @@ class DynamicInstrumentGUI(QMainWindow):
             logger.debug("Plotting trace data.")
         self.update_plot(plot_data)
 
-    def update_plot(self,data):
+    def update_plot(self, data):
         """
         Updates the given plot_widget with the provided data.
         
@@ -468,6 +468,7 @@ class DynamicInstrumentGUI(QMainWindow):
         # Handle the trace_dictionary format
         if isinstance(data, dict):
             logger.info("Processing trace_dictionary format data for plotting.")
+            logger.debug(f"Plotting trace dictionary {data}")
             for trace_id, trace_info in data.items():
                 # Extract the necessary data for each trace
                 trace_data = trace_info.get('data', [])

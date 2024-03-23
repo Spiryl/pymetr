@@ -322,7 +322,7 @@ class Oscilloscope(Instrument):
                 'visible': True,  # Adjust based on your implementation or the channel's display attribute
             }
         
-        self.trace_data_ready.emit(trace_data_dict) # We meed o include this to use the GUI
+        self.trace_data_ready.emit(trace_data_dict) # We meed to include this to use the GUI
         return trace_data_dict # This is for using a script
 
 class Acquire(Subsystem):
