@@ -148,9 +148,9 @@ class InstrumentFactory:
 
         return action_callback
     
-    def create_fetch_trace_action_callback(self, fetch_trace_method):
+    def create_fetch_trace_action_callback(self):
         def action_callback():
-            trace_data = fetch_trace_method()
+            trace_data = fetch_trace()
             logger.debug(f"Trace data: {trace_data}")
         return action_callback
     
@@ -176,16 +176,21 @@ class InstrumentFactory:
                 'children': []
             }
 
-            if 'action_parameters' in class_info:
-                logger.debug(f"🎬 Adding action parameters for {class_name} 🎬")
-                for action_param, is_enabled in class_info['action_parameters'].items():
-                    if is_enabled and action_param == 'fetch_trace':
-                        logger.debug(f"📈 Adding fetch_trace action for {class_name} 📈")
-                        class_group['children'].append({
-                            'name': action_param,
-                            'type': 'action',
-                            'action': self.create_fetch_trace_action_callback(self.current_instrument.fetch_trace)
-                        })
+            # if 'action_parameters' in class_info:
+            #     logger.debug(f"🎬 Adding action parameters for {class_name} 🎬")
+            #     for action_param, is_enabled in class_info['action_parameters'].items():
+            #         if is_enabled and action_param == 'fetch_trace':
+            #             logger.debug(f"📈 Adding fetch_trace action for {class_name} 📈")
+            #             # Assuming class_name gives the correct context for the fetch_trace action
+            #             # Adjust the 'property_path' as necessary to match your system's nomenclature
+            #             action_path = f"{class_name.lower()}.{action_param}"
+            #             class_group['children'].append({
+            #                 'name': action_param,
+            #                 'type': 'action',
+            #                 'action': self.create_fetch_trace_action_callback(self.current_instrument.fetch_trace),
+            #                 'property_path': action_path  # Added path reference for the action
+            #             })
+            #             logger.debug(f"🔗 Associated path '{action_path}' with '{action_param}' action")
 
             for subsystem_name, subsystem_info in class_info.get('subsystems', {}).items():
                 logger.debug(f"🛠 Creating subsystem group: {subsystem_name} 🛠")
@@ -241,19 +246,17 @@ class InstrumentFactory:
             logger.debug(f"✨ Finished creating group for non-indexed subsystem: {subsystem_name} ✨")
             return group
         
-    if __name__ == "__main__":
-           # Load a test driver
-            path = 'pymetr/instruments/DSOX1204G.py'  
-            with open(path, 'r') as file:
-                source = file.read()
+if __name__ == "__main__":
+        # Load a test driver
+        path = 'pymetr/instruments/DSOX1204G.py'  
+        with open(path, 'r') as file:
+            source = file.read()
 
+        tree = ast.parse(source, filename=path)
 
+        # Assuming PyMetrClassVisitor is your revised visitor class
+        visitor = InstrumentVisitor()
+        visitor.visit(tree)  # First pass to identify structure
 
-            tree = ast.parse(source, filename=path)
-
-            # Assuming PyMetrClassVisitor is your revised visitor class
-            visitor = InstrumentVisitor()
-            visitor.visit(tree)  # First pass to identify structure
-
-            print_consolidated_view(visitor.instruments)
-            print(visitor.instruments)
+        # print_consolidated_view(visitor.instruments)
+        print(visitor.instruments)

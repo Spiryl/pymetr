@@ -266,21 +266,19 @@ class DynamicInstrumentGUI(QMainWindow):
                 # Set up the instrument control tree
                 factory.set_current_instrument(instr)
                 self.parameter_tree_dict = factory.create_parameters_from_driver(_driver)
-                parameter_path_map = self.extract_parameter_paths(self.parameter_tree_dict)
 
+                # We need to keep a map between parameters and properties
+                parameter_path_map = self.extract_parameter_paths(self.parameter_tree_dict)
+                logger.debug(f"Parameter path map for {unique_id}: {parameter_path_map}")
 
                 # logger.debug(f"Building parameters parameter tree dictionary:\n {self.parameter_tree_dict}.")
                 parameters = Parameter.create(name='params', type='group', children=self.parameter_tree_dict)
-
-
-                instr.trace_data_ready.connect(self.update_plot)
 
                 # Build a new dock for the instrument and load the parameters in to the parameter tree
                 parameter_dock = InstrumentParameterDock(unique_id, self, on_tree_state_changed=self.create_parameter_change_handler(unique_id))
                 parameter_dock.setup_parameters(parameters)
 
                 fetchDataThread = TraceDataFetcherThread(instr)
-                fetchDataThread.trace_data_ready.connect(lambda data: self.on_trace_data_ready(data, unique_id))
 
                 # Add it to the Captain's log.
                 self.instruments[unique_id] = {
@@ -305,6 +303,8 @@ class DynamicInstrumentGUI(QMainWindow):
                 logger.debug(f"Instrument dock added to main window for instrument {unique_id}.")
 
                 # Start the fetch data thread
+                instr.trace_data_ready.connect(self.update_plot)
+                fetchDataThread.trace_data_ready.connect(lambda data: self.on_trace_data_ready(data, unique_id))
                 fetchDataThread.start()
 
             except Exception as e:
@@ -385,7 +385,7 @@ class DynamicInstrumentGUI(QMainWindow):
         parameter_path_map = self.instruments[unique_id]['parameter_path_map']
 
         def update_param_value(param, instr, full_param_path):
-            if param.opts.get('type') in ['action', 'group']:
+            if param.opts.get('type') in ['action','group']: 
                 logger.debug(f"Skipping {param.opts.get('type')} parameter: {param.name()}")
                 return
 
@@ -421,10 +421,16 @@ class DynamicInstrumentGUI(QMainWindow):
         def parameter_changed(param, changes):
             parameter_path_map = self.instruments[unique_id]['parameter_path_map']
             for param, change, data in changes:
-                param_name = param.name()  # Assuming this gives you the 'name' field of the parameter
+                param_name = param.name()
+                logger.debug(f"Parameter changed: {param_name}, Change: {change}, Data: {data}")
+                
                 # Construct the path to this parameter to look it up in the map
-                full_param_path = self.construct_full_param_path(param)
+                full_param_path = self.construct_full_param_path(param).lstrip("params.")  # Remove 'params.' prefix if present
+                logger.debug(f"Constructed full parameter path: {full_param_path}")
+
                 property_path = parameter_path_map.get(full_param_path)
+                logger.debug(f"Property path from map: {property_path}")
+
                 if property_path:
                     self.navigate_and_update_property(property_path, data, unique_id)
                 else:
@@ -465,6 +471,7 @@ class DynamicInstrumentGUI(QMainWindow):
         """
         Navigate through the instrument's properties/subsystems, including indexed ones,
         and update the target property with a new value.
+
         Args:
             path (str): The property path in dot-notation, supporting indexes (e.g., 'channel[1].probe').
             value: The new value to set at the target property.
@@ -472,23 +479,52 @@ class DynamicInstrumentGUI(QMainWindow):
         """
         target = self.instruments[unique_id]['instance']
         components = path.split('.')
+        logger.debug(f"Navigating path '{path}' to update value '{value}' in instrument {unique_id}")
 
         try:
-            for i, comp in enumerate(components[:-1]):  # Iterate through path components
-                if '[' in comp and ']' in comp:  # Detect indexed access
-                    base, index = comp[:-1].split('[')
-                    index = int(index)
+            for i, comp in enumerate(components[:-1]):  # Navigate to the last but one component
+                if '[' in comp and ']' in comp:  # Indexed access
+                    base, index = comp.split('[')
+                    index = int(index[:-1])  # Convert index to integer
+                    # Adjust for Python's 0-based indexing if needed
+                    index -= 1  # Subtract if necessary
                     target = getattr(target, base)[index]  # Navigate to indexed attribute
                 else:
                     target = getattr(target, comp)  # Regular attribute access
 
-            # Update the final property
+            # Set the new value on the final property
             final_attr = components[-1]
-            if hasattr(target, final_attr):
-                setattr(target, final_attr, value)
-                logger.info(f"✅ '{path}' updated to '{value}' in {unique_id}.")
-            else:
-                logger.error(f"❌ Final property '{final_attr}' not found in path '{path}'. Update failed.")
+            setattr(target, final_attr, value)
+            logger.info(f"✅ Updated '{path}' to '{value}' in instrument {unique_id}")
+        except Exception as e:
+            logger.error(f"🚨 Failed to navigate or update '{path}' with '{value}': {e}")
+
+    def navigate_and_invoke(self, path, value, unique_id):
+        """
+        Navigate through the instrument's structure and either update a property
+        or invoke an action based on the provided path.
+        """
+        target = self.instruments[unique_id]['instance']
+        components = path.split('.')
+        
+        try:
+            # Navigate to the target object or method
+            for comp in components[:-1]:
+                target = getattr(target, comp)
+
+            final_comp = components[-1]
+            if final_comp == 'fetch_trace':  # Example: Specific handling for 'fetch_trace' action
+                if callable(getattr(target, final_comp, None)):
+                    logger.debug(f"Invoking action {final_comp} on {target}")
+                    getattr(target, final_comp)()  # Invoke the method
+                else:
+                    logger.error(f"Expected action {final_comp} not callable on {target}")
+            else:  # Handle as regular property update
+                if hasattr(target, final_comp):
+                    setattr(target, final_comp, value)
+                    logger.info(f"✅ '{path}' updated to '{value}' in {unique_id}.")
+                else:
+                    logger.error(f"❌ Final property '{final_comp}' not found in path '{path}'. Update failed.")
         except Exception as e:
             logger.error(f"🚨 Failed navigating or updating '{path}' with '{value}': {e}")
 
