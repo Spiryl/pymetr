@@ -27,7 +27,37 @@ class InstrumentFactory:
         visitor.visit(tree) 
         logger.debug(f"Completed parsing. Extracted instruments: {list(visitor.instruments.keys())}")
         return visitor.instruments
-    
+
+    def generate_methods_list(self, methods):
+        """
+        Generates a list of method dictionaries for a given set of methods.
+        This is focused on handling action methods, preparing them for inclusion in the parameter tree.
+
+        Args:
+            methods (list of str): List of method names identified as action parameters.
+
+        Returns:
+            list of dict: A list of method (action parameter) dictionaries.
+        """
+        logger.debug(f"🚀 Starting to generate methods list. 🚀")
+        methods_list = []
+        for method_name in methods:
+            logger.debug(f"🔍 Processing method '{method_name}'.")
+            # Create the action callback dynamically, assuming a method with no arguments.
+            action_callback = self.create_action_callback(method_name, self.current_instrument)
+
+            # Add the method dictionary to the list.
+            method_dict = {
+                'name': method_name,
+                'type': 'action',
+                'action': action_callback  # This is where you might need to adjust based on how you implement action callbacks
+            }
+            methods_list.append(method_dict)
+            logger.debug(f"✅ Added method '{method_name}' to methods list as an action parameter.")
+
+        logger.debug(f"🏁 Finished generating methods list: Total methods {len(methods_list)}.")
+        return methods_list
+     
     def generate_properties_list(self, properties, class_name, index=None):
         """
         Generates a list of property dictionaries for a given set of properties, class name, and optional index.
@@ -148,17 +178,11 @@ class InstrumentFactory:
 
         return action_callback
     
-    def create_fetch_trace_action_callback(self):
-        def action_callback():
-            trace_data = fetch_trace()
-            logger.debug(f"Trace data: {trace_data}")
-        return action_callback
-    
     def generate_parameter_tree_dict(self, instrument_data):
         """
         Generates a parameter tree dictionary from the instrument data, including action parameters
-        and subsystems with their properties. Emojis and logging added for clarity and debugging.
-
+        and subsystems with their properties.
+        
         Args:
             instrument_data (dict): Instrument data, including subsystems and their properties.
         
@@ -176,22 +200,11 @@ class InstrumentFactory:
                 'children': []
             }
 
-            # if 'action_parameters' in class_info:
-            #     logger.debug(f"🎬 Adding action parameters for {class_name} 🎬")
-            #     for action_param, is_enabled in class_info['action_parameters'].items():
-            #         if is_enabled and action_param == 'fetch_trace':
-            #             logger.debug(f"📈 Adding fetch_trace action for {class_name} 📈")
-            #             # Assuming class_name gives the correct context for the fetch_trace action
-            #             # Adjust the 'property_path' as necessary to match your system's nomenclature
-            #             action_path = f"{class_name.lower()}.{action_param}"
-            #             class_group['children'].append({
-            #                 'name': action_param,
-            #                 'type': 'action',
-            #                 'action': self.create_fetch_trace_action_callback(self.current_instrument.fetch_trace),
-            #                 'property_path': action_path  # Added path reference for the action
-            #             })
-            #             logger.debug(f"🔗 Associated path '{action_path}' with '{action_param}' action")
+            # Add the methods to the dictionary
+            methods_list = self.generate_methods_list(class_info.get('methods', []))
+            class_group['children'].extend(methods_list)
 
+            # Add the subsystem properties to the dictionary
             for subsystem_name, subsystem_info in class_info.get('subsystems', {}).items():
                 logger.debug(f"🛠 Creating subsystem group: {subsystem_name} 🛠")
                 subsystem_group = self.create_subsystem_group(subsystem_name, subsystem_info)

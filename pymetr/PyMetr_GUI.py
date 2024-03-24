@@ -20,7 +20,6 @@ from pyqtgraph.Qt import QtCore, QtGui
 from pyqtgraph.parametertree import Parameter, ParameterTree
 from pymetr.factories import InstrumentFactory
 from pymetr.instrument import Instrument
-from utilities.decorators import debug
 from PySide6.QtCore import QThread, Signal, QObject
 from PySide6.QtWidgets import QDialog, QVBoxLayout, QListWidget, QDialogButtonBox, QDockWidget, QPushButton
 from PySide6.QtWidgets import QWidget, QMainWindow, QFileDialog, QComboBox, QSizePolicy
@@ -324,20 +323,6 @@ class DynamicInstrumentGUI(QMainWindow):
                 path_map[current_path] = item['property_path']
                 logger.debug(f"Mapping '{current_path}' to property path '{item['property_path']}'")
         return path_map
-
-    # def translate_property_path(instr, path):
-    #     parts = path.split('.')
-    #     target = instr  # Starting point is the instrument
-
-    #     for part in parts:
-    #         if '[' in part and ']' in part:  # Indexed access
-    #             base, index = part[:-1].split('[')
-    #             target = getattr(target, base)  # Get the base attribute (the list)
-    #             target = target[int(index)]  # Access the indexed element
-    #         else:
-    #             target = getattr(target, part)  # Regular attribute access
-
-    #     return target
     
     def translate_property_path(self, instr, path):
         parts = path.split('.')
@@ -419,22 +404,35 @@ class DynamicInstrumentGUI(QMainWindow):
 
     def create_parameter_change_handler(self, unique_id):
         def parameter_changed(param, changes):
-            parameter_path_map = self.instruments[unique_id]['parameter_path_map']
             for param, change, data in changes:
                 param_name = param.name()
                 logger.debug(f"Parameter changed: {param_name}, Change: {change}, Data: {data}")
-                
-                # Construct the path to this parameter to look it up in the map
-                full_param_path = self.construct_full_param_path(param).lstrip("params.")  # Remove 'params.' prefix if present
-                logger.debug(f"Constructed full parameter path: {full_param_path}")
 
-                property_path = parameter_path_map.get(full_param_path)
-                logger.debug(f"Property path from map: {property_path}")
-
-                if property_path:
-                    self.navigate_and_update_property(property_path, data, unique_id)
+                # Check if the parameter type is 'action' to handle method execution
+                if param.opts.get('type') == 'action':
+                    if change == 'activated':  # Ensure the change type is an action activation
+                        logger.debug(f"Action parameter activated: {param_name}")
+                        # Dynamically find and call the associated method on the instrument
+                        if hasattr(self.instruments[unique_id]['instance'], param_name):
+                            method = getattr(self.instruments[unique_id]['instance'], param_name)
+                            method()  # Execute the method
+                            logger.debug(f"Executed action method: {param_name}")
+                        else:
+                            logger.error(f"No method found for action parameter: {param_name}")
                 else:
-                    logger.error(f"Property path missing for parameter: {param_name}")
+                    # For non-action parameters, handle them as usual
+                    full_param_path = self.construct_full_param_path(param).lstrip("params.")  # Normalize the parameter path
+                    logger.debug(f"Constructed full parameter path: {full_param_path}")
+
+                    parameter_path_map = self.instruments[unique_id]['parameter_path_map']
+                    property_path = parameter_path_map.get(full_param_path)
+                    logger.debug(f"Property path from map: {property_path}")
+
+                    if property_path:
+                        # Use existing logic to update the property based on its path
+                        self.navigate_and_update_property(property_path, data, unique_id)
+                    else:
+                        logger.error(f"Property path missing for parameter: {param_name}")
         return parameter_changed
 
     def construct_full_param_path(self, param):
@@ -443,29 +441,6 @@ class DynamicInstrumentGUI(QMainWindow):
             path_parts.insert(0, param.name())
             param = param.parent()
         return '.'.join(path_parts)
-
-    # def on_tree_state_changed(self, param, changes, unique_id):
-    #     """
-    #     Adjusts the process of handling parameter state changes from the GUI,
-    #     ensuring property paths are accurately used for instrument updates.
-    #     """
-    #     logger.info(f"Tree changes detected for instrument {unique_id}.")
-    #     for param, change, data in changes:
-    #         _instrument = self.instruments[unique_id]
-
-    #         # Retrieve the full property path from the parameter itself
-    #         # Assuming each parameter holds its full property path as an attribute
-    #         if hasattr(param, 'property_path'):
-    #             property_path = getattr(param, 'property_path')
-    #         else:
-    #             logger.error(f"Property path missing for parameter: {param.name()}")
-    #             continue  # Skip this change if property_path is not defined
-
-    #         logger.debug(f"Parameter change - Path: {_instrument}{property_path}, Change: {change}, Data: {data}")
-            
-    #         # Use the correct property path to update the instrument
-    #         self.navigate_and_update_property(property_path, data, unique_id)
-    #         logger.info(f"Property '{property_path}' updated to '{data}'.")
 
     def navigate_and_update_property(self, path, value, unique_id):
         """
@@ -498,35 +473,6 @@ class DynamicInstrumentGUI(QMainWindow):
             logger.info(f"✅ Updated '{path}' to '{value}' in instrument {unique_id}")
         except Exception as e:
             logger.error(f"🚨 Failed to navigate or update '{path}' with '{value}': {e}")
-
-    def navigate_and_invoke(self, path, value, unique_id):
-        """
-        Navigate through the instrument's structure and either update a property
-        or invoke an action based on the provided path.
-        """
-        target = self.instruments[unique_id]['instance']
-        components = path.split('.')
-        
-        try:
-            # Navigate to the target object or method
-            for comp in components[:-1]:
-                target = getattr(target, comp)
-
-            final_comp = components[-1]
-            if final_comp == 'fetch_trace':  # Example: Specific handling for 'fetch_trace' action
-                if callable(getattr(target, final_comp, None)):
-                    logger.debug(f"Invoking action {final_comp} on {target}")
-                    getattr(target, final_comp)()  # Invoke the method
-                else:
-                    logger.error(f"Expected action {final_comp} not callable on {target}")
-            else:  # Handle as regular property update
-                if hasattr(target, final_comp):
-                    setattr(target, final_comp, value)
-                    logger.info(f"✅ '{path}' updated to '{value}' in {unique_id}.")
-                else:
-                    logger.error(f"❌ Final property '{final_comp}' not found in path '{path}'. Update failed.")
-        except Exception as e:
-            logger.error(f"🚨 Failed navigating or updating '{path}' with '{value}': {e}")
 
     def on_trace_data_ready(self, plot_data, unique_id=None):
         if unique_id is not None:

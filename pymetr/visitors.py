@@ -37,11 +37,15 @@ class InstrumentVisitor(ast.NodeVisitor):
                 'action_parameters': {}
             }
             
+            # New logic to identify action methods dynamically
             for item in node.body:
-                if isinstance(item, ast.FunctionDef) and item.name == 'fetch_trace':
-                    logger.debug(f"🔍 Found fetch_trace method in {self.current_instrument} 🔍")
-                    self.instruments[self.current_instrument]['action_parameters']['fetch_trace'] = True
-                    break
+                if isinstance(item, ast.FunctionDef):
+                    logger.debug(f"🔍 Found method in {self.current_instrument}: {item.name} 🔍")
+                    # You can add more logic here to filter specific methods as actions
+                    if not item.name.startswith('_'):  # Example condition to filter methods
+                        self.instruments[self.current_instrument]['methods'].append(item.name)
+                        self.instruments[self.current_instrument]['action_parameters'][item.name] = True
+            
             
         elif 'Subsystem' in bases and self.current_instrument:
             logger.debug(f"🔩 Found Subsystem: {node.name} within {self.current_instrument} 🔩")
