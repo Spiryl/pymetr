@@ -2,26 +2,23 @@ import logging
 logger = logging.getLogger(__name__)
 
 import ast
-from pyqtgraph.parametertree import Parameter
-from pymetr.visitors import InstrumentVisitor, SubsystemVisitor
+from pymetr.visitors import InstrumentVisitor
 
 class InstrumentFactory:
     def __init__(self):
-        pass  # No initialization required for now
+        self.current_instrument = None
 
-    def create_parameters_from_driver(self, path, instance):
-        """
-        This method remains largely the same but uses the updated visitors and methods.
-        """
+    def create_parameters_from_driver(self, path):
         logger.debug(f"Creating parameters from driver: {path}")
         instrument_data = self.parse_source_file(path)  # Parse the source file using the new visitor
-        parameter_tree_dict = self.generate_parameter_tree_dict(instrument_data, instance)  # Generate the parameter tree
-        return Parameter.create(name='params', type='group', children=parameter_tree_dict)
+        parameter_tree_dict = self.generate_parameter_tree_dict(instrument_data)  
+        return parameter_tree_dict
+    
+    def set_current_instrument(self, instrument):
+        self.current_instrument = instrument
+        logger.debug(f"Current instrument set to: {self.current_instrument}")
 
     def parse_source_file(self, path):
-        """
-        Replace PyMetrClassVisitor with the new InstrumentVisitor and return its instruments.
-        """
         logger.debug(f"Initiating parse of source file: {path}")
         with open(path, 'r') as file:
             source = file.read()
@@ -31,41 +28,33 @@ class InstrumentFactory:
         logger.debug(f"Completed parsing. Extracted instruments: {list(visitor.instruments.keys())}")
         return visitor.instruments
     
-    def generate_properties_list(self, properties):
-        # Function to create the properties list
+    def generate_properties_list(self, properties, class_name, index=None):
+        """
+        Generates a list of property dictionaries for a given set of properties, class name, and optional index.
+        Each property dictionary is constructed using the construct_param_dict method, ensuring the inclusion
+        of the property path. Logging is added for debug purposes to track the property processing flow.
+
+        Args:
+            properties (list of dict): List of property information including name and type.
+            class_name (str): The name of the class these properties belong to.
+            index (optional, int): The index for indexed properties, if applicable.
+
+        Returns:
+            list of dict: A list of property dictionaries with added property paths.
+        """
+        logger.debug(f"🚀 Starting to generate properties list for class '{class_name}' with index '{index}'.")
         properties_list = []
         for prop in properties:
-            param_dict = {
-                'name': prop['name'],
-                'type': prop['type'],
-                'value': None  # Placeholder, actual value should be set by syncing with the instrument
-            }
-            
-            if prop['type'] == 'select_property':
-                param_dict.update({
-                    'type': 'list',
-                    'values': prop['choices'],
-                    'value': prop['choices'][0]  # Default to the first choice
-                })
-            elif prop['type'] == 'switch_property':
-                param_dict.update({
-                    'type': 'bool',
-                    'value': False  # Default to False
-                })
-            elif prop['type'] in ['float', 'int']:
-                # Assuming 'int' properties can also have a 'range' defined
-                range_val = prop.get('range', [None, None])
-                param_dict.update({
-                    'type': 'float' if prop['type'] == 'float' else 'int',
-                    'limits': range_val,
-                    'value': 0.0 if prop['type'] == 'float' else 0  # Default to 0 or 0.0
-                })
-            
+            logger.debug(f"🔍 Processing property '{prop['name']}' of type '{prop['type']}' for class '{class_name}'.")
+            # Use construct_param_dict to create the property dictionary
+            param_dict = self.construct_param_dict(prop, class_name, index)
             properties_list.append(param_dict)
-            
+            logger.debug(f"✅ Added property '{prop['name']}' to properties list with path '{param_dict.get('property_path')}'.")
+        
+        logger.debug(f"🏁 Finished generating properties list for '{class_name}': Total properties {len(properties_list)}.")
         return properties_list
 
-    def construct_param_dict(self, prop, class_name, instance, index=None):
+    def construct_param_dict(self, prop, class_name, index=None):
         """
         Construct a parameter dictionary for a given property. This method should handle different types of properties
         including data properties and regular properties.
@@ -79,30 +68,34 @@ class InstrumentFactory:
         Returns:
             dict: A dictionary representing the parameter configuration.
         """
-        logger.debug(f"🚀 Constructing parameter dictionary for property '{prop['name']}' of class '{class_name}'.")
-
+        logger.debug(f"🚀 Starting construct_param_dict for '{prop['name']}' in '{class_name}' 🚀")
+        
         # Construct the property path considering indexing
+        logger.debug(f"🔍 Checking if '{prop['name']}' needs indexing... 🔍")
         property_path = f"{class_name.lower()}"
         if index is not None:
+            logger.debug(f"📊 Index provided. Appending to property path: [{index}] 📊")
             property_path += f"[{index}]"
         property_path += f".{prop['name']}"
+        logger.debug(f"✅ Property path constructed: {property_path} ✅")
 
         # Initialize the param_dict
+        logger.debug(f"📝 Initializing parameter dictionary for '{prop['name']}'... 📝")
         param_dict = {
             'name': prop['name'],
             'type': prop['type'],
             'property_path': property_path,
-            # Default values can be set more intelligently based on the type or other metadata
-            'value': None
+            'value': None  # Default values can be set more intelligently based on the type or other metadata
         }
 
-        # Map the property type to the correct parameter type and any additional properties
+        logger.debug(f"🔧 Mapping property type '{prop['type']}' to parameter configuration... 🔧")
         if prop['type'] == 'select_property':
             param_dict.update({
                 'type': 'list',
-                'values': prop['choices'],
+                'limits': prop['choices'],
                 'value': prop['choices'][0]  # Default to the first choice
             })
+            logger.debug(f"📋 Updated for select_property: {param_dict} 📋")
         elif prop['type'] == 'value_property':
             limits = prop.get('range', (None, None))
             param_dict.update({
@@ -110,28 +103,27 @@ class InstrumentFactory:
                 'limits': limits,
                 'value': 0.0  # Default to 0.0 for floats
             })
+            logger.debug(f"📐 Updated for value_property: {param_dict} 📐")
         elif prop['type'] == 'switch_property':
             param_dict.update({
                 'type': 'bool',
                 'value': False  # Default to False
             })
+            logger.debug(f"🔲 Updated for switch_property: {param_dict} 🔲")
         elif prop['type'] in ['float', 'int']:
             param_dict.update({
                 'limits': prop.get('range', [None, None]),
                 'value': 0  # Default to 0 for both int and float
             })
+            logger.debug(f"🔢 Updated for numeric type: {param_dict} 🔢")
 
-        # Handle action or data properties if any
-        if prop.get('is_action', False) or prop.get('is_data', False):
-            # Set up an action type parameter, which will trigger a method when activated
-            action = self.create_action_callback(prop['name'], instance, prop.get('is_data', False))
-            param_dict.update({
-                'type': 'action',
-                'value': prop['name'],
-                'action': action
-            })
+        # Uncomment or modify this section according to your requirements for actions or data properties
+        # logger.debug(f"🖇 Checking for action or data properties... 🖇")
+        # if prop.get('is_action', False) or prop.get('is_data', False):
+        #     # Logic for handling actions or data properties
+        #     logger.debug(f"⚙️ Handling action/data property: {prop['name']} ⚙️")
 
-        logger.debug(f"Constructed parameter dict: {param_dict}")
+        logger.debug(f"✨ Constructed parameter dict for '{prop['name']}': {param_dict} ✨")
         return param_dict
 
     def create_action_callback(self, method_name, instance, is_data=False):
@@ -156,60 +148,112 @@ class InstrumentFactory:
 
         return action_callback
     
-    def create_fetch_trace_action_callback(self, class_name, instance):
+    def create_fetch_trace_action_callback(self, fetch_trace_method):
         def action_callback():
-            logger.debug(f"Fetching data using {class_name}.fetch_trace")
-            instance.fetch_trace()
+            trace_data = fetch_trace_method()
+            logger.debug(f"Trace data: {trace_data}")
         return action_callback
     
-    def generate_parameter_tree_dict(self, instrument_data, instance):
+    def generate_parameter_tree_dict(self, instrument_data):
+        """
+        Generates a parameter tree dictionary from the instrument data, including action parameters
+        and subsystems with their properties. Emojis and logging added for clarity and debugging.
+
+        Args:
+            instrument_data (dict): Instrument data, including subsystems and their properties.
+        
+        Returns:
+            list: A parameter tree structure as a list of dictionaries.
+        """
+        logger.debug("🌳 Starting to generate the parameter tree... 🌳")
         tree_dict = []
 
         for class_name, class_info in instrument_data.items():
-            # Create a group for the main instrument
+            logger.debug(f"🔍 Processing class: {class_name} 🔍")
             class_group = {
                 'name': class_name,
                 'type': 'group',
                 'children': []
             }
 
-            # Deal with action parameters like fetch_trace first
-            if 'action_parameters' in class_info and class_info['action_parameters'].get('fetch_trace', False):
-                class_group['children'].append({
-                    'name': 'fetch_trace',
-                    'type': 'action',
-                    'action': self.create_fetch_trace_action_callback(class_name, instance)
-                })
+            if 'action_parameters' in class_info:
+                logger.debug(f"🎬 Adding action parameters for {class_name} 🎬")
+                for action_param, is_enabled in class_info['action_parameters'].items():
+                    if is_enabled and action_param == 'fetch_trace':
+                        logger.debug(f"📈 Adding fetch_trace action for {class_name} 📈")
+                        class_group['children'].append({
+                            'name': action_param,
+                            'type': 'action',
+                            'action': self.create_fetch_trace_action_callback(self.current_instrument.fetch_trace)
+                        })
 
-            # Loop through subsystems
-            for subsystem_name, subsystem_info in class_info['subsystems'].items():
-                # Special handling for Channel to put it under a single group
-                if subsystem_name == 'Channel':
-                    channel_group = {
-                        'name': 'Channels',  # Name this group as 'Channels'
-                        'type': 'group',
-                        'children': []
-                    }
-
-                    # For each indexed instance, create a subgroup and populate it
-                    for index_name, instance_info in subsystem_info['instances'].items():
-                        indexed_group = {
-                            'name': index_name,
-                            'type': 'group',
-                            'children': self.generate_properties_list(instance_info['properties'])
-                        }
-                        channel_group['children'].append(indexed_group)
-
-                    class_group['children'].append(channel_group)
-                else:
-                    # Directly create a group for non-indexed subsystems
-                    subsystem_group = {
-                        'name': subsystem_name,
-                        'type': 'group',
-                        'children': self.generate_properties_list(subsystem_info['properties'])
-                    }
-                    class_group['children'].append(subsystem_group)
+            for subsystem_name, subsystem_info in class_info.get('subsystems', {}).items():
+                logger.debug(f"🛠 Creating subsystem group: {subsystem_name} 🛠")
+                subsystem_group = self.create_subsystem_group(subsystem_name, subsystem_info)
+                class_group['children'].append(subsystem_group)
 
             tree_dict.append(class_group)
+            logger.debug(f"🌲 Added class group: {class_name} to the tree 🌲")
 
+        logger.debug("🏁 Finished generating the parameter tree 🏁")
         return tree_dict
+
+    def create_subsystem_group(self, subsystem_name, subsystem_info):
+        """
+        Creates a parameter group for a subsystem, adding logging and emoji flair for debug and clarity.
+        Handles indexed instances if present, creating a group for each instance.
+
+        Args:
+            subsystem_name (str): The name of the subsystem.
+            subsystem_info (dict): Info about the subsystem, including properties and instances.
+        
+        Returns:
+            dict: A parameter group for the subsystem.
+        """
+        logger.debug(f"🔧 Starting to create subsystem group for: {subsystem_name} 🔧")
+        if subsystem_info.get('needs_indexing', False):
+            logger.debug(f"⚙️ {subsystem_name} requires indexing ⚙️")
+            parent_group = {
+                'name': subsystem_name,
+                'type': 'group',
+                'children': []
+            }
+
+            for index, instance_info in subsystem_info['instances'].items():
+                logger.debug(f"📑 Creating indexed group for {subsystem_name}{index} 📑")
+                indexed_group = {
+                    'name': f"{subsystem_name}{index}",
+                    'type': 'group',
+                    'children': self.generate_properties_list(instance_info['properties'], subsystem_name, index=index)
+                }
+                parent_group['children'].append(indexed_group)
+                logger.debug(f"📚 Added indexed group for {subsystem_name}{index} 📚")
+            
+            logger.debug(f"📂 Completed indexed groups for {subsystem_name} 📂")
+            return parent_group
+        else:
+            logger.debug(f"🗂 Creating group for non-indexed subsystem: {subsystem_name} 🗂")
+            group = {
+                'name': subsystem_name,
+                'type': 'group',
+                'children': self.generate_properties_list(subsystem_info['properties'], subsystem_name)
+            }
+            logger.debug(f"✨ Finished creating group for non-indexed subsystem: {subsystem_name} ✨")
+            return group
+        
+    if __name__ == "__main__":
+           # Load a test driver
+            path = 'pymetr/instruments/DSOX1204G.py'  
+            with open(path, 'r') as file:
+                source = file.read()
+
+
+
+            tree = ast.parse(source, filename=path)
+
+            # Assuming PyMetrClassVisitor is your revised visitor class
+            visitor = InstrumentVisitor()
+            visitor.visit(tree)  # First pass to identify structure
+
+            print_consolidated_view(visitor.instruments)
+            print(visitor.instruments)

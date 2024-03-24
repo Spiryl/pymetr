@@ -87,7 +87,7 @@ class Oscilloscope(Instrument):
         super().__init__(resource_string)
         logger.info("Initializing Oscilloscope with resource string: %s", resource_string)
 
-        self._sources = None
+        self._sources = self.Sources.CH1
         self._format = "ASCII"
 
         # Use the build method to create subsystem instances

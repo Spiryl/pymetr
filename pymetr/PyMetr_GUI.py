@@ -249,21 +249,31 @@ class DynamicInstrumentGUI(QMainWindow):
         # Identify the correct instrument class from the module
         for attr_name in dir(module):
             attr = getattr(module, attr_name)
-            logger.debug(f"Searching: {attr}, {attr_name}")
+            logger.debug(f"Inspecting attribute: {attr}, Name: {attr_name}")
             if isinstance(attr, type) and issubclass(attr, Instrument) and attr != Instrument:
                 instr_class = attr
+                logger.debug(f"Instrument class found: {instr_class.__name__}")
                 break
 
         if instr_class:
             try:
                 # Build the instrument model instance and open it up.
                 instr = instr_class(selected_resource)
+                logger.debug(f"Instrument instance created: {instr}")
                 instr.open()
+                logger.debug(f"Instrument {unique_id} connection opened.")
 
-                # Look for a driver based on model number and identify and then sync the settings
-                parameters = factory.create_parameters_from_driver(_driver, instr)
+                # Set up the instrument control tree
+                factory.set_current_instrument(instr)
+                self.parameter_tree_dict = factory.create_parameters_from_driver(_driver)
+                parameter_path_map = self.extract_parameter_paths(self.parameter_tree_dict)
+
+
+                # logger.debug(f"Building parameters parameter tree dictionary:\n {self.parameter_tree_dict}.")
+                parameters = Parameter.create(name='params', type='group', children=self.parameter_tree_dict)
+
+
                 instr.trace_data_ready.connect(self.update_plot)
-                self.sync_parameters_with_instrument(parameters, instr)
 
                 # Build a new dock for the instrument and load the parameters in to the parameter tree
                 parameter_dock = InstrumentParameterDock(unique_id, self, on_tree_state_changed=self.create_parameter_change_handler(unique_id))
@@ -271,180 +281,216 @@ class DynamicInstrumentGUI(QMainWindow):
 
                 fetchDataThread = TraceDataFetcherThread(instr)
                 fetchDataThread.trace_data_ready.connect(lambda data: self.on_trace_data_ready(data, unique_id))
-                fetchDataThread.fetch_error.connect(lambda error: self.onTraceFetchError(error, unique_id))
-                fetchDataThread.start()
 
                 # Add it to the Captain's log.
                 self.instruments[unique_id] = {
                     'dock': parameter_dock,
                     'instance': instr,
                     'parameters': parameters,
-                    'plot_data_emitter': PlotDataEmitter(),  # Updated key and value
-                    'fetch_thread': fetchDataThread  # Keep the fetch thread reference
+                    'plot_data_emitter': PlotDataEmitter(),
+                    'fetch_thread': fetchDataThread,
+                    'parameter_path_map': parameter_path_map
                 }
-                
-                # Send out invitations to the plotting party.
+                logger.debug(f"Instrument {unique_id} added to the tracking dictionary.")
+
+                # See if we can sync it up
+                self.sync_parameters_with_instrument(unique_id)
+
+                # Connect signals to slots for plot updates.
                 self.instruments[unique_id]['plot_data_emitter'].plot_data_ready.connect(self.on_trace_data_ready)
-                
-                # Send it home!
+                logger.debug(f"Plot data ready signal connected for instrument {unique_id}.")
+
+                # Add the instrument dock to the main window.
                 self.addDockWidget(QtCore.Qt.RightDockWidgetArea, parameter_dock)
-                
+                logger.debug(f"Instrument dock added to main window for instrument {unique_id}.")
+
+                # Start the fetch data thread
+                fetchDataThread.start()
+
             except Exception as e:
                 logger.error(f"Failed to initialize instrument {unique_id}: {e}")
         else:
-            logger.error(f"Driver module for {unique_id} does not support instance creation.") 
+            logger.error(f"Driver module for {unique_id} does not support instance creation.")
 
-    def sync_parameters_with_instrument(self, parameters, instrument_instance):
-        """
-        Sync the Parameter Tree with the current state of the instrument by fetching the
-        current values of the instrument's properties and updating the Parameter Tree, ignoring action parameters.
-        """
-        def update_param_value(param, instr):
-            # Skip action parameters as they don't represent a state to sync
-            if param.opts.get('type') == 'action':
-                logger.debug(f"Skipping action parameter: {param.name()}")
+    def extract_parameter_paths(self, tree_dict, path_map=None, parent_path=None):
+        if path_map is None:
+            path_map = {}
+        for item in tree_dict:
+            current_path = f"{parent_path}.{item['name']}" if parent_path else item['name']
+            if 'children' in item:
+                logger.debug(f"Traversing into children of '{current_path}'")
+                self.extract_parameter_paths(item['children'], path_map, parent_path=current_path)
+            elif 'property_path' in item:
+                path_map[current_path] = item['property_path']
+                logger.debug(f"Mapping '{current_path}' to property path '{item['property_path']}'")
+        return path_map
+
+    # def translate_property_path(instr, path):
+    #     parts = path.split('.')
+    #     target = instr  # Starting point is the instrument
+
+    #     for part in parts:
+    #         if '[' in part and ']' in part:  # Indexed access
+    #             base, index = part[:-1].split('[')
+    #             target = getattr(target, base)  # Get the base attribute (the list)
+    #             target = target[int(index)]  # Access the indexed element
+    #         else:
+    #             target = getattr(target, part)  # Regular attribute access
+
+    #     return target
+    
+    def translate_property_path(self, instr, path):
+        parts = path.split('.')
+        target = instr  # Starting point is the instrument
+        logger.debug(f"Starting translation of path '{path}' from instrument {instr}")
+
+        for part in parts:
+            logger.debug(f"Processing part '{part}' of path")
+            if '[' in part and ']' in part:  # Indexed access
+                base, index = part.split('[')
+                index = int(index[:-1])  # Convert index to integer, removing the closing bracket
+
+                # Adjust for Python's 0-based indexing if needed
+                index -= 1  # Subtract one here if your input is 1-based but the internal representation is 0-based
+
+                if not hasattr(target, base):
+                    logger.error(f"Attribute '{base}' not found in object {target}. Path: {path}")
+                    raise AttributeError(f"Attribute '{base}' not found in object {target}. Path: {path}")
+
+                target = getattr(target, base)
+                logger.debug(f"Found base '{base}', now accessing index {index}")
+                if not isinstance(target, (list, tuple)):
+                    logger.error(f"Attribute '{base}' is not indexable. Path: {path}")
+                    raise TypeError(f"Attribute '{base}' is not indexable. Path: {path}")
+
+                try:
+                    target = target[index]
+                    logger.debug(f"Indexed access successful, moved to '{target}'")
+                except IndexError:
+                    logger.error(f"Index {index} out of bounds for '{base}'. Path: {path}")
+                    raise IndexError(f"Index {index} out of bounds for '{base}'. Path: {path}")
+            else:
+                if not hasattr(target, part):
+                    logger.error(f"Attribute '{part}' not found in object {target}. Path: {path}")
+                    raise AttributeError(f"Attribute '{part}' not found in object {target}. Path: {path}")
+                target = getattr(target, part)  # Regular attribute access
+                logger.debug(f"Moved to attribute '{part}', now at '{target}'")
+
+        logger.debug(f"Completed translation of path '{path}', final target: '{target}'")
+        return target
+
+    def sync_parameters_with_instrument(self, unique_id):
+        parameters = self.instruments[unique_id]['parameters']
+        instrument_instance = self.instruments[unique_id]['instance']
+        parameter_path_map = self.instruments[unique_id]['parameter_path_map']
+
+        def update_param_value(param, instr, full_param_path):
+            if param.opts.get('type') in ['action', 'group']:
+                logger.debug(f"Skipping {param.opts.get('type')} parameter: {param.name()}")
                 return
 
-            property_path = param.opts.get('property_path', None)
-            logger.debug(f"Syncing parameter: {param.name()} using property path: {property_path}")
-            
+            property_path = parameter_path_map.get(full_param_path)
             if property_path:
-                parts = property_path.split('.')
-                target = instr
-                # Navigate through the instrument and its subsystems based on the property path
-                for part in parts[:-1]:
-                    logger.debug(f"Checking for subsystem or property: {part} in {target}")
-                    if hasattr(target, part):
-                        target = getattr(target, part)
-                        logger.debug(f"Accessing: {part}")
-                    else:
-                        logger.error(f"Path '{property_path}' not valid: '{part}' not found")
-                        return
-                
-                # Set the final property value
-                property_name = parts[-1]
-                if hasattr(target, property_name):
-                    current_value = getattr(target, property_name)
-                    param.setValue(current_value)
-                    logger.debug(f"Parameter '{property_name}' set to '{current_value}'")
-                else:
-                    logger.error(f"Property '{property_name}' not found in {target}")
+                try:
+                    # Fetch the property's current value via translate_property_path
+                    # Note: translate_property_path is expected to return the property value directly
+                    property_value = self.translate_property_path(instr, property_path)
+                    logger.debug(f"Updating parameter '{param.name()}' with value from path '{property_path}': {property_value}")
+
+                    # Update the parameter's value in the parameter tree to reflect the instrument's current state
+                    param.setValue(property_value)
+                except Exception as e:
+                    logger.error(f"Error resolving path '{property_path}' for parameter '{param.name()}': {e}")
             else:
                 logger.warning(f"No property path for parameter '{param.name()}'")
 
-        # Iterate over all parameters in the tree and update their values
-        for child in parameters.children():
-            update_param_value(child, instrument_instance)
-            # Recurse into groups if they exist
-            if child.hasChildren():
-                for subchild in child.children():
-                    update_param_value(subchild, instrument_instance)
+        def traverse_and_sync(param_group, path_prefix=''):
+            logger.debug(f"Traversing into children of '{path_prefix.rstrip('.')}'")
+            for param in param_group.children():
+                full_param_path = f"{path_prefix}.{param.name()}" if path_prefix else param.name()
+                logger.debug(f"Processing parameter: {full_param_path}")
+                update_param_value(param, instrument_instance, full_param_path)
+                if param.hasChildren():
+                    new_path_prefix = full_param_path
+                    traverse_and_sync(param, new_path_prefix)
 
-    def get_property_name_from_param(self, param):
-        """
-        Derives the property name from a Parameter.
-
-        Args:
-            param (Parameter): The parameter from which to derive the property name.
-
-        Returns:
-            str: The derived property name, or None if not applicable.
-        """
-        # Example implementation, to be adjusted based on actual parameter structure
-        return param.opts.get('property_path', None).split('.')[-1] if 'property_path' in param.opts else None
+        # Start the traversal with the root parameters group
+        traverse_and_sync(parameters)
 
     def create_parameter_change_handler(self, unique_id):
-        """
-        Creates a closure that captures the unique identifier of an instrument and
-        returns a function that is triggered upon parameter changes in the GUI.
-
-        The returned function serves as a bridge, funneling GUI changes through to
-        the instrument's properties, ensuring the instrument's state reflects the
-        user's input.
-
-        Args:
-            unique_id (str): The unique identifier for the instrument.
-
-        Returns:
-            function: A handler function that takes parameter changes and applies them to the instrument.
-        """
         def parameter_changed(param, changes):
-            """
-            Handles parameter changes by dispatching them to the appropriate method
-            to reflect these changes on the instrument.
-
-            This function is connected to the signal emitted by the parameter tree
-            whenever a user modifies a parameter's value.
-
-            Args:
-                param (Parameter): The parameter that was changed.
-                changes (list): A list of changes, each being a tuple (param, change, data).
-                unique_id (str): Captured unique identifier for the instrument.
-            """
-            self.on_tree_state_changed(param, changes, unique_id)
+            parameter_path_map = self.instruments[unique_id]['parameter_path_map']
+            for param, change, data in changes:
+                param_name = param.name()  # Assuming this gives you the 'name' field of the parameter
+                # Construct the path to this parameter to look it up in the map
+                full_param_path = self.construct_full_param_path(param)
+                property_path = parameter_path_map.get(full_param_path)
+                if property_path:
+                    self.navigate_and_update_property(property_path, data, unique_id)
+                else:
+                    logger.error(f"Property path missing for parameter: {param_name}")
         return parameter_changed
 
-    def on_tree_state_changed(self, param, changes, unique_id):
-        """
-        Responds to signals indicating that a parameter's state has changed in the GUI,
-        initiating the process to update the corresponding property in the instrument's
-        driver.
+    def construct_full_param_path(self, param):
+        path_parts = []
+        while param is not None:
+            path_parts.insert(0, param.name())
+            param = param.parent()
+        return '.'.join(path_parts)
 
-        This method iterates over all signaled changes, translating them into property
-        updates or method calls as necessary to synchronize the instrument's state
-        with the GUI.
+    # def on_tree_state_changed(self, param, changes, unique_id):
+    #     """
+    #     Adjusts the process of handling parameter state changes from the GUI,
+    #     ensuring property paths are accurately used for instrument updates.
+    #     """
+    #     logger.info(f"Tree changes detected for instrument {unique_id}.")
+    #     for param, change, data in changes:
+    #         _instrument = self.instruments[unique_id]
 
-        Args:
-            param (Parameter): The parameter that was changed.
-            changes (list): A list of changes, each being a tuple (param, change, data).
-            unique_id (str): The unique identifier for the instrument affected by the changes.
-        """
-        logger.info(f"Tree changes detected for instrument {unique_id}.")
-        for param, change, data in changes:
-            _instrument = self.instruments[unique_id]
-            path = _instrument['parameters'].childPath(param)
-            if path is not None:
-                childName = '.'.join(path)
-            else:
-                childName = param.name()
+    #         # Retrieve the full property path from the parameter itself
+    #         # Assuming each parameter holds its full property path as an attribute
+    #         if hasattr(param, 'property_path'):
+    #             property_path = getattr(param, 'property_path')
+    #         else:
+    #             logger.error(f"Property path missing for parameter: {param.name()}")
+    #             continue  # Skip this change if property_path is not defined
 
-            logger.debug(f"Parameter change - Name: {childName}, Change: {change}, Data: {data}")
-            self.navigate_and_update_property(childName, data, unique_id)
-            logger.info(f"Property '{childName}' updated to '{data}'.")
+    #         logger.debug(f"Parameter change - Path: {_instrument}{property_path}, Change: {change}, Data: {data}")
+            
+    #         # Use the correct property path to update the instrument
+    #         self.navigate_and_update_property(property_path, data, unique_id)
+    #         logger.info(f"Property '{property_path}' updated to '{data}'.")
 
     def navigate_and_update_property(self, path, value, unique_id):
         """
-        Navigates the hierarchy of the instrument's properties based on the given path,
-        then updates the property or calls the method at the path's end with the provided value.
-
-        This method ensures that GUI changes are accurately reflected within the instrument's
-        driver, maintaining synchronicity between the GUI and the instrument's actual state.
-
+        Navigate through the instrument's properties/subsystems, including indexed ones,
+        and update the target property with a new value.
         Args:
-            path (str): The dot-separated path leading to the property or method to be updated.
-            value: The new value to set for the property, or the value to use in the method call.
-            unique_id (str): The unique identifier for the instrument.
+            path (str): The property path in dot-notation, supporting indexes (e.g., 'channel[1].probe').
+            value: The new value to set at the target property.
+            unique_id (str): Unique identifier for the instrument.
         """
-        components = path.split('.')
         target = self.instruments[unique_id]['instance']
+        components = path.split('.')
 
-        for comp in components[:-1]:
-            comp = comp.lower()  # Ensure we're navigating correctly
-            target = getattr(target, comp, None)
-            if target is None:
-                logger.error(f"Component '{comp}' not found in path '{path}'. Stopping navigation.")
-                return
+        try:
+            for i, comp in enumerate(components[:-1]):  # Iterate through path components
+                if '[' in comp and ']' in comp:  # Detect indexed access
+                    base, index = comp[:-1].split('[')
+                    index = int(index)
+                    target = getattr(target, base)[index]  # Navigate to indexed attribute
+                else:
+                    target = getattr(target, comp)  # Regular attribute access
 
-        property_name = components[-1]
-        if hasattr(target, property_name):
-            attr = getattr(target.__class__, property_name, None)
-            if isinstance(attr, property):
-                setattr(target, property_name, value)
-                logger.info(f"Successfully updated '{property_name}' to '{value}'.")
+            # Update the final property
+            final_attr = components[-1]
+            if hasattr(target, final_attr):
+                setattr(target, final_attr, value)
+                logger.info(f"✅ '{path}' updated to '{value}' in {unique_id}.")
             else:
-                logger.error(f"Attribute '{property_name}' not a property or not found.")
-        else:
-            logger.error(f"Attribute '{property_name}' not found on instance of '{target.__class__.__name__}'.")
+                logger.error(f"❌ Final property '{final_attr}' not found in path '{path}'. Update failed.")
+        except Exception as e:
+            logger.error(f"🚨 Failed navigating or updating '{path}' with '{value}': {e}")
 
     def on_trace_data_ready(self, plot_data, unique_id=None):
         if unique_id is not None:

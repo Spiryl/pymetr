@@ -6,48 +6,75 @@ from copy import deepcopy
 import ast
 
 class InstrumentVisitor(ast.NodeVisitor):
+    """
+    AST Node Visitor for instrument classes. It identifies instruments and subsystems,
+    extracting relevant information and structuring it for further processing.
+
+    Attributes:
+        instruments (dict): A dictionary holding information about each instrument identified.
+        current_instrument (str or None): The name of the currently processed instrument.
+    """
     def __init__(self):
         super().__init__()
         self.instruments = {}
         self.current_instrument = None
+        logger.debug("🎼 InstrumentVisitor initialized 🎼")
 
     def visit_ClassDef(self, node):
+        """
+        Visits class definitions, identifying instrument and subsystem classes
+        and extracting relevant information.
+        """
+        logger.debug(f"🏛 Visiting Class Definition: {node.name} 🏛")
         bases = [base.id for base in node.bases if isinstance(base, ast.Name)]
         if 'Instrument' in bases:
             self.current_instrument = node.name
+            logger.debug(f"🎷 Found Instrument: {self.current_instrument} 🎷")
             self.instruments[node.name] = {
                 'subsystems': {}, 
                 'properties': [], 
                 'methods': [],
-                'action_parameters': {}  # Preparing to capture special methods like fetch_trace
+                'action_parameters': {}
             }
             
-            # Look for the fetch_trace method directly in the current class definition
             for item in node.body:
                 if isinstance(item, ast.FunctionDef) and item.name == 'fetch_trace':
+                    logger.debug(f"🔍 Found fetch_trace method in {self.current_instrument} 🔍")
                     self.instruments[self.current_instrument]['action_parameters']['fetch_trace'] = True
-                    break  # Assuming only one fetch_trace method per class
+                    break
             
         elif 'Subsystem' in bases and self.current_instrument:
+            logger.debug(f"🔩 Found Subsystem: {node.name} within {self.current_instrument} 🔩")
             subsystem_visitor = SubsystemVisitor()
             subsystem_visitor.visit(node)
-            subsystem_info = self.instruments[self.current_instrument]['subsystems'][node.name]
+            subsystem_info = self.instruments[self.current_instrument]['subsystems'].get(node.name, {
+                'properties': [],
+                'methods': [],
+                'instances': {}
+            })
+
             if subsystem_info.get('needs_indexing', False):
-                # Duplicate properties and methods for each instance if needed
+                # Assuming 'indices' is the total number of instances to create
                 for index in range(1, subsystem_info['indices'] + 1):
-                    indexed_name = f"{node.name} {index}"
-                    subsystem_info['instances'][indexed_name] = deepcopy(subsystem_visitor.properties_methods)
+                    # Adjusting the approach to generate a descriptive and unique indexed name
+                    logger.debug(f"📐 Indexing {index} in {node.name} 📐")
+                    # Deepcopy ensures each instance has its own copy of properties and methods
+                    subsystem_info['instances'][index] = deepcopy(subsystem_visitor.properties_methods)
             else:
-                # Update properties and methods directly for non-indexed or single-instance subsystems
                 self.instruments[self.current_instrument]['subsystems'][node.name].update(subsystem_visitor.properties_methods)
-        super().generic_visit(node)  # Continue traversal.
+            logger.debug(f"✨ Subsystem info updated for {node.name} in {self.current_instrument} ✨")
+        super().generic_visit(node)
 
     def visit_Assign(self, node):
+        """
+        Visits assignment nodes to identify subsystem build configurations,
+        particularly looking for the 'build' method call to initialize subsystems.
+        """
         if self.current_instrument and isinstance(node.value, ast.Call) and getattr(node.value.func, 'attr', '') == 'build':
+            logger.debug(f"🏗 Parsing build call in {self.current_instrument} 🏗")
             subsystem_class_name = node.value.func.value.id
             indices = next((self.get_ast_node_value(kw.value) for kw in node.value.keywords if kw.arg == 'indices'), 1)
 
-            # Initialize the subsystem with indexing information and an 'instances' dictionary
             subsystem_info = {
                 'indices': indices,
                 'needs_indexing': indices > 1,
@@ -56,6 +83,7 @@ class InstrumentVisitor(ast.NodeVisitor):
                 'instances': {} if indices > 1 else None
             }
             self.instruments[self.current_instrument]['subsystems'][subsystem_class_name] = subsystem_info
+            logger.debug(f"🛠 Subsystem {subsystem_class_name} initialized with indexing: {indices > 1} 🛠")
         super().generic_visit(node)
             
     def get_ast_node_value(self, node):
@@ -83,50 +111,73 @@ class InstrumentVisitor(ast.NodeVisitor):
             return None
 
 class SubsystemVisitor(ast.NodeVisitor):
+    """
+    AST Node Visitor dedicated to subsystem classes within an instrument definition.
+    It extracts property and method definitions from the AST, enriching them with additional details
+    for later use in constructing a parameterized representation of each subsystem.
+    
+    Attributes:
+        properties_methods (dict): A dictionary holding properties and methods extracted from the subsystem.
+    """
     def __init__(self):
         super().__init__()
         self.properties_methods = {'properties': [], 'methods': []}
+        logger.debug("🚀 Initialized SubsystemVisitor 🚀")
 
     def visit_Assign(self, node):
-        # Logic to handle assignments within a subsystem class, focusing on properties.
+        """
+        Visits assignment nodes within the AST, looking for property definitions to capture and process.
+        """
+        logger.debug(f"🔍 Visiting Assign Node: {ast.dump(node)} 🔍")
         if isinstance(node.value, ast.Call) and hasattr(node.value.func, 'id'):
             prop_func_id = node.value.func.id
             if prop_func_id in ['value_property', 'select_property', 'switch_property']:
+                logger.debug(f"✨ Found a property: {prop_func_id} ✨")
                 prop_details = self.parse_property_details(node.value, prop_func_id)
-                # Ensure 'name' key is properly assigned to prop_details
                 if prop_details:
                     prop_name = node.targets[0].id
                     prop_details['name'] = prop_name
                     self.properties_methods['properties'].append(prop_details)
+                    logger.debug(f"📝 Added property details for {prop_name}: {prop_details} 📝")
         super().generic_visit(node)
 
     def visit_FunctionDef(self, node):
-        # Method detection could be as simple as adding the method's name to the list,
-        # assuming you're only interested in the existence/names of methods, not their signatures or bodies.
+        """
+        Visits function definition nodes within the AST, capturing method names for later processing.
+        """
+        logger.debug(f"📜 Visiting FunctionDef Node: {node.name} 📜")
         self.properties_methods['methods'].append(node.name)
-        super().generic_visit(node)  # Continue traversal.
+        logger.debug(f"📌 Added method: {node.name} 📌")
+        super().generic_visit(node)
 
     def parse_property_details(self, call_node, prop_func_id):
         """
-        Parses details from the AST node for property factory function calls.
+        Parses and returns the details of a property based on its AST node and identified type.
+        
+        Args:
+            call_node (ast.Call): The AST node representing the property definition call.
+            prop_func_id (str): The identified type of property (e.g., 'value_property').
+
+        Returns:
+            dict: A dictionary of property details, including type and potentially other attributes like choices or range.
         """
+        logger.debug(f"🧐 Parsing property details for type: {prop_func_id} 🧐")
         details = {'type': prop_func_id}
         if prop_func_id == 'value_property':
-            # Parse keywords for additional details like type and range
             for kw in call_node.keywords:
                 if kw.arg in ['type', 'range']:
                     details[kw.arg] = self.get_ast_node_value(kw.value)
+                    logger.debug(f"🔧 Setting {kw.arg}: {details[kw.arg]} 🔧")
         elif prop_func_id == 'select_property':
-            # Handle selection property specific logic
             if len(call_node.args) > 1:
                 choices_arg = call_node.args[1]
                 if isinstance(choices_arg, ast.List):
                     details['choices'] = [self.get_ast_node_value(el) for el in choices_arg.elts]
-        elif prop_func_id == 'switch_property' or prop_func_id == 'data_property':
-            # For now, there's no extra processing needed for these
-            pass
+                    logger.debug(f"🔄 Choices set for select_property: {details['choices']} 🔄")
+        elif prop_func_id in ['switch_property', 'data_property']:
+            logger.debug(f"⚙️ No additional processing needed for {prop_func_id} ⚙️")
         else:
-            logger.warning(f"Unsupported property function: {prop_func_id}")
+            logger.warning(f"🚨 Unsupported property function: {prop_func_id} 🚨")
 
         return details
     

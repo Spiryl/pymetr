@@ -23,6 +23,10 @@ oscope.waveform.points_mode = 'MAX'
 oscope.waveform.points = 10000
 oscope.timebase.range = 0.1 #s
 
+# confirm indexing
+print(f"Channel 1 probe value: {oscope.channel[1].probe}")
+print(f"Channel 2 display value: {oscope.channel[2].display}")
+print(f"Channel 3 coupling value: {oscope.channel[3].coupling}")
 
 # Initiate a single acquisition
 oscope.single()
