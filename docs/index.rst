@@ -56,15 +56,7 @@ Todo
    :caption: Contents:
    
    quickstart
-   bible
    instruments
    subsystem_theory
-   subsystem_example
-   instrument_gui
    oscilloscope
-   packaging
-   doc-build
-   sphinx
-   logging
-   unit-test
    api
