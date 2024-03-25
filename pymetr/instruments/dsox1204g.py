@@ -1,5 +1,6 @@
 import logging
 from enum import Enum
+from collections.abc import Iterable
 import numpy as np
 logger = logging.getLogger(__name__)
 from pymetr import Instrument, Subsystem, switch_property, select_property, value_property, string_property, data_property
@@ -19,8 +20,17 @@ def source_command(command_template):
     """
     def decorator(func):
         def wrapper(self, *sources, **kwargs):
-            # If no sources are explicitly provided, use the global sources or default to an empty list
-            sources_to_use = sources if sources else self._sources or []
+            # Check if sources is provided and not empty, otherwise use global sources or default to an empty list
+            if sources:
+                sources_to_use = sources
+            else:
+                sources_to_use = self._sources if self._sources else []
+
+            # Ensure sources_to_use is iterable and not a single enum item
+            if isinstance(sources_to_use, Enum):
+                sources_to_use = [sources_to_use]
+            elif not isinstance(sources_to_use, Iterable) or isinstance(sources_to_use, str):
+                sources_to_use = [sources_to_use]
 
             # Convert Enums to their string values if necessary
             cleaned_sources = [source.value if isinstance(source, Enum) else source for source in sources_to_use]
@@ -87,7 +97,7 @@ class Oscilloscope(Instrument):
         super().__init__(resource_string)
         logger.info("Initializing Oscilloscope with resource string: %s", resource_string)
 
-        self._sources = self.Sources.CH1
+        self._sources = None
         self._format = "ASCII"
 
         # Use the build method to create subsystem instances
@@ -302,28 +312,42 @@ class Oscilloscope(Instrument):
         Fetches trace data from the oscilloscope, utilizing global settings for sources
         and data format if set; otherwise, defaults to fetching from displayed channels.
         """
-        
         trace_data_dict = {}
-        sources_to_fetch = self._sources if self._sources else [
-            f"CH{num}" for num in range(1, 5) if self.channel[num-1].display == '1'
-        ]
-        logger.info(f"Fetching traces for sources: {sources_to_fetch}")
+        
+        # Ensure self._sources is iterable (even if it's a single source) or find which channels are displayed
+        if isinstance(self._sources, Enum):
+            sources_to_fetch = [self._sources]
+        elif not self._sources:
+            # Fetch from displayed channels by default
+            sources_to_fetch = [
+                self.Sources(f"CHAN{num}") for num in range(1, 5) if getattr(self.channel[num-1], 'display', False)
+            ]
+        else:
+            sources_to_fetch = self._sources
+
+        if not sources_to_fetch:
+            logger.warning("No sources specified for fetching traces, and no channels marked as displayed.")
+            return trace_data_dict
+
+        logger.info(f"Fetching traces for sources: {', '.join(str(source) for source in sources_to_fetch)}")
 
         self.digitize(*sources_to_fetch)
         self.query_operation_complete()  # Ensures the oscilloscope is ready
 
         for source in sources_to_fetch:
-            data_range = self.fetch_time(source)  # Fetches time base for the source
-            data_values = self.fetch_data(source)  # Fetches waveform data adjusted for probe attenuation
+            # Ensure source is passed as a string to fetch_time and fetch_data
+            source_str = str(source)
+            data_range = self.fetch_time(source_str)  # Fetches time base for the source
+            data_values = self.fetch_data(source_str)  # Fetches waveform data adjusted for probe attenuation
             
-            trace_data_dict[source] = {
+            trace_data_dict[source_str] = {
                 'data': data_values,
                 'range': data_range,
                 'visible': True,  # Adjust based on your implementation or the channel's display attribute
             }
         
-        self.trace_data_ready.emit(trace_data_dict) # We meed to include this to use the GUI
-        return trace_data_dict # This is for using a script
+        self.trace_data_ready.emit(trace_data_dict)  # Emit the trace data for the GUI
+        return trace_data_dict  # This is for using a script
 
 class Acquire(Subsystem):
     """

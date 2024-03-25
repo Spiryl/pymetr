@@ -1,8 +1,8 @@
 
 import logging
 logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
-logging.getLogger('pyvisa').setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
+logging.getLogger('pyvisa').setLevel(logging.CRITICAL)
 handler = logging.StreamHandler()
 formatter = logging.Formatter("%(name)s - %(message)s")
 
@@ -12,20 +12,29 @@ logger.addHandler(handler)
 import os
 os.environ['PYQTGRAPH_QT_LIB'] = 'PySide6'
 import sys
-
 import numpy as np
 import importlib.util
+import random
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtCore, QtGui
 from pyqtgraph.parametertree import Parameter, ParameterTree
 from pymetr.factories import InstrumentFactory
 from pymetr.instrument import Instrument
 from PySide6.QtCore import QThread, Signal, QObject
+from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QDialog, QVBoxLayout, QListWidget, QDialogButtonBox, QDockWidget, QPushButton
 from PySide6.QtWidgets import QWidget, QMainWindow, QFileDialog, QComboBox, QSizePolicy
+from contextlib import contextmanager
 
 factory = InstrumentFactory()
 
+@contextmanager
+def block_signals(objects):
+    original_states = [obj.blockSignals(True) for obj in objects]
+    yield
+    for obj, state in zip(objects, original_states):
+        obj.blockSignals(state)
+            
 class PlotDataEmitter(QObject):
     plot_data_ready = Signal(object)  # Emits plot data ready for plotting
 
@@ -147,15 +156,16 @@ class InstrumentParameterDock(QDockWidget):
         self.parameters = parameters
         self.parameterTree = ParameterTree()
         self.layout.addWidget(self.parameterTree)
-        self.parameterTree.setAlternatingRowColors(False)
+        self.parameterTree.setAlternatingRowColors(True)
         self.parameterTree.setParameters(parameters, showTop=True)
-        if self.on_tree_state_changed:
-            self.parameters.sigTreeStateChanged.connect(self.on_tree_state_changed)
+        # if self.on_tree_state_changed:
+        #     self.parameters.sigTreeStateChanged.connect(self.on_tree_state_changed)
 
 class DynamicInstrumentGUI(QMainWindow):
     """
     Main GUI window that integrates the plot, instrument control docks, and central control dock.
     """
+    color_palette = ['#5E57FF', '#F23CA6', '#FF9535', '#4BFF36', '#02FEE4']
 
     def __init__(self):
         """
@@ -301,7 +311,10 @@ class DynamicInstrumentGUI(QMainWindow):
                 self.addDockWidget(QtCore.Qt.RightDockWidgetArea, parameter_dock)
                 logger.debug(f"Instrument dock added to main window for instrument {unique_id}.")
 
-                # Start the fetch data thread
+                # Connect the tree signals to the properties.
+                parameters.sigTreeStateChanged.connect(self.create_parameter_change_handler(unique_id))
+
+                # Start the fetch data thread.
                 instr.trace_data_ready.connect(self.update_plot)
                 fetchDataThread.trace_data_ready.connect(lambda data: self.on_trace_data_ready(data, unique_id))
                 fetchDataThread.start()
@@ -324,6 +337,13 @@ class DynamicInstrumentGUI(QMainWindow):
                 logger.debug(f"Mapping '{current_path}' to property path '{item['property_path']}'")
         return path_map
     
+    def construct_full_param_path(self, param):
+        path_parts = []
+        while param is not None:
+            path_parts.insert(0, param.name())
+            param = param.parent()
+        return '.'.join(path_parts)
+
     def translate_property_path(self, instr, path):
         parts = path.split('.')
         target = instr  # Starting point is the instrument
@@ -435,13 +455,6 @@ class DynamicInstrumentGUI(QMainWindow):
                         logger.error(f"Property path missing for parameter: {param_name}")
         return parameter_changed
 
-    def construct_full_param_path(self, param):
-        path_parts = []
-        while param is not None:
-            path_parts.insert(0, param.name())
-            param = param.parent()
-        return '.'.join(path_parts)
-
     def navigate_and_update_property(self, path, value, unique_id):
         """
         Navigate through the instrument's properties/subsystems, including indexed ones,
@@ -482,51 +495,31 @@ class DynamicInstrumentGUI(QMainWindow):
         self.update_plot(plot_data)
 
     def update_plot(self, data):
-        """
-        Updates the given plot_widget with the provided data.
-        
-        Parameters:
-        - data: Can be a dictionary in the specified trace format, or other data formats compatible with pyqtgraph plotting functions (e.g., lists, np.arrays).
-        - plot_widget: The PyQtGraph plotting widget to update.
-        """
-        
         plot_widget = self.plotWidget  # Access the plot widget from the instance
         plot_widget.clear()
+        plot_widget.showGrid(x=True, y=True, alpha=0.3)  # Show grid by default
+        plot_widget.addLegend()  # Show legend by default
 
-        # Handle the trace_dictionary format
+        # If data is a dictionary, iterate through items
         if isinstance(data, dict):
-            logger.info("Processing trace_dictionary format data for plotting.")
-            logger.debug(f"Plotting trace dictionary {data}")
-            for trace_id, trace_info in data.items():
-                # Extract the necessary data for each trace
-                trace_data = trace_info.get('data', [])
-                trace_range = trace_info.get('range', np.arange(len(trace_data)))
-                color = trace_info.get('color', 'w')  # Default color white
-                label = trace_info.get('label', None)
-                visible = trace_info.get('visible', True)  # Default visibility to True if not specified
-                
-                # Adjust color for visibility
-                if not visible:
-                    color = (0, 0, 0, 0)  # Set color to transparent for invisible traces
-                    
-                # Plotting the trace data with optional parameters
-                logger.debug(f"Plotting trace ID {trace_id} with label: {label}, color: {color}, visible: {visible}.")
-                plot_widget.plot(trace_range, trace_data, pen=color, name=label)
+            for i, (trace_id, trace_info) in enumerate(data.items()):
+                color = trace_info.get('color', self.color_palette[i % len(self.color_palette)])
+                label = trace_info.get('label', f'Trace {i+1}')
+                if trace_info.get('visible', True):  # Check if the trace should be visible
+                    trace_data = trace_info.get('data', [])
+                    trace_range = trace_info.get('range', np.arange(len(trace_data)))
+                    plot_widget.plot(trace_range, trace_data, pen=pg.mkPen(color, width=2), name=label)
 
-        # Direct plotting if data isn't in the expected dictionary format
+        # If data is not a dictionary, plot it directly
         elif isinstance(data, (list, np.ndarray, tuple)):
-            logger.info("Processing direct data format for plotting.")
+            color = self.color_palette[0]  # Start with the first color in the palette
+            label = 'Trace 1'
             if isinstance(data, tuple):
-                # If data comes as a tuple, unpack it assuming it follows the (data, range) format
-                trace_data, trace_range = data
-                logger.debug("Plotting tuple format data.")
-                plot_widget.plot(trace_range, trace_data)
+                plot_widget.plot(data[1], data[0], pen=pg.mkPen(color, width=2), name=label)
             else:
-                # Directly plot the data if it's just a list or np.array
-                logger.debug("Plotting list or np.array format data.")
-                plot_widget.plot(data)
+                plot_widget.plot(data, pen=pg.mkPen(color, width=2), name=label)
+
         else:
-            # Log an error for unexpected data formats
             logger.error(f"Received data in an unexpected format, unable to plot: {data}")
 
 if __name__ == "__main__":
