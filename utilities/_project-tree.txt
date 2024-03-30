@@ -34,7 +34,6 @@ pymetr/
 │   │   ├── _rst_master.txt
 │   ├── _templates/
 ├── examples/
-│   │   ├── ast_test.py
 │   │   ├── DSOX1204G_script.py
 │   │   ├── instrument_cli.py
 │   │   ├── subsystem_script.py
@@ -45,7 +44,12 @@ pymetr/
 │   │   ├── properties.py
 │   │   ├── PyMetr_GUI.py
 │   │   ├── styles.qss
+│   │   ├── test.py
+│   │   ├── visitors.py
 │   │   ├── __init__.py
+│   ├── application/
+│   │   │   ├── data_fetcher_thread.py
+│   │   │   ├── instrument_dock.py
 │   ├── instruments/
 │   │   │   ├── DSOX1204G.py
 │   │   │   ├── __init__.py
@@ -58,15 +62,17 @@ pymetr/
 │   │   ├── test_instrument.py
 ├── utilities/
 │   │   ├── decorators.py
+│   │   ├── gui_builder.py
 │   │   ├── utils.py
 │   │   ├── _init_dump.py
+│   │   ├── _project-tree.txt
 │   │   ├── _project_tree.py
 │   │   ├── _rst_dump.py
 │   │   ├── __init__.py
 ├── xscratch/
 │   │   ├── control_factory.py
 │   │   ├── dark_style.py
-│   │   ├── gui_builder.py
+│   │   ├── fack.py
 │   │   ├── instrument_gui.py
 │   │   ├── oscilloscope.py
 │   │   ├── oscilloscope_gui.py

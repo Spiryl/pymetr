@@ -11,6 +11,80 @@ import pyvisa
 from enum import IntFlag
 from abc import abstractmethod
 
+class Sources(QObject):
+    """
+    Handles the management and operation of sources for SCPI instruments.
+
+    Many SCPI (Standard Commands for Programmable Instruments) instruments
+    accept commands that operate on one or more 'sources'—these could be channels,
+    measurement functions, or any other configurable inputs or outputs of the instrument.
+
+    This class provides a streamlined way to manage these sources, allowing for 
+    dynamic selection and modification of active sources. It supports adding and removing
+    sources, setting and querying active sources, and executing commands on these sources
+    through a decorator that abstracts away the complexity of source management.
+
+    It integrates with PySide6 for signal support, emitting signals when the list of
+    available sources or the list of active sources changes. This feature is particularly
+    useful for GUI applications that need to react to changes in instrument configuration.
+
+    Attributes:
+        sourceChanged (Signal): Emitted when the list of available sources changes.
+        activeSourceChanged (Signal): Emitted when the list of active sources changes.
+    """
+    # Define signals
+    sourceChanged = Signal(list)
+    activeSourceChanged = Signal(list)
+
+    def __init__(self, sources):
+        super().__init__()
+        self._sources = sources
+        self.active_sources = []
+        logger.info("Sources initialized with: %s", sources)
+
+    @property
+    def sources(self):
+        """Returns the list of available sources."""
+        return self._sources
+
+    def set_active_sources(self, *sources):
+        """Sets the active sources from the available sources."""
+        self.active_sources = [source for source in sources if source in self._sources]
+        logger.debug("Active sources set to: %s", self.active_sources)
+        self.activeSourceChanged.emit(self.active_sources)
+
+    def get_active_sources(self):
+        """Returns the currently active sources."""
+        return self.active_sources
+
+    @staticmethod
+    def source_command(func):
+        """Decorator to process source-related commands."""
+        def wrapper(self, *args, **kwargs):
+            sources_to_use = self.get_active_sources() if not args else args
+            logger.info("Executing %s with sources: %s", func.__name__, sources_to_use)
+            result = func(self, *sources_to_use, **kwargs)
+            return result
+        return wrapper
+
+    def add_source(self, source):
+        """Adds a source to the list of available sources if it's not already present."""
+        if source not in self._sources:
+            self._sources.append(source)
+            logger.info("Added new source: %s", source)
+            self.sourceChanged.emit(self._sources)
+
+    def remove_source(self, source):
+        """Removes a source from the list of available sources."""
+        if source in self._sources:
+            self._sources.remove(source)
+            logger.info("Removed source: %s", source)
+            self.sourceChanged.emit(self._sources)
+            # Ensure it's also removed from active sources if present
+            if source in self.active_sources:
+                self.active_sources.remove(source)
+                self.activeSourceChanged.emit(self.active_sources)
+
 class Subsystem:
     """
     Base class for creating instrument subsystems, supporting both simple and indexed instantiation, 
