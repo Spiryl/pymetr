@@ -2,6 +2,8 @@ import logging
 logger = logging.getLogger(__name__)
 logging.getLogger('pyvisa').setLevel(logging.CRITICAL)
 from pyvisa.constants import BufferType
+from enum import Enum
+from collections.abc import Iterable
 from PySide6.QtCore import QObject, Signal
 import sys
 import numpy as np
@@ -14,76 +16,91 @@ from abc import abstractmethod
 class Sources(QObject):
     """
     Handles the management and operation of sources for SCPI instruments.
-
-    Many SCPI (Standard Commands for Programmable Instruments) instruments
-    accept commands that operate on one or more 'sources'—these could be channels,
-    measurement functions, or any other configurable inputs or outputs of the instrument.
-
-    This class provides a streamlined way to manage these sources, allowing for 
-    dynamic selection and modification of active sources. It supports adding and removing
-    sources, setting and querying active sources, and executing commands on these sources
-    through a decorator that abstracts away the complexity of source management.
-
-    It integrates with PySide6 for signal support, emitting signals when the list of
-    available sources or the list of active sources changes. This feature is particularly
-    useful for GUI applications that need to react to changes in instrument configuration.
-
+    ...
     Attributes:
-        sourceChanged (Signal): Emitted when the list of available sources changes.
-        activeSourceChanged (Signal): Emitted when the list of active sources changes.
+        sourcesChanged (Signal): Emitted when the list of active sources changes.
+        allSourcesChanged (Signal): Emitted when the list of available sources changes.
     """
     # Define signals
-    sourceChanged = Signal(list)
-    activeSourceChanged = Signal(list)
+    sourcesChanged = Signal(list)
+    allSourcesChanged = Signal(list)
 
-    def __init__(self, sources):
+    def __init__(self, all_sources):
         super().__init__()
-        self._sources = sources
-        self.active_sources = []
-        logger.info("Sources initialized with: %s", sources)
+        self.all_sources = all_sources
+        self.sources = []
+        logger.info("Sources initialized with: %s", all_sources)
 
     @property
-    def sources(self):
-        """Returns the list of available sources."""
-        return self._sources
+    def source(self):
+        """Returns the list of active sources."""
+        return self.sources
 
-    def set_active_sources(self, *sources):
+    @source.setter
+    def source(self, sources):
         """Sets the active sources from the available sources."""
-        self.active_sources = [source for source in sources if source in self._sources]
-        logger.debug("Active sources set to: %s", self.active_sources)
-        self.activeSourceChanged.emit(self.active_sources)
-
-    def get_active_sources(self):
-        """Returns the currently active sources."""
-        return self.active_sources
-
-    @staticmethod
-    def source_command(func):
-        """Decorator to process source-related commands."""
-        def wrapper(self, *args, **kwargs):
-            sources_to_use = self.get_active_sources() if not args else args
-            logger.info("Executing %s with sources: %s", func.__name__, sources_to_use)
-            result = func(self, *sources_to_use, **kwargs)
-            return result
-        return wrapper
+        self.sources = [source for source in sources if source in self.all_sources]
+        logger.debug("Active sources set to: %s", self.sources)
+        self.sourcesChanged.emit(self.sources)
 
     def add_source(self, source):
         """Adds a source to the list of available sources if it's not already present."""
-        if source not in self._sources:
-            self._sources.append(source)
+        if source not in self.all_sources:
+            self.all_sources.append(source)
             logger.info("Added new source: %s", source)
-            self.sourceChanged.emit(self._sources)
+            self.allSourcesChanged.emit(self.all_sources)
 
     def remove_source(self, source):
         """Removes a source from the list of available sources."""
-        if source in self._sources:
-            self._sources.remove(source)
+        if source in self.all_sources:
+            self.all_sources.remove(source)
             logger.info("Removed source: %s", source)
-            self.sourceChanged.emit(self._sources)
+            self.allSourcesChanged.emit(self.all_sources)
             # Ensure it's also removed from active sources if present
-            if source in self.active_sources:
-                self.active_sources.remove(source)
-                self.activeSourceChanged.emit(self.active_sources)
+            if source in self.sources:
+                self.sources.remove(source)
+                self.sourcesChanged.emit(self.sources)
+
+    @staticmethod
+    def source_command(command_template):
+        """
+        A decorator to handle oscilloscope source-related commands. It determines the correct sources
+        to use (provided or global), converts Enum members to strings, generates the SCPI command,
+        and executes it.
+
+        Args:
+            command_template (str): A template string for the SCPI command, with '{}' placeholder for source(s).
+
+        Returns:
+            A decorated function.
+        """
+        def decorator(func):
+            def wrapper(self, *sources, **kwargs):
+                # Check if sources is provided and not empty, otherwise use global sources or default to an empty list
+                if sources:
+                    sources_to_use = sources
+                else:
+                    sources_to_use = self.sources.get_active_sources()
+
+                # Ensure sources_to_use is iterable and not a single enum item
+                if isinstance(sources_to_use, Enum):
+                    sources_to_use = [sources_to_use]
+                elif not isinstance(sources_to_use, Iterable) or isinstance(sources_to_use, str):
+                    sources_to_use = [sources_to_use]
+
+                # Convert Enums to their string values if necessary
+                cleaned_sources = [source.value if isinstance(source, Enum) else source for source in sources_to_use]
+
+                # Generate and execute the SCPI command
+                command = command_template.format(', '.join(cleaned_sources))
+                logger.debug(f"Executing command: {command}")
+                self.write(command)
+
+                # Call the original function with the cleaned source strings
+                return func(self, *cleaned_sources, **kwargs)
+
+            return wrapper
+        return decorator
 
 class Subsystem:
     """
@@ -138,7 +155,7 @@ class Subsystem:
             logger.debug(f"Build method creating {indices} instances")
             return [cls(instr, cmd_prefix, index=idx) for idx in range(1, indices + 1)]
 
-class Instrument(QObject):
+class Instrument(Sources):
     """
     A comprehensive class for interacting with scientific and industrial instruments through VISA, 
     specifically tailored for devices that support the Standard Commands for Programmable Instruments (SCPI) protocol. 
@@ -240,7 +257,7 @@ class Instrument(QObject):
             raise ValueError(f"Invalid data type. Supported types are: {', '.join(valid_types)}")
         self._data_type = type
 
-    def __init__(self, resource_string, **kwargs):
+    def __init__(self, resource_string, sources = None, **kwargs):
         """
         Initializes the instrument connection using the provided VISA resource string.
         
@@ -254,6 +271,7 @@ class Instrument(QObject):
         super().__init__()  # Initialize the QObject base class
         self.resource_string = resource_string
         self.rm = pyvisa.ResourceManager()
+        self.sources = Sources(all_sources) if all_sources else Sources([])
         self.instrument = None
         self._data_mode = 'BINARY'  # Default to BINARY
         self._data_type = 'B'  # Default data type (e.g., for binary data)

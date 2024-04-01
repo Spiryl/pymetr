@@ -1,5 +1,6 @@
 import ast
 import logging
+
 logger = logging.getLogger(__name__)
 from copy import deepcopy
 import ast
@@ -21,14 +22,10 @@ class InstrumentVisitor(ast.NodeVisitor):
             self.instruments[node.name] = {
                 'subsystems': {},
                 'properties': [],
-                'methods': {},  # Initialize methods as a dictionary
+                'methods': {},
                 'sources': []
             }
             self.extract_instrument_info(node)
-
-        elif node.name == 'Sources' and self.current_instrument:
-            logger.debug(f"🔍 Found Sources class in {self.current_instrument} 🔍")
-            self.extract_sources_info(node)
 
         elif 'Subsystem' in bases and self.current_instrument:
             logger.debug(f"🔩 Found Subsystem: {node.name} within {self.current_instrument} 🔩")
@@ -50,25 +47,35 @@ class InstrumentVisitor(ast.NodeVisitor):
 
     def extract_instrument_info(self, node):
         for item in node.body:
-            if isinstance(item, ast.FunctionDef):
-                logger.debug(f"🔍 Found method in {self.current_instrument}: {item.name} 🔍")
-                if not item.name.startswith('_'):
-                    method_info = {
-                        'args': [arg.arg for arg in item.args.args if arg.arg != 'self'],
-                        'return': self.get_return_annotation(item),
-                        'is_source_method': self.is_source_method(item)  # Check if the method uses @source_command decorator
-                    }
-                    self.instruments[self.current_instrument]['methods'][item.name] = method_info
+            if isinstance(item, ast.FunctionDef) and not item.name.startswith('_'):
+                self.extract_method_info(item)
             elif isinstance(item, ast.Assign):
-                if isinstance(item.value, ast.Call) and isinstance(item.value.func, ast.Name) and item.value.func.id == 'Sources':
-                    sources_list = self.get_ast_node_value(item.value.args[0])
-                    self.instruments[self.current_instrument]['sources'] = sources_list
+                self.process_assignment(item)
+
+    def extract_method_info(self, item):
+        logger.debug(f"Found method in {self.current_instrument}: {item.name}")
+        method_info = {
+            'args': [arg.arg for arg in item.args.args if arg.arg != 'self'],
+            'return': self.get_return_annotation(item),
+            'is_source_method': self.is_source_method(item)
+        }
+        self.instruments[self.current_instrument]['methods'][item.name] = method_info
 
     def is_source_method(self, node):
         for decorator in node.decorator_list:
-            if isinstance(decorator, ast.Call) and isinstance(decorator.func, ast.Name) and decorator.func.id == 'source_command':
+            if (isinstance(decorator, ast.Call) and 
+                isinstance(decorator.func, ast.Attribute) and
+                decorator.func.attr == 'source_command'):
                 return True
         return False
+
+    def process_assignment(self, item):
+        if (isinstance(item.value, ast.Call) and 
+                isinstance(item.value.func, ast.Name) and 
+                item.value.func.id == 'Sources'):
+            sources_list = self.get_ast_node_value(item.value.args[0])
+            self.instruments[self.current_instrument]['sources'] = sources_list
+            logger.debug(f"Captured Sources for {self.current_instrument}: {sources_list}")
 
     def get_return_annotation(self, node):
         if node.returns:
@@ -78,13 +85,6 @@ class InstrumentVisitor(ast.NodeVisitor):
                 return f"{node.returns.value.id}.{node.returns.attr}"
         return None
 
-    def extract_sources_info(self, node):
-        for item in node.body:
-            if isinstance(item, ast.Assign):
-                if isinstance(item.value, ast.List):
-                    sources_list = [el.value for el in item.value.elts if isinstance(el, ast.Constant)]
-                    self.instruments[self.current_instrument]['sources'] = sources_list
-
     def handle_indexed_subsystem(self, node, subsystem_info, properties_methods):
         for index in range(1, subsystem_info['indices'] + 1):
             logger.debug(f"📐 Indexing {index} in {node.name} 📐")
@@ -92,20 +92,44 @@ class InstrumentVisitor(ast.NodeVisitor):
             self.instruments[self.current_instrument]['subsystems'][node.name]['instances'][index] = instance_info
 
     def visit_Assign(self, node):
-        if self.current_instrument and isinstance(node.value, ast.Call) and getattr(node.value.func, 'attr', '') == 'build':
-            logger.debug(f"🏗 Parsing build call in {self.current_instrument} 🏗")
-            subsystem_class_name = node.value.func.value.id
-            indices = next((self.get_ast_node_value(kw.value) for kw in node.value.keywords if kw.arg == 'indices'), 1)
+        if self.current_instrument:
+            if isinstance(node.value, ast.Call) and getattr(node.value.func, 'attr', '') == 'build':
+                logger.debug(f"🏗 Parsing build call in {self.current_instrument} 🏗")
+                subsystem_class_name = node.value.func.value.id
+                indices = next((self.get_ast_node_value(kw.value) for kw in node.value.keywords if kw.arg == 'indices'), 1)
 
-            subsystem_info = {
-                'indices': indices,
-                'needs_indexing': indices > 1,
-                'properties': [],
-                'methods': [],
-                'instances': {} if indices > 1 else None
-            }
-            self.instruments[self.current_instrument]['subsystems'][subsystem_class_name] = subsystem_info
-            logger.debug(f"🛠 Subsystem {subsystem_class_name} initialized with indexing: {indices > 1} 🛠")
+                subsystem_info = {
+                    'indices': indices,
+                    'needs_indexing': indices > 1,
+                    'properties': [],
+                    'methods': [],
+                    'instances': {} if indices > 1 else None
+                }
+                self.instruments[self.current_instrument]['subsystems'][subsystem_class_name] = subsystem_info
+                logger.debug(f"🛠 Subsystem {subsystem_class_name} initialized with indexing: {indices > 1} 🛠")
+            elif (isinstance(node.value, ast.Call) and
+                isinstance(node.value.func, ast.Name) and
+                node.value.func.id == 'Sources'):
+                logger.debug(f"Found Sources initialization: {ast.dump(node.value)}")
+                sources_list = []
+                
+                # Check for positional arguments
+                if node.value.args:
+                    sources_arg = node.value.args[0]
+                    if isinstance(sources_arg, ast.List):
+                        sources_list = [el.value for el in sources_arg.elts]
+                
+                # Check for keyword arguments
+                sources_keyword = next((kw for kw in node.value.keywords if kw.arg == 'sources'), None)
+                if sources_keyword and isinstance(sources_keyword.value, ast.List):
+                    sources_list = [el.value for el in sources_keyword.value.elts]
+                
+                if sources_list:
+                    self.instruments[self.current_instrument]['sources'] = sources_list
+                    logger.debug(f"Captured Sources for {self.current_instrument}: {sources_list}")
+                else:
+                    logger.warning(f"No sources found in Sources initialization for {self.current_instrument}")
+        
         super().generic_visit(node)
 
     def get_ast_node_value(self, node):
@@ -115,6 +139,8 @@ class InstrumentVisitor(ast.NodeVisitor):
             return node.id
         elif isinstance(node, ast.List):
             return [self.get_ast_node_value(el) for el in node.elts]
+        elif isinstance(node, ast.Dict):
+            return {key.value: self.get_ast_node_value(value) for key, value in zip(node.keys, node.values)}
         elif isinstance(node, ast.UnaryOp):
             operand = self.get_ast_node_value(node.operand)
             if isinstance(node.op, ast.UAdd):
@@ -123,6 +149,7 @@ class InstrumentVisitor(ast.NodeVisitor):
                 return -operand
         else:
             logger.error(f"Unhandled node type: {type(node).__name__}")
+            logger.debug(f"Node dump: {ast.dump(node)}")
             return None
 
 class SubsystemVisitor(ast.NodeVisitor):
@@ -147,38 +174,37 @@ class SubsystemVisitor(ast.NodeVisitor):
             prop_class_name = node.value.func.id
             if prop_class_name in ['SelectProperty', 'ValueProperty', 'SwitchProperty', 'StringProperty', 'DataProperty']:
                 logger.debug(f"✨ Found a property: {prop_class_name} ✨")
-                prop_details = self.parse_property_details(node.value, prop_class_name)
+                prop_name = node.targets[0].id
+                prop_details = self.parse_property_details(node.value, prop_class_name, prop_name)
                 if prop_details:
-                    prop_name = node.targets[0].id
-                    prop_details['name'] = prop_name
                     if self.current_subsystem:
                         prop_details['subsystem'] = self.current_subsystem
                     self.properties_methods['properties'].append(prop_details)
                     logger.debug(f"📝 Added property details for {prop_name}: {prop_details} 📝")
         super().generic_visit(node)
 
-    def parse_property_details(self, call_node, prop_class_name):
+    def parse_property_details(self, call_node, prop_class_name, prop_name):
         logger.debug(f"🧐 Parsing property details for type: {prop_class_name} 🧐")
-        details = {'type': prop_class_name}
-        # Handle args for SelectProperty specifically
+        details = {'type': prop_class_name, 'name': prop_name}
+        
         if prop_class_name == 'SelectProperty':
-            choices_arg = next((arg for arg in call_node.args if isinstance(arg, ast.List)), None)
-            if choices_arg:
-                details['choices'] = [self.get_ast_node_value(el) for el in choices_arg.elts]
+            if len(call_node.args) > 1:
+                choices_arg = call_node.args[1]
+                if isinstance(choices_arg, ast.List):
+                    details['choices'] = [self.get_ast_node_value(el) for el in choices_arg.elts]
+                    logger.debug(f"🔄 Choices set for SelectProperty: {details['choices']} 🔄")
 
-        # Process keywords for all properties
-        for keyword in call_node.keywords:
-            key = keyword.arg
-            if key == 'doc_str':
-                details[key] = self.get_ast_node_value(keyword.value)
-            elif key in ['type', 'units']:
-                details[key] = self.get_ast_node_value(keyword.value)
-            elif key == 'range':
-                # Special handling for range to ensure it captures a tuple/list
-                details[key] = [self.get_ast_node_value(limit) for limit in keyword.value.elts]
-            elif key == 'choices':
-                # This handles dynamic choices provided through keywords
-                details[key] = [self.get_ast_node_value(choice) for choice in keyword.value.elts]
+        elif prop_class_name == 'ValueProperty':
+            for kw in call_node.keywords:
+                if kw.arg in ['type', 'range', 'units', 'doc_str']:
+                    details[kw.arg] = self.get_ast_node_value(kw.value)
+                    logger.debug(f"🔧 Setting {kw.arg}: {details[kw.arg]} 🔧")
+
+        elif prop_class_name in ['SwitchProperty', 'StringProperty', 'DataProperty']:
+            logger.debug(f"⚙️ No additional processing needed for {prop_class_name} ⚙️")
+
+        else:
+            logger.warning(f"🚨 Unsupported property class: {prop_class_name} 🚨")
 
         return details
 
@@ -250,25 +276,17 @@ if __name__ == "__main__":
         prop_type = prop.get('type')
         summary_parts = [f"{prop['name']} ({prop_type})"]
         if 'choices' in prop:
-            choices_str = ", ".join(prop['choices'])
-            summary_parts.append(f"[Choices: {choices_str}]")
+            if isinstance(prop['choices'][0], str):
+                choices_str = ", ".join(prop['choices'])
+                summary_parts.append(f"[Choices: {choices_str}]")
+            else:
+                summary_parts.append(f"[Choices: {len(prop['choices'])} items]")
         elif 'range' in prop:
             range_str = f"[Range: {prop['range'][0]} to {prop['range'][1]}]"
             summary_parts.append(range_str)
+        if 'units' in prop:
+            summary_parts.append(f"[Units: {prop['units']}]")
         return " ".join(summary_parts)
-
-    def format_property_summary(prop):
-        """Formats a property summary based on its type and details."""
-        if prop['type'] == 'select_property':
-            return f"{prop['name']} (list) [Choices: {', '.join(prop['choices'])}]"
-        elif prop['type'] == 'switch_property':
-            return f"{prop['name']} (bool)"
-        elif prop['type'] in ['value_property', 'int', 'float']:
-            prop_summary = f"{prop['name']} ({prop.get('value_type', prop['type'])})"
-            if 'range' in prop:
-                prop_summary += f" [Range: {prop['range'][0]} to {prop['range'][1]}]"
-            return prop_summary
-        return f"{prop['name']} ({prop['type']})"
     
     # Load a test driver
     path = 'pymetr/instruments/DSOX1204G.py'  
@@ -282,4 +300,4 @@ if __name__ == "__main__":
     visitor.visit(tree)  # First pass to identify structure
 
     print_consolidated_view(visitor.instruments)
-    print(visitor.instruments)
+    #print(visitor.instruments)

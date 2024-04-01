@@ -241,18 +241,6 @@ if __name__ == "__main__":
 
     def format_property_summary(prop):
         """Formats a property summary based on its type and details."""
-        prop_type = prop.get('type')
-        summary_parts = [f"{prop['name']} ({prop_type})"]
-        if 'choices' in prop:
-            choices_str = ", ".join(prop['choices'])
-            summary_parts.append(f"[Choices: {choices_str}]")
-        elif 'range' in prop:
-            range_str = f"[Range: {prop['range'][0]} to {prop['range'][1]}]"
-            summary_parts.append(range_str)
-        return " ".join(summary_parts)
-
-    def format_property_summary(prop):
-        """Formats a property summary based on its type and details."""
         if prop['type'] == 'SelectProperty':
             return f"{prop['name']} (list) [Choices: {', '.join(prop['choices'])}]"
         elif prop['type'] == 'SwitchProperty':

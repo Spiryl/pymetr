@@ -1,49 +1,9 @@
 import logging
-<<<<<<< Updated upstream
-from enum import Enum
-=======
 from collections.abc import Iterable
->>>>>>> Stashed changes
 import numpy as np
 
 logger = logging.getLogger(__name__)
-<<<<<<< Updated upstream
-from pymetr import Instrument, Subsystem, switch_property, select_property, value_property, string_property, data_property
-
-
-def source_command(command_template):
-    """
-    A decorator to handle oscilloscope source-related commands. It determines the correct sources
-    to use (provided or global), converts Enum members to strings, generates the SCPI command,
-    and executes it.
-
-    Args:
-        command_template (str): A template string for the SCPI command, with '{}' placeholder for source(s).
-
-    Returns:
-        A decorated function.
-    """
-    def decorator(func):
-        def wrapper(self, *sources, **kwargs):
-            # If no sources are explicitly provided, use the global sources or default to an empty list
-            sources_to_use = sources if sources else self._sources or []
-
-            # Convert Enums to their string values if necessary
-            cleaned_sources = [source.value if isinstance(source, Enum) else source for source in sources_to_use]
-
-            # Generate and execute the SCPI command
-            command = command_template.format(', '.join(cleaned_sources))
-            logger.debug(f"Executing command: {command}")
-            self.write(command)
-
-            # Call the original function with the cleaned source strings
-            return func(self, *cleaned_sources, **kwargs)
-
-        return wrapper
-    return decorator
-=======
 from pymetr import Instrument, Subsystem, SwitchProperty, SelectProperty, ValueProperty, StringProperty, DataProperty, Sources
->>>>>>> Stashed changes
 
 class Oscilloscope(Instrument):
     """
@@ -67,67 +27,44 @@ class Oscilloscope(Instrument):
         self.acquire = Acquire.build(self, ':ACQuire')
         self.channel = Channel.build(self, ':CHANnel', indices=4)
 
+    def set_format(self, format):
+        if format in ["ASCII", "BYTE", "WORD"]:
+            self._format = format
+            logger.debug(f"Data format set to {format}")
+        else:
+            logger.debug("Invalid data format.")
+
     def set_sources(self, *sources):
-        """
-        Sets the active sources globally.
-        """
         self.sources.set_active_sources(*sources)
         self.blank()
         self.view(sources)
 
     @Sources.source_command(":AUTOScale {}")
     def autoscale(self, *sources):
-        """
-        Automatically scales the oscilloscope to optimize the display of specified sources.
-        """
         pass
 
     @Sources.source_command(":DIGItize {}")
     def digitize(self, *sources):
-        """
-        Digitizes the specified sources on the oscilloscope.
-        """
         pass
 
     @Sources.source_command(":VIEW {}")
     def view(self, *sources):
-        """
-        Turns on the display for specified sources.
-        """
         pass
 
     @Sources.source_command(":BLANK {}")
     def blank(self, *sources):
-        """
-        Turns off the display for specified sources.
-        """
         pass
 
     def run(self):
-        """
-        Starts repetitive waveform acquisitions.
-        """
-        logger.debug("Engaging continuous waveform acquisition.")
         self.write(":RUN")
 
     def stop(self):
-        """
-        Stops waveform acquisition.
-        """
-        logger.debug("Halting continuous waveform acquisition.")
         self.write(":STOP")
 
     def single(self):
-        """
-        Initiates a single waveform acquisition.
-        """
-        logger.debug("Initiating single waveform acquisition.")
         self.write(":SINGLE")
 
     def fetch_preamble(self):
-        """
-        Fetches and parses the preamble from the instrument.
-        """
         logger.debug("Attempting to fetch preamble...")
         try:
             preamble_str = self.waveform.preamble
@@ -138,9 +75,6 @@ class Oscilloscope(Instrument):
             logger.error(f'Issue fetching or parsing preamble: {e}')
 
     def fetch_time(self, source=None):
-        """
-        Returns the time array for the waveform data.
-        """
         logger.debug(f"Fetching time for source: {source}")
         if source:
             self.waveform.source = source
@@ -185,31 +119,6 @@ class Oscilloscope(Instrument):
             voltages = waveform_data
         else:
             raise ValueError(f"Unsupported data format: {self.format}")
-<<<<<<< Updated upstream
-        if self._format in ["WORD"]:
-            voltages = (voltages / 2**4) # ? Only 12 out of 16 bits MSB aligned 
-        return voltages
-
-    def fetch_trace(self):
-        """
-        Fetches trace data from the oscilloscope, utilizing global settings for sources
-        and data format if set; otherwise, defaults to fetching from displayed channels.
-        """
-        
-        trace_data_dict = {}
-        sources_to_fetch = self._sources if self._sources else [
-            f"CH{num}" for num in range(1, 5) if self.channel[num-1].display == '1'
-        ]
-        logger.info(f"Fetching traces for sources: {sources_to_fetch}")
-
-        self.digitize(*sources_to_fetch)
-        self.query_operation_complete()  # Ensures the oscilloscope is ready
-
-        for source in sources_to_fetch:
-            data_range = self.fetch_time(source)  # Fetches time base for the source
-            data_values = self.fetch_data(source)  # Fetches waveform data adjusted for probe attenuation
-            
-=======
         
         return voltages
     
@@ -225,18 +134,11 @@ class Oscilloscope(Instrument):
         for source in sources:
             data_range = self.fetch_time(source)
             data_values = self.fetch_data(source)
->>>>>>> Stashed changes
             trace_data_dict[source] = {
                 'data': data_values,
                 'range': data_range,
                 'visible': True,
             }
-<<<<<<< Updated upstream
-        
-        self.trace_data_ready.emit(trace_data_dict) # We meed o include this to use the GUI
-        return trace_data_dict # This is for using a script
-=======
->>>>>>> Stashed changes
 
         self.trace_data_ready.emit(trace_data_dict)  # Emit the trace data for the GUI
         return trace_data_dict  # For scripting use

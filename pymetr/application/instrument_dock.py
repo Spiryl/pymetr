@@ -1,7 +1,6 @@
 #  pymetr/gui/instrument_dock.py
 import logging
 logger = logging.getLogger()
-
 import os
 os.environ['PYQTGRAPH_QT_LIB'] = 'PySide6'
 
@@ -41,10 +40,14 @@ class InstrumentDock(QDockWidget):
         Loads the instrument driver from the given _driver.
         """
         module_name = os.path.splitext(os.path.basename(_driver))[0]
+        logger.debug(f"Module name: {module_name}")
         spec = importlib.util.spec_from_file_location(module_name, _driver)
+        logger.debug(f"Spec: {spec}")
         module = importlib.util.module_from_spec(spec)
+        logger.debug(f"Module before exec_module: {module}")
         try:
             spec.loader.exec_module(module)
+            logger.debug(f"Module after exec_module: {module}")
             return module
         except Exception as e:
             logger.error(f"Error loading instrument driver '{_driver}': {e}")
@@ -99,7 +102,7 @@ class InstrumentDock(QDockWidget):
             # Placeholder for additional details to be added later
         }
 
-        _driver = f"pymetr/instruments/{model_number}.py"
+        _driver = f"pymetr/instruments/{model_number.lower()}.py"
         logger.info(f"Looking for driver: {_driver}")
         if not os.path.exists(_driver):
             logger.info(f"No driver found for model {model_number}. Please select a driver file.")
@@ -113,86 +116,87 @@ class InstrumentDock(QDockWidget):
                 self.initialize_instrument(module, selected_resource, unique_id, _driver)
 
     def initialize_instrument(self, module, selected_resource, unique_id, _driver):
-        """
-        Initializes the instrument using the loaded driver module, opens a connection,
-        and sets up the instrument parameter UI using the GuiFactory.
-        """
-        instr_class = None
-        logger.info(f"Initializing instrument with module: {module}")
+        instr_class = self.get_instrument_class_from_module(module)
+        if not instr_class:
+            logger.error(f"Driver module for {unique_id} does not support instance creation.")
+            return
 
-        # Identify the correct instrument class from the module
+        instr = self.create_instrument_instance(instr_class, selected_resource, unique_id)
+        if not instr:
+            return
+
+        factory = InstrumentFactory()
+        instrument_data = factory.create_instrument_data_from_driver(_driver)
+
+        self.setup_parameter_tree(instrument_data, unique_id)
+        self.setup_method_buttons(instrument_data['methods'], instr)  # Pass the instrument instance to setup_method_buttons
+        self.setup_sources_group(instrument_data['sources'])
+
+        self.instruments[unique_id] = {
+            'instance': instr,
+            'parameters': self.parameters,
+            'fetch_thread': self.create_fetch_thread(instr),
+            'parameter_path_map': self.parameter_path_map,
+            'methods': instrument_data['methods'],
+            'sources': instrument_data['sources']
+        }
+        logger.info(f"Instrument {unique_id} added to the tracking dictionary.")
+
+        self.synchronize_instrument(unique_id)
+        self.connect_signals_and_slots(unique_id)
+        self.start_fetch_thread(unique_id)
+        self.instrument_connected.emit(unique_id)
+
+    def get_instrument_class_from_module(self, module):
         for attr_name in dir(module):
             attr = getattr(module, attr_name)
-            logger.info(f"Inspecting attribute: {attr}, Name: {attr_name}")
             if isinstance(attr, type) and issubclass(attr, Instrument) and attr != Instrument:
-                instr_class = attr
-                logger.info(f"Instrument class found: {instr_class.__name__}")
-                break
+                logger.info(f"Instrument class found: {attr.__name__}")
+                return attr
+        return None
 
-        if instr_class:
-            try:
-                # Build the instrument model instance and open it up.
-                instr = instr_class(selected_resource)
-                logger.info(f"Instrument instance created: {instr}")
-                instr.open()
-                logger.info(f"Instrument {unique_id} connection opened.")
+    def create_instrument_instance(self, instr_class, selected_resource, unique_id):
+        try:
+            instr = instr_class(selected_resource)
+            logger.info(f"Instrument instance created: {instr}")
+            instr.open()
+            logger.info(f"Instrument {unique_id} connection opened.")
+            return instr
+        except Exception as e:
+            logger.error(f"Failed to create instrument instance for {unique_id}: {e}")
+            return None
 
-                # Set up the instrument control tree
-                factory.set_current_instrument(instr)
-                instrument_data = factory.create_instrument_data_from_driver(_driver)
+    def setup_parameter_tree(self, instrument_data, unique_id):
+        self.parameters_dict = instrument_data['parameter_tree']
+        self.parameter_path_map = self.extract_parameter_paths(self.parameters_dict)
+        logger.info(f"Parameter path map for {unique_id}: {self.parameter_path_map}")
+        self.parameters = Parameter.create(name='params', type='group', children=self.parameters_dict)
+        self.setup_parameters(self.parameters)
 
-                self.parameters_dict = instrument_data['parameter_tree']
-                methods_dict = instrument_data['methods']
-                sources_list = instrument_data['sources']
+    def setup_method_buttons(self, method_names, instr):
+        for method_name in method_names:
+            if method_name in ['fetch_trace']:
+                method_func = getattr(instr, method_name)  # Get the actual method from the instrument instance
+                self.add_action_button(method_name, method_func)
 
-                logger.info(f"Found sources: {sources_list}")
-                logger.info(f"Found methods: {methods_dict}")
+    def setup_sources_group(self, sources_list):
+        sources_group = {
+            'name': 'Sources',
+            'type': 'group',
+            'children': [{'name': source, 'type': 'bool', 'value': False} for source in sources_list]
+        }
+        self.parameters_dict.insert(0, sources_group)
 
-                # Create action buttons for instrument methods
-                for method_name, method_func in methods_dict.items():
-                    if method_name in ['fetch_trace']:
-                        self.add_action_button(method_name, method_func)
+    def create_fetch_thread(self, instr):
+        return TraceDataFetcherThread(instr)
 
-                # We need to keep a map between parameters and properties
-                parameter_path_map = self.extract_parameter_paths(self.parameters_dict)
-                logger.info(f"Parameter path map for {unique_id}: {parameter_path_map}")
+    def connect_signals_and_slots(self, unique_id):
+        self.instruments[unique_id]['fetch_thread'].trace_data_ready.connect(lambda data: self.trace_data_ready.emit(data, unique_id))
+        self.parameters.sigTreeStateChanged.connect(self.create_parameter_change_handler(unique_id))
+        self.instruments[unique_id].source_changed.connect(self.instruments[unique_id].sources.set_active_sources)
 
-                parameters = Parameter.create(name='params', type='group', children=self.parameters_dict)
-                self.setup_parameters(parameters)
-
-                fetchDataThread = TraceDataFetcherThread(instr)
-                self.instruments[unique_id]['fetch_thread'] = fetchDataThread
-
-                # Add it to the Captain's log.
-                self.instruments[unique_id] = {
-                    'instance': instr,
-                    'parameters': parameters,
-                    'fetch_thread': fetchDataThread,
-                    'parameter_path_map': parameter_path_map,
-                    'methods': methods_dict,
-                    'sources': sources_list
-                }
-                logger.info(f"Instrument {unique_id} added to the tracking dictionary.")
-
-                # See if we can sync it up
-                self.synchronize_instrument(unique_id)
-
-                # Connect signals to slots for plot updates.
-                fetchDataThread.trace_data_ready.connect(lambda data: self.trace_data_ready.emit(data, unique_id))
-
-                # Connect the tree signals to the properties.
-                parameters.sigTreeStateChanged.connect(self.create_parameter_change_handler(unique_id))
-
-                # Start the fetch data thread.
-                fetchDataThread.start()
-
-                # Emit signal to notify that the instrument is successfully connected
-                self.instrument_connected.emit(unique_id)
-
-            except Exception as e:
-                logger.error(f"Failed to initialize instrument {unique_id}: {e}")
-        else:
-            logger.error(f"Driver module for {unique_id} does not support instance creation.")
+    def start_fetch_thread(self, unique_id):
+        self.instruments[unique_id]['fetch_thread'].start()
 
     def synchronize_instrument(self, unique_id):
         parameters = self.instruments[unique_id]['parameters']
@@ -268,6 +272,9 @@ class InstrumentDock(QDockWidget):
         if path_map is None:
             path_map = {}
         for item in tree_dict:
+            if 'name' not in item:
+                logger.warning(f"Skipping item without 'name' key: {item}")
+                continue
             current_path = f"{parent_path}.{item['name']}" if parent_path else item['name']
             if 'children' in item:
                 logger.info(f"Traversing into children of '{current_path}'")
@@ -346,9 +353,9 @@ class InstrumentDock(QDockWidget):
                     logger.info(f"Source {param_name} changed to {data}")
                     # Handle the source checkbox state change here
                     if data:
-                        self.add_source(param_name, unique_id)
+                        self.instruments[unique_id].add_source(param_name, unique_id)
                     else:
-                        self.remove_source(param_name, unique_id)
+                        self.instruments[unique_id].remove_source(param_name, unique_id)
                 else:
                     # For non-action parameters, handle them as usual
                     full_param_path = self.construct_parameter_path(param).lstrip("params.")  # Normalize the parameter path
@@ -364,3 +371,17 @@ class InstrumentDock(QDockWidget):
                     else:
                         logger.error(f"Property path missing for parameter: {param_name}")
         return parameter_changed
+    
+if __name__ == "__main__":
+    from PySide6.QtWidgets import QApplication
+    from PyMetr import Instrument
+    import sys
+    app = QApplication(sys.argv)
+
+    resource = Instrument.select_instrument("TCPIP?*::INSTR")
+    dock = InstrumentDock()
+    dock.setup_instrument(resource)
+
+    # Add any additional testing or debugging code here
+
+    sys.exit(app.exec())
