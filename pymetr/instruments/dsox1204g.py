@@ -17,7 +17,8 @@ class Oscilloscope(Instrument):
         logger.info("Initializing Oscilloscope with resource string: %s", resource_string)
 
         self._format = "ASCII"
-        self.sources = Sources(['CHAN1', 'CHAN2', 'CHAN3', 'CHAN4', 'FUNC', 'MATH', 'BUS', 'FFT', 'MEMORY', 'EXT'])
+        # The following and the init method should work with the class visitor and the code?!
+        self.sources = Sources(['CHAN1', 'CHAN2', 'CHAN3', 'CHAN4', 'MATH', 'FFT'])
 
         # Create subsystem instances
         self.waveform = Waveform.build(self, ':WAVeform')
@@ -27,6 +28,9 @@ class Oscilloscope(Instrument):
         self.acquire = Acquire.build(self, ':ACQuire')
         self.channel = Channel.build(self, ':CHANnel', indices=4)
 
+        # Current default setting
+        # self.sources.source = self.waveform.source
+
     def set_format(self, format):
         if format in ["ASCII", "BYTE", "WORD"]:
             self._format = format
@@ -35,9 +39,10 @@ class Oscilloscope(Instrument):
             logger.debug("Invalid data format.")
 
     def set_sources(self, *sources):
-        self.sources.set_active_sources(*sources)
+        self.sources.source(*sources)
         self.blank()
         self.view(sources)
+        self.source_changed.emit(sources)  # Emit the signal when sources change
 
     @Sources.source_command(":AUTOScale {}")
     def autoscale(self, *sources):
@@ -130,6 +135,9 @@ class Oscilloscope(Instrument):
         
         self.query_operation_complete() # let it digitize
 
+        if not sources:
+            sources = self.sources.source
+
         trace_data_dict = {}
         for source in sources:
             data_range = self.fetch_time(source)
@@ -187,7 +195,7 @@ class Channel(Subsystem):
     """
     coupling = SelectProperty(":COUPling", ['AC', 'DC'], "Coupling mode of the channel")
     display = SwitchProperty(":DISPlay", "Display state of the channel")
-    scale = ValueProperty(":SCALe", type="float", range=[1e-3, 1e3], units="V/div", doc_str="Vertical scale of the channel")
+    scale = ValueProperty(":SCALe", type="float", range=[1e-3, 1e3], units="V", doc_str="Vertical scale of the channel")
     offset = ValueProperty(":OFFset", type="float", range=[-1e2, 1e2], units="V", doc_str="Vertical offset of the channel")
     probe = ValueProperty(":PROBe", type="float", doc_str="Probe attenuation factor")
 
@@ -197,7 +205,7 @@ class Timebase(Subsystem):
     """
     mode = SelectProperty(":MODE", ['MAIN', 'WIND', 'XY', 'ROLL'], "Timebase mode")
     reference = SelectProperty(":REFerence", ['LEFT', 'CENTer', 'RIGHT'], "Timebase reference position")
-    scale = ValueProperty(":SCALe", type="float", range=[1e-9, 1e0], units="s/div", doc_str="Timebase scale")
+    scale = ValueProperty(":SCALe", type="float", range=[1e-9, 1e0], units="s", doc_str="Timebase scale")
     position = ValueProperty(":POSition", type="float", range=[-5e0, 5e0], units="s", doc_str="Timebase position")
     range = ValueProperty(":RANGe", type="float", range=[2e-9, 50e0], units="s", doc_str="Timebase range")
 

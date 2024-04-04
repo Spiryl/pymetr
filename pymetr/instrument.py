@@ -22,14 +22,13 @@ class Sources(QObject):
         allSourcesChanged (Signal): Emitted when the list of available sources changes.
     """
     # Define signals
-    sourcesChanged = Signal(list)
-    allSourcesChanged = Signal(list)
+    source_changed = Signal(list)
 
-    def __init__(self, all_sources):
+    def __init__(self, sources):
         super().__init__()
-        self.all_sources = all_sources
-        self.sources = []
-        logger.info("Sources initialized with: %s", all_sources)
+        self.sources = sources
+        self._source = []
+        logger.info("Sources initialized with: %s", sources)
 
     @property
     def source(self):
@@ -39,27 +38,22 @@ class Sources(QObject):
     @source.setter
     def source(self, sources):
         """Sets the active sources from the available sources."""
-        self.sources = [source for source in sources if source in self.all_sources]
-        logger.debug("Active sources set to: %s", self.sources)
-        self.sourcesChanged.emit(self.sources)
+        self._source = [source for source in sources if source in self.sources]
+        logger.debug("Active source set to: %s", self.source)
+        self.source_changed.emit(self._source)
 
     def add_source(self, source):
         """Adds a source to the list of available sources if it's not already present."""
-        if source not in self.all_sources:
-            self.all_sources.append(source)
+        if source not in self.sources:
+            self.sources.append(source)
             logger.info("Added new source: %s", source)
-            self.allSourcesChanged.emit(self.all_sources)
+            self.source_changed.emit(self._source)
 
     def remove_source(self, source):
-        """Removes a source from the list of available sources."""
-        if source in self.all_sources:
-            self.all_sources.remove(source)
+        if source in self.sources:
+            self.sources.remove(source)
             logger.info("Removed source: %s", source)
-            self.allSourcesChanged.emit(self.all_sources)
-            # Ensure it's also removed from active sources if present
-            if source in self.sources:
-                self.sources.remove(source)
-                self.sourcesChanged.emit(self.sources)
+            self.source_changed.emit(self.source)
 
     @staticmethod
     def source_command(command_template):
@@ -80,7 +74,7 @@ class Sources(QObject):
                 if sources:
                     sources_to_use = sources
                 else:
-                    sources_to_use = self.sources.get_active_sources()
+                    sources_to_use = self.sources.source  # Special implied instance for now
 
                 # Ensure sources_to_use is iterable and not a single enum item
                 if isinstance(sources_to_use, Enum):
@@ -155,7 +149,7 @@ class Subsystem:
             logger.debug(f"Build method creating {indices} instances")
             return [cls(instr, cmd_prefix, index=idx) for idx in range(1, indices + 1)]
 
-class Instrument(Sources):
+class Instrument(QObject):
     """
     A comprehensive class for interacting with scientific and industrial instruments through VISA, 
     specifically tailored for devices that support the Standard Commands for Programmable Instruments (SCPI) protocol. 
@@ -168,38 +162,27 @@ class Instrument(Sources):
 
     # Signal needed to emit for plotting
     trace_data_ready = Signal(object)
-
-    class Status(IntFlag):
+    def __init__(self, resource_string, sources = None, **kwargs):
         """
-        Event Status Register Bits for SCPI Instruments.
-
-        Each bit in the status register represents a specific status or error condition.
-        These are defined according to the IEEE 488.2 standard for SCPI instruments.
+        Initializes the instrument connection using the provided VISA resource string.
+        
+        Parameters:
+            resource_string (str): VISA resource string to identify the instrument.
+            timeout (int): Timeout period in milliseconds.
+            input_buffer_size (int): Size of the input buffer.
+            output_buffer_size (int): Size of the output buffer.
+            **kwargs: Additional keyword arguments for PyVISA's open_resource method.
         """
-
-        OPC = 1 << 0  # Operation Complete
-        """Operation complete bit, set when an operation is finished."""
-
-        RQL = 1 << 1  # Request Control
-        """Request control bit, indicates a device is requesting control."""
-
-        QYE = 1 << 2  # Query Error
-        """Query error bit, set when there is a syntax error in a query command."""
-
-        DDE = 1 << 3  # Device Dependent Error
-        """Device dependent error bit, indicates an error specific to the device's operation."""
-
-        EXE = 1 << 4  # Execution Error
-        """Execution error bit, set when there is an error in executing a command."""
-
-        CME = 1 << 5  # Command Error
-        """Command error bit, set when there is a syntax error in a command."""
-
-        URQ = 1 << 6  # User Request
-        """User request bit, set when there is a user request for service."""
-
-        PON = 1 << 7  # Power On
-        """Power on bit, set when the device is first powered on or reset."""
+        super().__init__()  # Initialize the QObject base class
+        self.resource_string = resource_string
+        self.rm = pyvisa.ResourceManager()
+        self.sources = Sources(sources) if sources else Sources([])
+        self.instrument = None
+        self._data_mode = 'BINARY'  # Default to BINARY
+        self._data_type = 'B'  # Default data type (e.g., for binary data)
+        self.buffer_size = kwargs.pop('buffer_size', 2^16)  # Default buffer size, can be overridden via kwargs
+        self.buffer_type = kwargs.pop('buffer_type', BufferType.io_in | BufferType.io_out)  # Default buffer type, can be overridden
+        logger.debug(f"Initializing Instrument with resource_string: {resource_string}")
 
     @property
     def data_mode(self):
@@ -257,28 +240,6 @@ class Instrument(Sources):
             raise ValueError(f"Invalid data type. Supported types are: {', '.join(valid_types)}")
         self._data_type = type
 
-    def __init__(self, resource_string, sources = None, **kwargs):
-        """
-        Initializes the instrument connection using the provided VISA resource string.
-        
-        Parameters:
-            resource_string (str): VISA resource string to identify the instrument.
-            timeout (int): Timeout period in milliseconds.
-            input_buffer_size (int): Size of the input buffer.
-            output_buffer_size (int): Size of the output buffer.
-            **kwargs: Additional keyword arguments for PyVISA's open_resource method.
-        """
-        super().__init__()  # Initialize the QObject base class
-        self.resource_string = resource_string
-        self.rm = pyvisa.ResourceManager()
-        self.sources = Sources(all_sources) if all_sources else Sources([])
-        self.instrument = None
-        self._data_mode = 'BINARY'  # Default to BINARY
-        self._data_type = 'B'  # Default data type (e.g., for binary data)
-        self.buffer_size = kwargs.pop('buffer_size', 2^16)  # Default buffer size, can be overridden via kwargs
-        self.buffer_type = kwargs.pop('buffer_type', BufferType.io_in | BufferType.io_out)  # Default buffer type, can be overridden
-        logger.debug(f"Initializing Instrument with resource_string: {resource_string}")
-
     @abstractmethod
     def fetch_trace(self):
         """
@@ -315,6 +276,38 @@ class Instrument(Sources):
                     }
         """
         pass
+
+    class Status(IntFlag):
+        """
+        Event Status Register Bits for SCPI Instruments.
+
+        Each bit in the status register represents a specific status or error condition.
+        These are defined according to the IEEE 488.2 standard for SCPI instruments.
+        """
+
+        OPC = 1 << 0  # Operation Complete
+        """Operation complete bit, set when an operation is finished."""
+
+        RQL = 1 << 1  # Request Control
+        """Request control bit, indicates a device is requesting control."""
+
+        QYE = 1 << 2  # Query Error
+        """Query error bit, set when there is a syntax error in a query command."""
+
+        DDE = 1 << 3  # Device Dependent Error
+        """Device dependent error bit, indicates an error specific to the device's operation."""
+
+        EXE = 1 << 4  # Execution Error
+        """Execution error bit, set when there is an error in executing a command."""
+
+        CME = 1 << 5  # Command Error
+        """Command error bit, set when there is a syntax error in a command."""
+
+        URQ = 1 << 6  # User Request
+        """User request bit, set when there is a user request for service."""
+
+        PON = 1 << 7  # Power On
+        """Power on bit, set when the device is first powered on or reset."""
 
     def open(self):
         """

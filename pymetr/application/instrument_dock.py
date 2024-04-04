@@ -160,6 +160,8 @@ class InstrumentDock(QDockWidget):
             instr = instr_class(selected_resource)
             logger.info(f"Instrument instance created: {instr}")
             instr.open()
+            instr.reset()
+            instr.query_operation_complete()
             logger.info(f"Instrument {unique_id} connection opened.")
             return instr
         except Exception as e:
@@ -187,13 +189,19 @@ class InstrumentDock(QDockWidget):
         }
         self.parameters_dict.insert(0, sources_group)
 
+    def update_sources(self, sources, unique_id):
+        instr = self.instruments[unique_id]['instance']
+        # instr["sources"] = sources
+        logger.info(f"Updated active sources for instrument {unique_id}: {sources}")
+
     def create_fetch_thread(self, instr):
         return TraceDataFetcherThread(instr)
 
     def connect_signals_and_slots(self, unique_id):
-        self.instruments[unique_id]['fetch_thread'].trace_data_ready.connect(lambda data: self.trace_data_ready.emit(data, unique_id))
+        instr = self.instruments[unique_id]['instance']
+        instr.trace_data_ready.connect(lambda data: self.trace_data_ready.emit(data, unique_id))
         self.parameters.sigTreeStateChanged.connect(self.create_parameter_change_handler(unique_id))
-        self.instruments[unique_id].source_changed.connect(self.instruments[unique_id].sources.set_active_sources)
+        instr.sources.source_changed.connect(lambda sources: self.update_sources(sources, unique_id))
 
     def start_fetch_thread(self, unique_id):
         self.instruments[unique_id]['fetch_thread'].start()
@@ -228,14 +236,24 @@ class InstrumentDock(QDockWidget):
             for param in param_group.children():
                 full_param_path = f"{path_prefix}.{param.name()}" if path_prefix else param.name()
                 logger.info(f"Processing parameter: {full_param_path}")
-                update_param_value(param, instrument_instance, full_param_path)
+
+                # Check if the parameter is in the "Sources" group
+                if param.parent() and param.parent().name() == "Sources":
+                    # Synchronize the source checkbox state with the current sources.source value
+                    source_name = param.name()
+                    is_selected = source_name in instrument_instance.sources.source
+                    logger.info(f"Synchronizing source '{source_name}' to state: {is_selected}")
+                    param.setValue(is_selected)
+                else:
+                    update_param_value(param, instrument_instance, full_param_path)
+
                 if param.hasChildren():
                     new_path_prefix = full_param_path
                     traverse_and_sync(param, new_path_prefix)
 
         # Start the traversal with the root parameters group
         traverse_and_sync(parameters)
-
+        
     def update_instrument(self, path, value, unique_id):
         """
         Navigate through the instrument's properties/subsystems, including indexed ones,
@@ -348,14 +366,14 @@ class InstrumentDock(QDockWidget):
                             logger.info(f"Executed action method: {param_name}")
                         else:
                             logger.error(f"No method found for action parameter: {param_name}")
-                            # Check if the parameter is in the "Sources" group
+                # Check if the parameter is in the "Sources" group
                 elif param.parent() and param.parent().name() == "Sources":
                     logger.info(f"Source {param_name} changed to {data}")
                     # Handle the source checkbox state change here
                     if data:
-                        self.instruments[unique_id].add_source(param_name, unique_id)
+                        self.instruments[unique_id]['instance'].sources.add_source(param_name)
                     else:
-                        self.instruments[unique_id].remove_source(param_name, unique_id)
+                        self.instruments[unique_id]['instance'].sources.remove_source(param_name)
                 else:
                     # For non-action parameters, handle them as usual
                     full_param_path = self.construct_parameter_path(param).lstrip("params.")  # Normalize the parameter path
