@@ -178,7 +178,7 @@ class Instrument(QObject):
         self.rm = pyvisa.ResourceManager()
         self.sources = Sources(sources) if sources else Sources([])
         self.instrument = None
-        self._data_mode = 'BINARY'  # Default to BINARY
+        self._data_mode = 'ASCII'  # Default to BINARY
         self._data_type = 'B'  # Default data type (e.g., for binary data)
         self.buffer_size = kwargs.pop('buffer_size', 2^16)  # Default buffer size, can be overridden via kwargs
         self.buffer_type = kwargs.pop('buffer_type', BufferType.io_in | BufferType.io_out)  # Default buffer type, can be overridden

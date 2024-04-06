@@ -1,26 +1,14 @@
-import logging
-from collections.abc import Iterable
-import numpy as np
 
-logger = logging.getLogger(__name__)
-from pymetr import Instrument, Subsystem, SwitchProperty, SelectProperty, ValueProperty, StringProperty, DataProperty, Sources
+import numpy as np
+from pymetr import Instrument, Subsystem, SwitchProperty, SelectProperty, ValueProperty, DataProperty, DataBlockProperty, Sources
 
 class Oscilloscope(Instrument):
-    """
-    Represents an oscilloscope instrument.
-    
-    Args:
-        resource_string (str): VISA resource string for connecting to the oscilloscope.
-    """
     def __init__(self, resource_string):
         super().__init__(resource_string)
-        logger.info("Initializing Oscilloscope with resource string: %s", resource_string)
 
-        self._format = "ASCII"
-        # The following and the init method should work with the class visitor and the code?!
+        self._format = "ASCII" # Global data format for all channels
         self.sources = Sources(['CHAN1', 'CHAN2', 'CHAN3', 'CHAN4', 'MATH', 'FFT'])
 
-        # Create subsystem instances
         self.waveform = Waveform.build(self, ':WAVeform')
         self.trigger = Trigger.build(self, ':TRIGger')
         self.timebase = Timebase.build(self, ':TIMebase')
@@ -28,76 +16,56 @@ class Oscilloscope(Instrument):
         self.acquire = Acquire.build(self, ':ACQuire')
         self.channel = Channel.build(self, ':CHANnel', indices=4)
 
-        # Current default setting
-        # self.sources.source = self.waveform.source
+    # Waveform.format must be set for each data source 
+    # we keep a global setting and pull it in fetch data method
+    @property
+    def format(self):
+        return self._format
 
-    def set_format(self, format):
+    @format.setter
+    def format(self, format):
         if format in ["ASCII", "BYTE", "WORD"]:
             self._format = format
-            logger.debug(f"Data format set to {format}")
         else:
-            logger.debug("Invalid data format.")
+            raise ValueError("Invalid data format. Must be 'ASCII', 'BYTE', or 'WORD'.")
 
-    def set_sources(self, *sources):
-        self.sources.source(*sources)
-        self.blank()
-        self.view(sources)
-        self.source_changed.emit(sources)  # Emit the signal when sources change
+# --- Methods ------------------------------------------------------------------------------
 
     @Sources.source_command(":AUTOScale {}")
     def autoscale(self, *sources):
         pass
 
-    @Sources.source_command(":DIGItize {}")
-    def digitize(self, *sources):
-        pass
-
-    @Sources.source_command(":VIEW {}")
-    def view(self, *sources):
-        pass
-
-    @Sources.source_command(":BLANK {}")
-    def blank(self, *sources):
-        pass
-
-    def run(self):
+    def run(self): # Start continuous
         self.write(":RUN")
 
-    def stop(self):
+    def stop(self): # Stop continuous trigger
         self.write(":STOP")
 
-    def single(self):
+    def single(self): # Single trigger
         self.write(":SINGLE")
 
-    def fetch_preamble(self):
-        logger.debug("Attempting to fetch preamble...")
-        try:
-            preamble_str = self.waveform.preamble
-            preamble_values = [float(val) for val in preamble_str.split(',')]
-            self._x_increment, self._x_origin, self._x_reference = preamble_values[4], preamble_values[5], int(preamble_values[6])
-            self._y_increment, self._y_origin, self._y_reference = preamble_values[7], preamble_values[8], int(preamble_values[9])
-        except Exception as e:
-            logger.error(f'Issue fetching or parsing preamble: {e}')
-
     def fetch_time(self, source=None):
-        logger.debug(f"Fetching time for source: {source}")
         if source:
             self.waveform.source = source
 
-        self.waveform.format = self._format
-        self.fetch_preamble()
-        timestamps = (np.arange(self.waveform.points) - self._x_reference) * self._x_increment + self._x_origin
-        return timestamps
+        try:
+            _preamble = self.waveform.preamble
+            self._x_increment, self._x_origin, self._x_reference = _preamble[4], _preamble[5], int(_preamble[6])
+            self._y_increment, self._y_origin, self._y_reference = _preamble[7], _preamble[8], int(_preamble[9])
+            self.waveform.format = self._format
+            timestamps = (np.arange(self.waveform.points) - self._x_reference) * self._x_increment + self._x_origin
+            return timestamps
+        except Exception as e:
+            raise ValueError(f'Issue fetching or parsing preamble: {e}')
 
     def fetch_data(self, source=None):
-        """
-        Fetches and returns waveform data in voltage units.
-        """
-        logger.debug(f"Fetching data for source: {source}")
+
+        # Update measurement source from argument
         if source:
             self.waveform.source = source
 
-        self.waveform.format = self._format
+        # To handle the supported data types we need to define them. 
+        self.waveform.format = self.format
         _unsigned = self.waveform.unsigned
 
         if self._format == "BYTE":
@@ -107,17 +75,14 @@ class Oscilloscope(Instrument):
         else:
             _data_type = None
 
+        # See the DataBlockProperty class documentation
         self.data_mode = "ASCII" if self._format == "ASCII" else "BINARY"
         self.data_type = _data_type if _data_type else 'B'
-        probe_attenuation = 1
 
-        if source.startswith("CHAN"):
-            channel_index = int(source.replace("CHAN", "")) - 1
-            probe_attenuation = int(self.channel[channel_index].probe)
-
-        self.fetch_preamble()
+        # We can grab the data here.
         waveform_data = self.waveform.data
 
+        # Binary data must be scaled
         if self._format in ["BYTE", "WORD"]:
             voltages = ((waveform_data - self._y_reference) * self._y_increment + self._y_origin)
         elif self._format == "ASCII":
@@ -146,41 +111,15 @@ class Oscilloscope(Instrument):
                 'data': data_values,
                 'range': data_range,
                 'visible': True,
+                'label': source,
             }
 
         self.trace_data_ready.emit(trace_data_dict)  # Emit the trace data for the GUI
         return trace_data_dict  # For scripting use
     
-    # def fetch_trace(self, *sources):
-    #     """
-    #     Fetches trace data from the oscilloscope.
-    #     """
-    #     trace_data_dict = {}
-    #     sources_to_fetch = sources or self.sources.get_active_sources() or [
-    #         f"CHAN{num}" for num in range(1, 5) if getattr(self.channel[num-1], 'display', False)
-    #     ]
-
-    #     if not sources_to_fetch:
-    #         logger.warning("No sources specified for fetching traces, and no channels marked as displayed.")
-    #         return trace_data_dict
-        
-    #     logger.info(f"Fetching traces for sources: {', '.join(sources_to_fetch)}")
-    #     self.digitize(*sources_to_fetch)
-    #     self.query_operation_complete()
-
-    #     for source in sources_to_fetch:
-    #         data_range = self.fetch_time(source)
-    #         data_values = self.fetch_data(source)
-    #         trace_data_dict[source] = {
-    #             'data': data_values,
-    #             'range': data_range,
-    #             'visible': True,
-    #         }
-
-    #     self.trace_data_ready.emit(trace_data_dict)  # Emit the trace data for the GUI
-    #     return trace_data_dict  # For scripting use
+# --- Subsystems -----------------------------------------------------------------------------------
     
-class Acquire(Subsystem):
+class Acquire(Subsystem):#
     """
     Manages the acquisition settings of an oscilloscope or similar instrument.
     """
@@ -238,12 +177,12 @@ class Waveform(Subsystem):
     points_mode = SelectProperty(":POINts:MODE", ['NORMal', 'MAXiumum', 'RAW'], "Waveform points mode")
     byte_order = SelectProperty(":BYTeorder", ['LSBFirst', 'MSBFirst'], "Byte order for 16 bit data capture")
     unsigned = SwitchProperty(":UNSigned", "Indicates if the returned data is signed or unsigned")
-    points = ValueProperty(":POINts", type="float", doc_str="Number of trace points to pull")
-    x_increment = ValueProperty(":XINCrement", type="float", doc_str="Waveform X increment")
-    x_origin = ValueProperty(":XORigin", type="float", doc_str="Waveform X origin")
-    x_reference = ValueProperty(":XREFerence", type="int", doc_str="Waveform X reference point")
-    y_increment = ValueProperty(":YINCrement", type="float", doc_str="Waveform Y increment")
-    y_origin = ValueProperty(":YORigin", type="float", doc_str="Waveform Y origin")
-    y_reference = ValueProperty(":YREFerence", type="int", doc_str="Waveform Y reference point")
-    preamble = StringProperty(":PREamble", access='read', doc_str="Preamble info including scale factors and offsets.")
-    data = DataProperty(":DATa", access='read', ieee_header=True, doc_str="Returns the data array of the waveform as a numpy array.")
+    points = ValueProperty(":POINts", type="int", access='write', doc_str="Number of trace points to pull")
+    x_increment = DataProperty(":XINCrement", doc_str="Waveform X increment")
+    x_origin = DataProperty(":XORigin", doc_str="Waveform X origin")
+    x_reference = DataProperty(":XREFerence", doc_str="Waveform X reference point")
+    y_increment = DataProperty(":YINCrement", doc_str="Waveform Y increment")
+    y_origin = DataProperty(":YORigin", doc_str="Waveform Y origin")
+    y_reference = DataProperty(":YREFerence", doc_str="Waveform Y reference point")
+    preamble = DataProperty(":PREamble", access='read', doc_str="Preamble info including scale factors and offsets.")
+    data = DataBlockProperty(":DATa", access='read', ieee_header=True, doc_str="Returns the data array of the waveform as a numpy array.")

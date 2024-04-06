@@ -187,6 +187,11 @@ class SubsystemVisitor(ast.NodeVisitor):
         logger.debug(f"🧐 Parsing property details for type: {prop_class_name} 🧐")
         details = {'type': prop_class_name, 'name': prop_name}
         
+        for kw in call_node.keywords:
+            if kw.arg == 'access':
+                details['access'] = self.get_ast_node_value(kw.value)
+                logger.debug(f"🔑 Access mode set for {prop_name}: {details['access']} 🔑")
+
         if prop_class_name == 'SelectProperty':
             if len(call_node.args) > 1:
                 choices_arg = call_node.args[1]
@@ -286,6 +291,8 @@ if __name__ == "__main__":
             summary_parts.append(range_str)
         if 'units' in prop:
             summary_parts.append(f"[Units: {prop['units']}]")
+        if 'access' in prop:
+            summary_parts.append(f"[Access: {prop['access']}]")
         return " ".join(summary_parts)
     
     # Load a test driver

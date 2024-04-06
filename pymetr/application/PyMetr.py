@@ -114,7 +114,7 @@ class DynamicInstrumentGUI(QMainWindow):
         self.instruments = {} # Instrument Tracker
 
         self.plotWidget = pg.PlotWidget() 
-        self.setCentralWidget(self.plotWidget)  
+        self.setCentralWidget(self.plotWidget)
         
         self.centralControlDock = CentralControlDock(self) 
         self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.centralControlDock)
@@ -190,15 +190,15 @@ class DynamicInstrumentGUI(QMainWindow):
 
 if __name__ == "__main__":
 
-    # sys.argv += ['-platform', 'windows:darkmode=2']
+    sys.argv += ['-platform', 'windows:darkmode=2']
     app = pg.mkQApp("Dynamic Instrument Control Application")
     app.setStyle("Fusion")
 
-    # Load and apply the stylesheet file
-    styleSheetFile = QtCore.QFile("pymetr/application/styles.qss")  # Update the path to where your QSS file is
-    if styleSheetFile.open(QtCore.QFile.ReadOnly | QtCore.QFile.Text):
-        textStream = QtCore.QTextStream(styleSheetFile)
-        app.setStyleSheet(textStream.readAll())
+    # # Load and apply the stylesheet file
+    # styleSheetFile = QtCore.QFile("pymetr/application/styles.qss")  # Update the path to where your QSS file is
+    # if styleSheetFile.open(QtCore.QFile.ReadOnly | QtCore.QFile.Text):
+    #     textStream = QtCore.QTextStream(styleSheetFile)
+    #     app.setStyleSheet(textStream.readAll())
 
     mainWindow = DynamicInstrumentGUI()
     mainWindow.show()

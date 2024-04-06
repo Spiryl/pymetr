@@ -61,8 +61,10 @@ class InstrumentDock(QDockWidget):
         self.parameters = parameters
         self.parameterTree = ParameterTree()
         self.layout.addWidget(self.parameterTree)
-        self.parameterTree.setAlternatingRowColors(False)
+        self.parameterTree.setAlternatingRowColors(True)
         self.parameterTree.setParameters(parameters, showTop=True)
+        self.parameterTree.setDragEnabled(True)  # Enable drag functionality
+        self.parameterTree.setAcceptDrops(True)  # Enable drop functionality
 
     def add_action_button(self, button_text, handler_function):
         """
@@ -88,6 +90,9 @@ class InstrumentDock(QDockWidget):
         model_number = idn_response.split(',')[1].strip().upper()
         serial_number = idn_response.split(',')[2].strip()
         unique_id = f"{model_number}_{serial_number}"
+
+        # Set the dock title to the unique ID of the instrument
+        self.setWindowTitle(unique_id)
 
         logger.info(f"Selected_key: {selected_key}")
         logger.info(f"IDN String: {idn_response}")
@@ -128,8 +133,8 @@ class InstrumentDock(QDockWidget):
         factory = InstrumentFactory()
         instrument_data = factory.create_instrument_data_from_driver(_driver)
 
+        self.setup_method_buttons(instrument_data['methods'], instr) 
         self.setup_parameter_tree(instrument_data, unique_id)
-        self.setup_method_buttons(instrument_data['methods'], instr)  # Pass the instrument instance to setup_method_buttons
         self.setup_sources_group(instrument_data['sources'])
 
         self.instruments[unique_id] = {
@@ -175,10 +180,23 @@ class InstrumentDock(QDockWidget):
         self.parameters = Parameter.create(name='params', type='group', children=self.parameters_dict)
         self.setup_parameters(self.parameters)
 
-    def setup_method_buttons(self, method_names, instr):
-        for method_name in method_names:
-            if method_name in ['fetch_trace']:
-                method_func = getattr(instr, method_name)  # Get the actual method from the instrument instance
+        def update_param_attributes(param_dict):
+            if 'access' in param_dict:
+                param_dict['readonly'] = param_dict['access'] != 'write'
+            if 'range' in param_dict:
+                param_dict['limits'] = param_dict['range']
+            if 'units' in param_dict:
+                param_dict['units'] = param_dict['units']
+            for child_dict in param_dict.get('children', []):
+                update_param_attributes(child_dict)
+
+        for param_dict in self.parameters_dict:
+            update_param_attributes(param_dict)
+
+    def setup_method_buttons(self, methods_dict, instr):
+        for method_name, method_info in methods_dict.items():
+            if method_info.get('is_source_method', False):
+                method_func = getattr(instr, method_name)
                 self.add_action_button(method_name, method_func)
 
     def setup_sources_group(self, sources_list):
@@ -219,6 +237,12 @@ class InstrumentDock(QDockWidget):
             property_path = parameter_path_map.get(full_param_path)
             if property_path:
                 try:
+                    # Check the access mode of the property
+                    access_mode = self.get_property_access_mode(instr, property_path)
+                    if access_mode == 'write':
+                        logger.info(f"Skipping synchronization for write-only property: {param.name()}")
+                        return
+                    
                     # Fetch the property's current value via translate_property_path
                     # Note: translate_property_path is expected to return the property value directly
                     property_value = self.translate_property_path(instr, property_path)

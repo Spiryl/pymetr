@@ -2,10 +2,8 @@
 import logging
 logger = logging.getLogger(__name__)
 import json
-
 import ast
 from pymetr.application.instrument_visitor import InstrumentVisitor
-from pymetr import SelectProperty, StringProperty, ValueProperty, DataProperty, SwitchProperty
 
 class InstrumentFactory:
     def __init__(self):
@@ -46,7 +44,7 @@ class InstrumentFactory:
             for method_name, method_info in class_info.get('methods', {}).items():
                 if method_info['is_source_method']:
                     logger.info(f"🔧 Adding source method: {method_name} 🔧")
-                    methods_dict[method_name] = method_name  # Store the method name instead of the actual method
+                    methods_dict[method_name] = method_info  # Store the method info dictionary
         logger.info("✅ Finished generating the methods dictionary ✅")
         return methods_dict
 

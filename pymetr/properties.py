@@ -186,17 +186,65 @@ class StringProperty(Property):
             logger.debug(f"Setting {self.cmd_str} property to string: {value}")
         else:
             raise AttributeError(f"{self.cmd_str} property is read-only.")
-
+        
 class DataProperty(Property):
     """
-    Represents a property for handling instrument data, such as waveforms or measurement results.
+    Represents a property for handling ASCII data from an instrument.
 
-    This property supports fetching data in various formats (ASCII, binary) and provides options for handling IEEE headers and data conversion.
+    This property supports fetching ASCII data and provides options for handling different delimiters and data conversion.
 
     Args:
         cmd_str (str): The SCPI command string associated with the data property.
         access (str, optional): The access mode of the data property. Can be 'read', 'write', or 'read-write'. Defaults to 'read-write'.
         doc_str (str, optional): The documentation string for the data property. Defaults to an empty string.
+        container (type, optional): The container type to use for the data, e.g., numpy.array. Defaults to numpy.array.
+        converter (callable, optional): A function to convert the data elements to the desired type. Defaults to float.
+        delimiter (str, optional): The delimiter used to separate the data elements in the ASCII response. Defaults to ','.
+    """
+    def __init__(self, cmd_str, access='read-write', doc_str="", container=np.array, converter=float, delimiter=','):
+        super().__init__(cmd_str, doc_str, access)
+        self.container = container
+        self.converter = converter
+        self.delimiter = delimiter
+
+    def getter(self, instance):
+        full_cmd_str = f"{instance.cmd_prefix}{self.cmd_str}?"
+        logger.debug(f"Getting data with command: {full_cmd_str}")
+
+        try:
+            raw_response = instance.instr.query(full_cmd_str)
+            ascii_data = raw_response.strip().split(self.delimiter)
+            data = self.container([self.converter(val) for val in ascii_data])
+            logger.debug(f"Data fetched in ASCII format with {len(data)} elements using delimiter '{self.delimiter}'.")
+            return self.container(data)
+
+        except Exception as e:
+            logger.error(f"Exception while fetching data: {e}")
+            raise
+
+    def setter(self, instance, value):
+        if self.access not in ['write', 'read-write']:
+            raise AttributeError(f"{self.cmd_str} property is read-only.")
+
+        try:
+            full_cmd_str = f"{instance.cmd_prefix}{self.cmd_str}"
+            ascii_data = self.delimiter.join(str(v) for v in value)
+            instance.instr.write(f"{full_cmd_str} {ascii_data}")
+            logger.debug(f"Data sent in ASCII format: {value}")
+        except Exception as e:
+            logger.error(f"Failed to send data with command {full_cmd_str}: {e}")
+            raise e
+
+class DataBlockProperty(Property):
+    """
+    Represents a property for handling instrument data blocks, such as waveforms or measurement results.
+
+    This property supports fetching data blocks in various formats (ASCII, binary) and provides options for handling IEEE headers and data conversion.
+
+    Args:
+        cmd_str (str): The SCPI command string associated with the data block property.
+        access (str, optional): The access mode of the data block property. Can be 'read', 'write', or 'read-write'. Defaults to 'read-write'.
+        doc_str (str, optional): The documentation string for the data block property. Defaults to an empty string.
         container (type, optional): The container type to use for the data, e.g., numpy.array. Defaults to numpy.array.
         converter (callable, optional): A function to convert the data elements to the desired type. Defaults to float.
         ieee_header (bool, optional): Specifies whether the instrument's response includes an IEEE header. Defaults to False.
