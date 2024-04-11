@@ -137,6 +137,11 @@ class InstrumentDock(QDockWidget):
         self.setup_parameter_tree(instrument_data, unique_id)
         self.setup_sources_group(instrument_data['sources'])
 
+        # self.instrument_connected.emit(unique_id)
+        syncInstrumentButton = QPushButton(f"Sync {unique_id}")
+        syncInstrumentButton.clicked.connect(lambda: self.synchronize_instrument(unique_id))
+        self.layout.addWidget(syncInstrumentButton)
+
         self.instruments[unique_id] = {
             'instance': instr,
             'parameters': self.parameters,
@@ -147,10 +152,10 @@ class InstrumentDock(QDockWidget):
         }
         logger.info(f"Instrument {unique_id} added to the tracking dictionary.")
 
-        self.synchronize_instrument(unique_id)
+        # self.synchronize_instrument(unique_id)
         self.connect_signals_and_slots(unique_id)
         self.start_fetch_thread(unique_id)
-        self.instrument_connected.emit(unique_id)
+        
 
     def get_instrument_class_from_module(self, module):
         for attr_name in dir(module):
@@ -237,11 +242,11 @@ class InstrumentDock(QDockWidget):
             property_path = parameter_path_map.get(full_param_path)
             if property_path:
                 try:
-                    # Check the access mode of the property
-                    access_mode = self.get_property_access_mode(instr, property_path)
-                    if access_mode == 'write':
-                        logger.info(f"Skipping synchronization for write-only property: {param.name()}")
-                        return
+                    # # Check the access mode of the property
+                    # access_mode = self.get_property_access_mode(instr, property_path)
+                    # if access_mode == 'write':
+                    #     logger.info(f"Skipping synchronization for write-only property: {param.name()}")
+                    #     return
                     
                     # Fetch the property's current value via translate_property_path
                     # Note: translate_property_path is expected to return the property value directly

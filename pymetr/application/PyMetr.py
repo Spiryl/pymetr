@@ -11,15 +11,53 @@ import os
 os.environ['PYQTGRAPH_QT_LIB'] = 'PySide6'
 import sys
 import numpy as np
+import inspect
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtCore, QtGui
-from PySide6.QtGui import QColor
+from PySide6.QtGui import QColor, QAction
 from PySide6.QtWidgets import QDialog, QVBoxLayout, QListWidget, QDialogButtonBox, QDockWidget, QPushButton
 from PySide6.QtWidgets import QWidget, QMainWindow, QFileDialog, QComboBox, QSizePolicy
+from PySide6.QtWidgets import QMenuBar
 from contextlib import contextmanager
 
 from pymetr.application.instrument_dock import InstrumentDock
 from pymetr.instrument import Instrument
+
+class MainMenuBar(QMenuBar):
+    def __init__(self, parent=None):
+        super(MainMenuBar, self).__init__(parent)
+
+        # File menu
+        self.fileMenu = self.addMenu("&File")
+
+        # Add actions to the file menu
+        self.setupFileMenuActions()
+
+    def setupFileMenuActions(self):
+        exportPlotAction = QAction("&Export Plot", self)
+        exportPlotAction.triggered.connect(self.exportPlot)
+        self.fileMenu.addAction(exportPlotAction)
+
+        generateReportAction = QAction("&Generate Report", self)
+        generateReportAction.triggered.connect(self.generateReport)
+        self.fileMenu.addAction(generateReportAction)
+
+        importTraceDataAction = QAction("&Import Trace Data", self)
+        importTraceDataAction.triggered.connect(self.importTraceData)
+        self.fileMenu.addAction(importTraceDataAction)
+
+    # Placeholder methods for menu actions
+    def exportPlot(self):
+        # Placeholder for export plot logic
+        print("Exporting plot...")
+
+    def generateReport(self):
+        # Placeholder for generate report logic
+        print("Generating report...")
+
+    def importTraceData(self):
+        # Placeholder for import trace data logic
+        print("Importing trace data...")
 
 class CentralControlDock(QDockWidget):
     """
@@ -103,37 +141,57 @@ class DynamicInstrumentGUI(QMainWindow):
     color_palette = ['#5E57FF', '#F23CA6', '#FF9535', '#4BFF36', '#02FEE4']
 
     def __init__(self):
-        """
-        Initializes the main GUI window and its components, including the instruments dictionary and central control dock.
-        """
         super().__init__()
         logger.debug(f"Opening PyMetr Application")
-        self.setWindowTitle("Dynamic Instrument Control")
+        self.setWindowTitle("PyMetr - Instrument Control")
         self.setGeometry(100, 100, 1200, 800)
-        
-        self.instruments = {} # Instrument Tracker
 
-        self.plotWidget = pg.PlotWidget() 
-        self.setCentralWidget(self.plotWidget)
-        
-        self.centralControlDock = CentralControlDock(self) 
+        # --- Menu Bar ---------------------------------------
+        self.menuBarInstance = MainMenuBar(self)
+        self.setMenuBar(self.menuBarInstance)
+
+        self.centralWidget = QWidget()
+        self.setCentralWidget(self.centralWidget)
+
+        self.centralLayout = QVBoxLayout()
+        self.centralWidget.setLayout(self.centralLayout)
+
+        # --- Plot setup -------------------------------------
+        self.plotLayout = pg.GraphicsLayoutWidget()
+        self.centralLayout.addWidget(self.plotLayout, stretch=1)
+
+        self.mainPlotItem = self.plotLayout.addPlot(row=0, col=0)
+        self.mainPlot = self.mainPlotItem.vb
+        self.roiPlotItem = self.plotLayout.addPlot(row=1, col=0, rowSpan=1, height=100)
+        self.roiPlot = self.roiPlotItem.vb
+
+        self.roi = pg.LinearRegionItem()
+        self.roi.setZValue(-10)
+        self.roiPlot.addItem(self.roi)
+
+        self.roi.sigRegionChanged.connect(self.update_main_plot)
+        self.mainPlot.sigXRangeChanged.connect(self.update_roi_plot)
+
+        # --- Control Dock ---------------------------------
+        self.centralControlDock = CentralControlDock(self)
+        self.centralControlDock.addInstrumentButton.clicked.connect(self.add_instrument_button_clicked)
         self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.centralControlDock)
 
+        # --- Instrument Docks ---------------------------------
+        self.instruments = {}  # Instrument Tracker
         self.instrumentDock = InstrumentDock(self)
-        self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.instrumentDock)
-
-        # Connect signals and slots
-        self.centralControlDock.addInstrumentButton.clicked.connect(self.add_instrument_button_clicked)
         self.instrumentDock.instrument_connected.connect(self.on_instrument_connected)
         self.instrumentDock.instrument_disconnected.connect(self.on_instrument_disconnected)
         self.instrumentDock.trace_data_ready.connect(self.on_trace_data_ready)
-
+        self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.instrumentDock)
+        
     def add_instrument_button_clicked(self):
         """
         Called when the 'Add Instrument' button is clicked in the CentralControlDock.
         Initiates the instrument selection process.
         """
         logger.debug(f"Add instrument button clicked")
+        logger.debug(f"Caller: {inspect.stack()[1][3]}")  # Log the calling method
         dialog = InstrumentSelectionDialog(self)
         if dialog.exec() == QDialog.Accepted:
             selected_resource = dialog.get_selected_instrument()
@@ -158,35 +216,50 @@ class DynamicInstrumentGUI(QMainWindow):
             logger.debug(f"Plotting trace data for instrument: {unique_id}.")
         else:
             logger.debug("Plotting trace data.")
-        self.update_plot(plot_data)
+        self.update_plot_data(plot_data)
 
-    def update_plot(self, data):
-        plot_widget = self.plotWidget  # Access the plot widget from the instance
-        plot_widget.clear()
-        plot_widget.showGrid(x=True, y=True, alpha=0.3)  # Show grid by default
-        plot_widget.addLegend()  # Show legend by default
+    def update_plot_data(self, data):
+        self.mainPlotItem.clear()
+        self.roiPlotItem.clear()
 
-        # If data is a dictionary, iterate through items
         if isinstance(data, dict):
             for i, (trace_id, trace_info) in enumerate(data.items()):
                 color = trace_info.get('color', self.color_palette[i % len(self.color_palette)])
                 label = trace_info.get('label', f'Trace {i+1}')
-                if trace_info.get('visible', True):  # Check if the trace should be visible
+                if trace_info.get('visible', True):
                     trace_data = trace_info.get('data', [])
                     trace_range = trace_info.get('range', np.arange(len(trace_data)))
-                    plot_widget.plot(trace_range, trace_data, pen=pg.mkPen(color, width=2), name=label)
+                    main_curve = self.mainPlotItem.plot(trace_range, trace_data, pen=pg.mkPen(color, width=2), name=label)
+                    self.mainPlot.addItem(main_curve)
+                    roi_curve = self.roiPlotItem.plot(trace_range, trace_data, pen=pg.mkPen(color, width=2), name=label)
+                    self.roiPlot.addItem(roi_curve)
 
-        # If data is not a dictionary, plot it directly
         elif isinstance(data, (list, np.ndarray, tuple)):
-            color = self.color_palette[0]  # Start with the first color in the palette
+            color = self.color_palette[0]
             label = 'Trace 1'
             if isinstance(data, tuple):
-                plot_widget.plot(data[1], data[0], pen=pg.mkPen(color, width=2), name=label)
+                main_curve = self.mainPlotItem.plot(data[1], data[0], pen=pg.mkPen(color, width=2), name=label)
+                self.mainPlot.addItem(main_curve)
+                roi_curve = self.roiPlotItem.plot(data[1], data[0], pen=pg.mkPen(color, width=2), name=label)
+                self.roiPlot.addItem(roi_curve)
             else:
-                plot_widget.plot(data, pen=pg.mkPen(color, width=2), name=label)
+                main_curve = self.mainPlotItem.plot(data, pen=pg.mkPen(color, width=2), name=label)
+                self.mainPlot.addItem(main_curve)
+                roi_curve = self.roiPlotItem.plot(data, pen=pg.mkPen(color, width=2), name=label)
+                self.roiPlot.addItem(roi_curve)
 
         else:
             logger.error(f"Received data in an unexpected format, unable to plot: {data}")
+
+        self.update_main_plot()
+        self.roiPlot.autoRange()
+
+    def update_main_plot(self):
+        self.mainPlot.setXRange(*self.roi.getRegion(), padding=0)
+
+    def update_roi_plot(self):
+        view_range = self.mainPlot.viewRange()[0]
+        self.roi.setRegion(view_range)
 
 if __name__ == "__main__":
 

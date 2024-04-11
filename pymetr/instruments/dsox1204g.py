@@ -8,6 +8,7 @@ class Oscilloscope(Instrument):
 
         self._format = "ASCII" # Global data format for all channels
         self.sources = Sources(['CHAN1', 'CHAN2', 'CHAN3', 'CHAN4', 'MATH', 'FFT'])
+        self.sources.source = "CHAN1"
 
         self.waveform = Waveform.build(self, ':WAVeform')
         self.trigger = Trigger.build(self, ':TRIGger')

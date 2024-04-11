@@ -1,48 +1,83 @@
-from PySide6.QtWidgets import QApplication, QVBoxLayout, QWidget
-from pyqtgraph.parametertree import Parameter, ParameterTree
+import traceback
+import numpy as np
 
-# Define the function to be called when the action parameter is activated
-def action_callback():
-    print("Action parameter triggered")
+import pyqtgraph as pg
+from pyqtgraph.graphicsItems.ScatterPlotItem import name_list
+from pyqtgraph.Qt import QtWidgets, QtCore
+from pyqtgraph.parametertree import interact, ParameterTree, Parameter
+import random
 
-# Define a function to handle changes to the parameter value
-def value_changed(param, value):
-    print(f"Parameter {param.name()} changed to {value}")
+pg.mkQApp()
 
-# Create the application instance
-app = QApplication([])
+rng = np.random.default_rng(10)
+random.seed(10)
 
-# Define parameters, including an action parameter and a value parameter in separate groups
-params = [
-    {'name': 'Action Parameters', 'type': 'group', 'children': [
-        {'name': 'Action', 'type': 'action'},
-    ]},
-    {'name': 'Value Parameters', 'type': 'group', 'children': [
-        {'name': 'Some Value', 'type': 'int', 'value': 10, 'limits': (0, 100)},
-    ]}
-]
 
-# Create ParameterTree
-param_tree = ParameterTree()
-parameters = Parameter.create(name='params', type='group', children=params)
-param_tree.setParameters(parameters, showTop=False)
+def sortedRandint(low, high, size):
+    return np.sort(rng.integers(low, high, size))
 
-# Retrieve the action parameter and connect the action
-action_param = parameters.child('Action Parameters', 'Action')
-action_param.sigActivated.connect(action_callback)
 
-# Retrieve the value parameter and connect the change handler
-value_param = parameters.child('Value Parameters', 'Some Value')
-value_param.sigValueChanged.connect(value_changed)
+def isNoneOrScalar(value):
+    return value is None or np.isscalar(value[0])
 
-# Setup the layout and widget
-widget = QWidget()
-layout = QVBoxLayout()
-layout.addWidget(param_tree)
-widget.setLayout(layout)
 
-# Show the widget
-widget.show()
+values = {
+    # Convention 1
+    "None (replaced by integer indices)": None,
+    # Convention 2
+    "Single curve values": sortedRandint(0, 20, 15),
+    # Convention 3 list form
+    "container of (optionally) mixed-size curve values": [
+        sortedRandint(0, 20, 15),
+        *[sortedRandint(0, 20, 15) for _ in range(4)],
+    ],
+    # Convention 3 array form
+    "2D matrix": np.row_stack([sortedRandint(20, 40, 15) for _ in range(6)]),
+}
 
-# Execute the application
-app.exec_()
+
+def next_plot(xtype="random", ytype="random", symbol="o", symbolBrush="#f00"):
+    constKwargs = locals()
+    x = y = None
+    if xtype == "random":
+        xtype = random.choice(list(values))
+    if ytype == "random":
+        ytype = random.choice(list(values))
+    x = values[xtype]
+    y = values[ytype]
+    textbox.setValue(f"x={xtype}\ny={ytype}")
+    pltItem.clear()
+    try:
+        pltItem.multiDataPlot(
+            x=x, y=y, pen=cmap.getLookupTable(nPts=6), constKwargs=constKwargs
+        )
+    except Exception as e:
+        QtWidgets.QMessageBox.critical(widget, "Error", traceback.format_exc())
+
+
+cmap = pg.colormap.get("viridis")
+widget = pg.PlotWidget()
+pltItem: pg.PlotItem = widget.plotItem
+
+xytype = dict(type="list", values=list(values))
+topParam = interact(
+    next_plot,
+    symbolBrush=dict(type="color"),
+    symbol=dict(type="list", values=name_list),
+    xtype=xytype,
+    ytype=xytype,
+)
+tree = ParameterTree()
+tree.setMinimumWidth(150)
+tree.addParameters(topParam, showTop=True)
+
+textbox = Parameter.create(name="text", type="text", readonly=True)
+tree.addParameters(textbox)
+
+win = QtWidgets.QWidget()
+win.setLayout(lay := QtWidgets.QHBoxLayout())
+lay.addWidget(widget)
+lay.addWidget(tree)
+if __name__ == "__main__":
+    win.show()
+    pg.exec()
