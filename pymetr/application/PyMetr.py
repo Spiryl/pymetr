@@ -11,17 +11,20 @@ import os
 os.environ['PYQTGRAPH_QT_LIB'] = 'PySide6'
 import sys
 import numpy as np
+import random
 import inspect
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtCore, QtGui
 from PySide6.QtGui import QColor, QAction
 from PySide6.QtWidgets import QDialog, QVBoxLayout, QListWidget, QDialogButtonBox, QDockWidget, QPushButton
-from PySide6.QtWidgets import QWidget, QMainWindow, QFileDialog, QComboBox, QSizePolicy
+from PySide6.QtWidgets import QWidget, QMainWindow, QFileDialog, QComboBox, QSizePolicy, QTabWidget
 from PySide6.QtWidgets import QMenuBar
+from PySide6.QtCore import QObject, Signal, Qt
 from contextlib import contextmanager
 
 from pymetr.application.instrument_dock import InstrumentDock
-from pymetr.instrument import Instrument
+from pymetr.application.trace_dock import TraceDock
+from pymetr.instrument import Instrument, Trace
 
 class MainMenuBar(QMenuBar):
     def __init__(self, parent=None):
@@ -29,6 +32,8 @@ class MainMenuBar(QMenuBar):
 
         # File menu
         self.fileMenu = self.addMenu("&File")
+        self.toolMenu = self.addMenu("&Tools")
+        self.settingsMenu = self.addMenu("&Settings")
 
         # Add actions to the file menu
         self.setupFileMenuActions()
@@ -70,7 +75,7 @@ class CentralControlDock(QDockWidget):
         """
         logger.debug(f"Initializing control dock")
         super(CentralControlDock, self).__init__("Control Panel", parent)
-        self.setAllowedAreas(QtCore.Qt.RightDockWidgetArea)
+        self.setAllowedAreas(Qt.RightDockWidgetArea)
 
         self.dockLayout = QVBoxLayout()
         self.dockWidget = QWidget()
@@ -150,41 +155,68 @@ class DynamicInstrumentGUI(QMainWindow):
         self.menuBarInstance = MainMenuBar(self)
         self.setMenuBar(self.menuBarInstance)
 
-        self.centralWidget = QWidget()
-        self.setCentralWidget(self.centralWidget)
-
-        self.centralLayout = QVBoxLayout()
-        self.centralWidget.setLayout(self.centralLayout)
+        # --- Layout Setup -------------------------------------
+        self.central_widget = QWidget()
+        self.layout = QVBoxLayout(self.central_widget)
+        self.setCentralWidget(self.central_widget)
 
         # --- Plot setup -------------------------------------
-        self.plotLayout = pg.GraphicsLayoutWidget()
-        self.centralLayout.addWidget(self.plotLayout, stretch=1)
+        self.plot_layout = pg.GraphicsLayoutWidget()
+        self.layout.addWidget(self.plot_layout)
+        self.plot_item = self.plot_layout.addPlot(row=0, col=0)
+        self.plot_item.showGrid(x=True, y=True)
+        self.legend = pg.LegendItem(offset=(70, 30))
+        self.legend.setParentItem(self.plot_item)
 
-        self.mainPlotItem = self.plotLayout.addPlot(row=0, col=0)
-        self.mainPlot = self.mainPlotItem.vb
-        self.roiPlotItem = self.plotLayout.addPlot(row=1, col=0, rowSpan=1, height=100)
-        self.roiPlot = self.roiPlotItem.vb
+        # --- Tabbed Dock for Trace and Instrument Docks -----
+        self.tabbed_dock = QDockWidget("Control Dock", self)
+        self.tabbed_dock.setAllowedAreas(Qt.RightDockWidgetArea)
+        self.tabbed_dock.setMinimumWidth(250)
+        self.addDockWidget(Qt.RightDockWidgetArea, self.tabbed_dock)
 
-        self.roi = pg.LinearRegionItem()
-        self.roi.setZValue(-10)
-        self.roiPlot.addItem(self.roi)
+        self.tabbed_widget = QTabWidget()
+        self.tabbed_dock.setWidget(self.tabbed_widget)
 
-        self.roi.sigRegionChanged.connect(self.update_main_plot)
-        self.mainPlot.sigXRangeChanged.connect(self.update_roi_plot)
+        # --- Trace Dock --------------------------------------
+        self.trace_dock = TraceDock(self)
+        self.tabbed_widget.addTab(self.trace_dock, "Traces")
 
-        # --- Control Dock ---------------------------------
-        self.centralControlDock = CentralControlDock(self)
-        self.centralControlDock.addInstrumentButton.clicked.connect(self.add_instrument_button_clicked)
-        self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.centralControlDock)
-
-        # --- Instrument Docks ---------------------------------
-        self.instruments = {}  # Instrument Tracker
+        # --- Instrument Dock ---------------------------------
         self.instrumentDock = InstrumentDock(self)
         self.instrumentDock.instrument_connected.connect(self.on_instrument_connected)
         self.instrumentDock.instrument_disconnected.connect(self.on_instrument_disconnected)
         self.instrumentDock.trace_data_ready.connect(self.on_trace_data_ready)
-        self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.instrumentDock)
-        
+        self.tabbed_widget.addTab(self.instrumentDock, "Instruments")
+
+        # --- Test Button -------------------------------------
+        self.add_trace_button = QPushButton("Add Trace")
+        self.add_trace_button.clicked.connect(self.add_trace)
+        self.layout.addWidget(self.add_trace_button)
+
+        self.additional_axes = []
+        self.additional_view_boxes = []
+        self.trace_view_boxes = {}  # Dictionary to store view boxes for each trace
+        self.trace_axes = {}  # Dictionary to store axes for each trace
+        self.traces = []
+
+        self.roi_plot_item = None
+        self.roi_plot = None
+        self.roi = None
+
+        self.plot_item.vb.sigRangeChanged.connect(self.on_main_plot_range_changed)
+        self.trace_dock.trace_manager.traceDataChanged.connect(self.update_plot)  # Wrap this signal
+        self.trace_dock.traceModeChanged.connect(self.on_trace_mode_changed)
+        self.trace_dock.roiPlotEnabled.connect(self.on_roi_plot_enabled)
+
+        # --- Control Dock ------------------------------------
+        self.centralControlDock = CentralControlDock(self)
+        self.centralControlDock.addInstrumentButton.clicked.connect(self.add_instrument_button_clicked)
+        self.addDockWidget(Qt.RightDockWidgetArea, self.centralControlDock)
+
+    def add_trace(self):
+        trace = TraceGenerator.generate_random_trace(self.trace_dock.trace_manager.trace_mode)
+        self.trace_dock.trace_manager.add_trace(trace)
+
     def add_instrument_button_clicked(self):
         """
         Called when the 'Add Instrument' button is clicked in the CentralControlDock.
@@ -211,56 +243,213 @@ class DynamicInstrumentGUI(QMainWindow):
         logger.info(f"Instrument {unique_id} disconnected.")
         # Add any additional actions or UI updates here
 
-    def on_trace_data_ready(self, plot_data, unique_id=None):
-        if unique_id is not None:
-            logger.debug(f"Plotting trace data for instrument: {unique_id}.")
+    def on_trace_data_ready(self, plot_data):
+        self.update_plot(plot_data)
+
+    def on_roi_plot_enabled(self, enabled):
+        if enabled:
+            self.roi_plot_item = self.plot_layout.addPlot(row=1, col=0)
+            self.roi_plot_item.setMaximumHeight(100)  # Adjust the height of the ROI plot
+            self.roi_plot = self.roi_plot_item.vb
+
+            self.roi = pg.LinearRegionItem()
+            self.roi.setZValue(-10)
+            self.roi_plot.addItem(self.roi)
+
+            self.roi.sigRegionChanged.connect(self.update_main_plot)
+            self.plot_item.sigXRangeChanged.connect(self.update_roi_plot)
+
+            self.update_roi_plot() 
+            self.autoscale_roi_plot()
+            self.set_roi_region()
         else:
-            logger.debug("Plotting trace data.")
-        self.update_plot_data(plot_data)
+            if self.roi_plot_item is not None:
+                self.plot_layout.removeItem(self.roi_plot_item)
+                self.roi_plot_item = None
+                self.roi_plot = None
+                self.roi = None
 
-    def update_plot_data(self, data):
-        self.mainPlotItem.clear()
-        self.roiPlotItem.clear()
+    def on_main_plot_range_changed(self, view_box, range_):
+        if self.roi is not None:
+            self.roi.setRegion(view_box.viewRange()[0])
 
-        if isinstance(data, dict):
-            for i, (trace_id, trace_info) in enumerate(data.items()):
-                color = trace_info.get('color', self.color_palette[i % len(self.color_palette)])
-                label = trace_info.get('label', f'Trace {i+1}')
-                if trace_info.get('visible', True):
-                    trace_data = trace_info.get('data', [])
-                    trace_range = trace_info.get('range', np.arange(len(trace_data)))
-                    main_curve = self.mainPlotItem.plot(trace_range, trace_data, pen=pg.mkPen(color, width=2), name=label)
-                    self.mainPlot.addItem(main_curve)
-                    roi_curve = self.roiPlotItem.plot(trace_range, trace_data, pen=pg.mkPen(color, width=2), name=label)
-                    self.roiPlot.addItem(roi_curve)
-
-        elif isinstance(data, (list, np.ndarray, tuple)):
-            color = self.color_palette[0]
-            label = 'Trace 1'
-            if isinstance(data, tuple):
-                main_curve = self.mainPlotItem.plot(data[1], data[0], pen=pg.mkPen(color, width=2), name=label)
-                self.mainPlot.addItem(main_curve)
-                roi_curve = self.roiPlotItem.plot(data[1], data[0], pen=pg.mkPen(color, width=2), name=label)
-                self.roiPlot.addItem(roi_curve)
-            else:
-                main_curve = self.mainPlotItem.plot(data, pen=pg.mkPen(color, width=2), name=label)
-                self.mainPlot.addItem(main_curve)
-                roi_curve = self.roiPlotItem.plot(data, pen=pg.mkPen(color, width=2), name=label)
-                self.roiPlot.addItem(roi_curve)
-
-        else:
-            logger.error(f"Received data in an unexpected format, unable to plot: {data}")
-
-        self.update_main_plot()
-        self.roiPlot.autoRange()
+    def clear_roi_plot(self):
+        if self.roi_plot_item is not None:
+            self.roi_plot_item.clear()
 
     def update_main_plot(self):
-        self.mainPlot.setXRange(*self.roi.getRegion(), padding=0)
+        if self.roi is not None:
+            self.plot_item.vb.setXRange(*self.roi.getRegion(), padding=0)
+
+    def autoscale_roi_plot(self):
+        if self.roi_plot_item is not None:
+            self.roi_plot_item.enableAutoRange()
+
+    def set_roi_region(self):
+        if self.roi is not None:
+            self.roi.setRegion(self.plot_item.vb.viewRange()[0])
 
     def update_roi_plot(self):
-        view_range = self.mainPlot.viewRange()[0]
-        self.roi.setRegion(view_range)
+        if self.roi is not None:
+            view_range = self.plot_item.vb.viewRange()[0]
+            self.roi.setRegion(view_range)
+    
+    def add_trace(self):
+        trace = TraceGenerator.generate_random_trace(self.trace_dock.trace_manager.trace_mode)
+        self.trace_dock.trace_manager.add_trace(trace)
 
+    def on_trace_mode_changed(self, trace_mode):
+        self.trace_dock.trace_manager.trace_mode = trace_mode
+
+    def update_plot(self, trace_data):
+        self.plot_item.clear()
+        self.clear_traces()  # Clear traces without removing additional axes
+        if self.roi_plot_item is not None:
+            self.roi_plot_item.clear()
+
+        for trace in self.trace_dock.trace_manager.traces:
+            visible = trace.visible
+            color = trace.color
+            legend_alias = trace.label
+            x = np.arange(len(trace.data))
+            y = trace.data
+            mode = trace.mode
+
+            if visible:
+                pen = pg.mkPen(color=color, width=trace.line_thickness, style=self.get_line_style(trace.line_style))
+
+                if mode == "Group":
+                    curve = pg.PlotCurveItem(x, y, pen=pen, name=legend_alias)
+                    self.plot_item.addItem(curve)
+                    self.legend.addItem(curve, legend_alias)
+                    self.traces.append(curve)
+                else:  # Isolate mode
+                    if trace in self.trace_view_boxes:
+                        view_box = self.trace_view_boxes[trace]
+                        axis = self.trace_axes[trace]
+                    else:
+                        axis = pg.AxisItem("right", pen=pen)
+                        self.plot_layout.addItem(axis, row=0, col=self.trace_dock.trace_manager.traces.index(trace) + 1)
+                        self.additional_axes.append(axis)
+
+                        view_box = pg.ViewBox()
+                        axis.linkToView(view_box)
+                        view_box.setXLink(self.plot_item.vb)
+                        self.plot_layout.scene().addItem(view_box)
+                        self.additional_view_boxes.append(view_box)
+
+                        self.trace_view_boxes[trace] = view_box
+                        self.trace_axes[trace] = axis
+                        view_box.sigRangeChanged.connect(lambda _, t=trace: self.handle_view_box_range_changed(view_box, t))  # Connect the range changed signal
+
+                    curve = pg.PlotCurveItem(x, y, pen=pen, name=legend_alias)
+                    view_box.addItem(curve)
+                    self.legend.addItem(curve, legend_alias)
+                    self.traces.append(curve)
+
+                    if trace.y_range is not None:
+                        view_box.setRange(yRange=trace.y_range)  # Restore the previous y-range
+                        view_box.enableAutoRange(axis='y', enable=False)  # Disable y-axis auto-range
+                    else:
+                        view_box.setRange(yRange=self.plot_item.vb.viewRange()[1])  # Set initial y-range to match the main axis
+
+                print(f"Trace: {trace.label}, Visible: {trace.visible}, Mode: {trace.mode}, Y-Range: {trace.y_range}")  # Debug information
+
+        self.plot_item.vb.sigResized.connect(self.update_view_boxes)
+        self.restore_view_ranges()  # Restore the view ranges of the main plot and additional axes
+        self.update_roi_plot()
+        self.update_view_boxes()
+
+    def update_roi_plot(self):
+        if self.roi_plot_item is not None:
+            self.roi_plot_item.clear()
+
+            for trace in self.trace_dock.trace_manager.traces:
+                if trace.visible:
+                    x = np.arange(len(trace.data))
+                    y = trace.data
+                    pen = pg.mkPen(color=trace.color, width=trace.line_thickness, style=self.get_line_style(trace.line_style))
+                    roi_curve = self.roi_plot_item.plot(x, y, pen=pen, name=trace.label)
+
+            self.roi_plot_item.autoRange()
+
+    def clear_traces(self):
+        for trace in self.traces:
+            if trace in self.plot_item.items:
+                self.plot_item.removeItem(trace)
+            else:
+                for view_box in self.trace_view_boxes.values():
+                    if trace in view_box.addedItems:
+                        view_box.removeItem(trace)
+        self.traces.clear()
+        self.legend.clear()
+
+    def restore_view_ranges(self):
+        if self.plot_item.vb.viewRange()[0] is not None:
+            self.plot_item.vb.setRange(xRange=self.plot_item.vb.viewRange()[0], yRange=self.plot_item.vb.viewRange()[1], padding=0)
+        for trace, view_box in self.trace_view_boxes.items():
+            if trace.y_range is not None:
+                view_box.setRange(yRange=trace.y_range, padding=0)
+                
+    def get_line_style(self, line_style):
+        if line_style == 'Solid':
+            return Qt.SolidLine
+        elif line_style == 'Dash':
+            return Qt.DashLine
+        elif line_style == 'Dot':
+            return Qt.DotLine
+        elif line_style == 'Dash-Dot':
+            return Qt.DashDotLine
+        else:
+            return Qt.SolidLine
+
+    def handle_view_box_range_changed(self, view_box, trace):
+        x_range, y_range = view_box.viewRange()
+        if isinstance(trace, list):
+            for t in trace:
+                if isinstance(t, Trace):  # Check if the element is a Trace object
+                    t.x_range = x_range
+                    t.y_range = y_range
+                    print(f"Trace: {t.label}, X-Range: {x_range}, Y-Range: {y_range}")
+                else:
+                    print(f"Unexpected element in trace list: {t}")
+        elif isinstance(trace, Trace):  # Check if trace is a single Trace object
+            trace.x_range = x_range
+            trace.y_range = y_range
+            print(f"Trace: {trace.label}, X-Range: {x_range}, Y-Range: {y_range}")
+        else:
+            print(f"Unexpected trace object: {trace}")
+
+    def clear_additional_axes(self):
+        for axis in self.additional_axes:
+            self.plot_layout.removeItem(axis)
+            axis.deleteLater()
+        for view_box in self.additional_view_boxes:
+            self.plot_layout.scene().removeItem(view_box)
+            view_box.deleteLater()
+        self.additional_axes.clear()
+        self.additional_view_boxes.clear()
+        self.legend.clear()
+        self.trace_view_boxes.clear()  # Clear the trace view boxes dictionary
+        self.trace_axes.clear()  # Clear the trace axes dictionary
+
+    def update_view_boxes(self):
+        for view_box in self.additional_view_boxes:
+            view_box.setGeometry(self.plot_item.vb.sceneBoundingRect())
+
+class TraceGenerator:
+    trace_counter = 1
+
+    @staticmethod
+    def generate_random_trace(mode='Group'):
+        trace_name = f"Trace {TraceGenerator.trace_counter}"
+        TraceGenerator.trace_counter += 1
+        random_color = pg.intColor(random.randint(0, 255))
+        x = np.arange(100)
+        y = np.random.normal(loc=0, scale=20, size=100)
+        trace = Trace(label=trace_name, color=random_color, mode=mode, data=y)
+        return trace
+    
 if __name__ == "__main__":
 
     sys.argv += ['-platform', 'windows:darkmode=2']
@@ -268,9 +457,9 @@ if __name__ == "__main__":
     app.setStyle("Fusion")
 
     # # Load and apply the stylesheet file
-    # styleSheetFile = QtCore.QFile("pymetr/application/styles.qss")  # Update the path to where your QSS file is
-    # if styleSheetFile.open(QtCore.QFile.ReadOnly | QtCore.QFile.Text):
-    #     textStream = QtCore.QTextStream(styleSheetFile)
+    # styleSheetFile = QFile("pymetr/application/styles.qss")  # Update the path to where your QSS file is
+    # if styleSheetFile.open(QFile.ReadOnly | QFile.Text):
+    #     textStream = QTextStream(styleSheetFile)
     #     app.setStyleSheet(textStream.readAll())
 
     mainWindow = DynamicInstrumentGUI()

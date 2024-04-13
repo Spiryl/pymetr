@@ -9,6 +9,7 @@ import sys
 import numpy as np
 import logging
 import pyvisa
+import random
 
 from enum import IntFlag
 from abc import abstractmethod
@@ -95,6 +96,42 @@ class Sources(QObject):
 
             return wrapper
         return decorator
+
+class Trace:
+    def __init__(self, data, x_data=None, z_data=None, label=None, color=None, mode=None, visible=True, line_thickness=1.0, line_style='Solid'):
+        """
+        Initializes a Trace object to store data and attributes for plotting.
+
+        Args:
+        label (str): Label for the trace.
+        y_data (list or np.array): Primary data points for the trace.
+        x_data (list or np.array, optional): X-axis values if different from default range(len(y_data)).
+        z_data (list or np.array, optional): Z-axis values for 3D plotting.
+        color (str): Color of the trace in hex format.
+        visible (bool): Visibility of the trace in the plot.
+        line_thickness (float): Thickness of the line in the plot.
+        line_style (str): Style of the line (e.g., 'Solid', 'Dash').
+        """
+        self.label = label if label is not None else None
+        self.data = np.array(data)
+        self.x_data = np.array(x_data) if x_data is not None else None
+        self.z_data = np.array(z_data) if z_data is not None else None
+        self.color = color if color else "#{:06x}".format(random.randint(0, 0xFFFFFF))
+        self.label = label if label else f"Trace {id(self)}"
+        self.mode = mode
+        self.visible = visible
+        self.x_range = None
+        self.y_range = None
+        self.line_thickness = line_thickness
+        self.line_style = line_style
+
+    def update_data(self, y_data, x_data=None, z_data=None):
+        """Update the trace data."""
+        self.y_data = np.array(y_data)
+        if x_data is not None:
+            self.x_data = np.array(x_data)
+        if z_data is not None:
+            self.z_data = np.array(z_data)
 
 class Subsystem:
     """
@@ -486,27 +523,6 @@ class Instrument(QObject):
         want to wipe the slate clean and start over.
         """
         self.write("*RST")
-
-        """
-        Checks the instrument for errors after executing a command.
-
-        Continuously queries the oscilloscope for its error queue until it's empty,
-        printing out any errors encountered. If an error is found, the program exits.
-
-        :param command: The SCPI command that was executed prior to checking for errors.
-        :type command: str
-        """
-        while True:
-            error_string = self.query(":SYSTem:ERRor?")
-            if error_string:  # If there is an error string value
-                if not error_string.startswith("+0,"):  # Not "No error"
-                    logger.error("Exited because of error.")
-                    sys.exit(1)
-                else:  # "No error"
-                    break
-            else:  # :SYSTem:ERRor? should always return a string
-                logger.error("Exited because of error.")
-                sys.exit(1)
 
     def set_service_request(self, mask):
         """

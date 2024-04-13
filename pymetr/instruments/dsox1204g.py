@@ -110,7 +110,7 @@ class Oscilloscope(Instrument):
             data_values = self.fetch_data(source)
             trace_data_dict[source] = {
                 'data': data_values,
-                'range': data_range,
+                'x_data': data_range,
                 'visible': True,
                 'label': source,
             }

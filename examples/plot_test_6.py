@@ -1,11 +1,23 @@
-# --- trace_dock.py ---
-import numpy as np
 import pyqtgraph as pg
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QPushButton, QDockWidget, QComboBox
-from PySide6.QtCore import QObject, Signal, Qt
+from pyqtgraph.Qt import QtWidgets, QtCore
+import numpy as np
+import random
 
-class TraceManager(QObject):
-    traceDataChanged = Signal(object)
+class Trace:
+    def __init__(self, label=None, color=None, mode='Group', data=None, line_thickness=1.0, alpha=1.0, line_style='-'):
+        self.label = label
+        self.color = color
+        self.mode = mode
+        self.data = data if data is not None else np.array([])
+        self.visible = True
+        self.x_range = None
+        self.y_range = None
+        self.line_thickness = line_thickness
+        self.alpha = alpha
+        self.line_style = line_style
+
+class TraceManager(QtCore.QObject):
+    traceDataChanged = QtCore.Signal(object)
 
     def __init__(self):
         super().__init__()
@@ -37,33 +49,33 @@ class TraceManager(QObject):
         } for trace in self.traces}
         self.traceDataChanged.emit(trace_data)
 
-class TraceDock(QDockWidget):
+class TraceDock(QtWidgets.QDockWidget):
 
-    traceModeChanged = Signal(str)  # Add this line
-    roiPlotEnabled = Signal(bool)
+    traceModeChanged = QtCore.Signal(str)  # Add this line
+    roiPlotEnabled = QtCore.Signal(bool)
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, trace_manager=None):
         super().__init__("Trace Settings", parent)
         self.setMinimumWidth(200) 
-        self.setAllowedAreas(Qt.RightDockWidgetArea)
+        self.setAllowedAreas(QtCore.Qt.RightDockWidgetArea)
 
-        self.trace_manager = TraceManager()
+        self.trace_manager = trace_manager
 
-        self.dock_widget = QWidget()
-        self.dock_layout = QVBoxLayout(self.dock_widget)
+        self.dock_widget = QtWidgets.QWidget()
+        self.dock_layout = QtWidgets.QVBoxLayout(self.dock_widget)
 
-        self.plot_mode_combo_box = QComboBox()
+        self.plot_mode_combo_box = QtWidgets.QComboBox()
         self.plot_mode_combo_box.addItems(["Add", "Replace"])
         self.plot_mode_combo_box.currentIndexChanged.connect(self.on_plot_mode_changed)
         self.dock_layout.addWidget(self.plot_mode_combo_box)
 
-        self.trace_mode_combo_box = QComboBox()
+        self.trace_mode_combo_box = QtWidgets.QComboBox()
         self.trace_mode_combo_box.addItems(["Group", "Isolate"])
         self.trace_mode_combo_box.currentIndexChanged.connect(self.on_trace_mode_changed)
         self.dock_layout.addWidget(self.trace_mode_combo_box)
         self.trace_mode_combo_box.setCurrentText(self.trace_manager.trace_mode)
 
-        self.roi_plot_toggle = QPushButton("ROI Plot")
+        self.roi_plot_toggle = QtWidgets.QPushButton("ROI Plot")
         self.roi_plot_toggle.setCheckable(True)
         self.roi_plot_toggle.setChecked(False)
         self.roi_plot_toggle.toggled.connect(self.on_roi_plot_toggled)
@@ -136,3 +148,74 @@ class TraceDock(QDockWidget):
                 self.trace_manager.remove_trace(trace)
                 break
 
+class PlotWidget(QGraphicsLayoutWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.plot_item = self.addPlot(row=0, col=0)
+        self.legend = pg.LegendItem(offset=(70, 30))
+        self.legend.setParentItem(self.plot_item)
+        self.traces = {}  # Key: Trace label, Value: PlotCurveItem instance
+
+    @pyqtSlot(dict)
+    def update_traces(self, trace_data):
+        for trace_label, trace_info in trace_data.items():
+            if trace_label not in self.traces:
+                self.add_trace(trace_label, trace_info)
+            else:
+                self.edit_trace(trace_label, trace_info)
+        self.remove_unused_traces(trace_data.keys())
+
+    def add_trace(self, label, trace_info):
+        pen = pg.mkPen(color=trace_info['color'], width=trace_info.get('line_thickness', 1.0),
+                       style=self.get_line_style(trace_info.get('line_style', 'Solid')))
+        curve = pg.PlotCurveItem(name=label, pen=pen)
+        self.plot_item.addItem(curve)
+        self.legend.addItem(curve, label)
+        self.traces[label] = curve
+        self.update_trace_data(label, trace_info)
+
+    def edit_trace(self, label, trace_info):
+        trace = self.traces[label]
+        pen = pg.mkPen(color=trace_info['color'], width=trace_info.get('line_thickness', 1.0),
+                       style=self.get_line_style(trace_info.get('line_style', 'Solid')))
+        trace.setPen(pen)
+        self.update_trace_data(label, trace_info)
+
+    def update_trace_data(self, label, trace_info):
+        trace = self.traces[label]
+        trace.setData(trace_info['data'])  # Assuming 'data' is a list [x, y]
+        trace.setVisible(trace_info['visible'])
+
+    def remove_unused_traces(self, current_labels):
+        for label in list(self.traces.keys()):
+            if label not in current_labels:
+                self.remove_trace(label)
+
+    def remove_trace(self, label):
+        trace = self.traces.pop(label)
+        self.plot_item.removeItem(trace)
+        self.legend.removeItem(trace)
+
+    def get_line_style(self, line_style):
+        styles = {
+            'Solid': Qt.SolidLine,
+            'Dash': Qt.DashLine,
+            'Dot': Qt.DotLine,
+            'Dash-Dot': Qt.DashDotLine,
+        }
+        return styles.get(line_style, Qt.SolidLine)
+
+class TraceGenerator:
+    trace_counter = 1
+
+    @staticmethod
+    def generate_random_trace(mode='Group'):
+        trace_name = f"Trace {TraceGenerator.trace_counter}"
+        TraceGenerator.trace_counter += 1
+        random_color = pg.intColor(random.randint(0, 255))
+        x = np.arange(100)
+        y = np.random.normal(loc=0, scale=20, size=100)
+        trace = Trace(label=trace_name, color=random_color, mode=mode, data=y)
+        return trace
+
+if __name__ == "__main__":

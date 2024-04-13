@@ -4,17 +4,16 @@ import numpy as np
 import random
 
 class Trace:
-    def __init__(self, data=None, x_data = None, z_data = None, label=None, color=None, mode='Group', line_thickness=1.0, line_style='solid'):
+    def __init__(self, label=None, color=None, mode='Group', data=None, line_thickness=1.0, alpha=1.0, line_style='-'):
         self.label = label
         self.color = color
         self.mode = mode
         self.data = data if data is not None else np.array([])
-        self.x_data = x_data
-        self.z_data = z_data
         self.visible = True
         self.x_range = None
         self.y_range = None
         self.line_thickness = line_thickness
+        self.alpha = alpha
         self.line_style = line_style
 
 class TraceManager(QtCore.QObject):
@@ -137,7 +136,7 @@ class TraceDock(QtWidgets.QDockWidget):
             if trace.label == trace_id:
                 setattr(trace, parameter, value)
                 if parameter == 'color' and trace.mode == 'Isolate':
-                    axis = self.parent().trace_axes.get(trace)  # Access trace_axes from the MainWindow instance
+                    axis = self.parent().plot_widget.trace_axes.get(trace)  # Access trace_axes from the PlotWidget instance
                     if axis is not None:
                         axis.setPen(value)
                 self.trace_manager.emit_trace_data()
@@ -149,106 +148,41 @@ class TraceDock(QtWidgets.QDockWidget):
                 self.trace_manager.remove_trace(trace)
                 break
 
-class MainWindow(QtWidgets.QMainWindow):
-    def __init__(self):
-        super().__init__()
+class PlotWidget(QtWidgets.QWidget):
+    def __init__(self, trace_manager, parent=None):
+        super().__init__(parent)
+        self.trace_manager = trace_manager
+        self.layout = QtWidgets.QVBoxLayout(self)
 
-        self.central_widget = QtWidgets.QWidget()
-        self.layout = QtWidgets.QVBoxLayout(self.central_widget)
-
-        self.plot_layout = pg.GraphicsLayoutWidget()
-        self.layout.addWidget(self.plot_layout)
-        self.plot_item = self.plot_layout.addPlot(row=0, col=0)
+        self.plot_widget = pg.PlotWidget()
+        self.layout.addWidget(self.plot_widget)
+        self.plot_item = self.plot_widget.getPlotItem()
+        self.plot_item.setTitle("Plot")
+        self.plot_item.setLabel("left", "Y")
+        self.plot_item.setLabel("bottom", "X")
+        self.plot_item.showGrid(x=True, y=True)
 
         self.legend = pg.LegendItem(offset=(70, 30))
-        self.legend.setParentItem(self.plot_item)
-
-        self.trace_manager = TraceManager()
-        self.trace_dock = TraceDock(self, self.trace_manager)
-        self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.trace_dock)
-
-        self.add_trace_button = QtWidgets.QPushButton("Add Trace")
-        self.add_trace_button.clicked.connect(self.add_trace)
-        self.layout.addWidget(self.add_trace_button)
-
-        self.setCentralWidget(self.central_widget)
+        self.legend.setParentItem(self.plot_item) 
 
         self.additional_axes = []
         self.additional_view_boxes = []
-        self.trace_view_boxes = {}  # Dictionary to store view boxes for each trace
-        self.trace_axes = {}  # Dictionary to store axes for each trace
+        self.trace_view_boxes = {}
+        self.trace_axes = {}
         self.traces = []
 
         self.roi_plot_item = None
         self.roi_plot = None
         self.roi = None
 
-        self.plot_item.vb.sigRangeChanged.connect(self.on_main_plot_range_changed)
         self.trace_manager.traceDataChanged.connect(self.update_plot)
-        self.trace_dock.traceModeChanged.connect(self.on_trace_mode_changed)
-        self.trace_dock.roiPlotEnabled.connect(self.on_roi_plot_enabled)
-
-    def on_roi_plot_enabled(self, enabled):
-        if enabled:
-            self.roi_plot_item = self.plot_layout.addPlot(row=1, col=0)
-            self.roi_plot_item.setMaximumHeight(100)  # Adjust the height of the ROI plot
-            self.roi_plot = self.roi_plot_item.vb
-
-            self.roi = pg.LinearRegionItem()
-            self.roi.setZValue(-10)
-            self.roi_plot.addItem(self.roi)
-
-            self.roi.sigRegionChanged.connect(self.update_main_plot)
-            self.plot_item.sigXRangeChanged.connect(self.update_roi_plot)
-
-            self.update_roi_plot()  # Add this line to update the ROI plot when enabled
-            self.autoscale_roi_plot()  # Add this line to autoscale the ROI plot
-            self.set_roi_region()  # Add this line to set the ROI region to the current main plot region
-        else:
-            if self.roi_plot_item is not None:
-                self.plot_layout.removeItem(self.roi_plot_item)
-                self.roi_plot_item = None
-                self.roi_plot = None
-                self.roi = None
-
-    def on_main_plot_range_changed(self, view_box, range_):
-        if self.roi is not None:
-            self.roi.setRegion(view_box.viewRange()[0])
-
-    def clear_roi_plot(self):
-        if self.roi_plot_item is not None:
-            self.roi_plot_item.clear()
-
-    def update_main_plot(self):
-        if self.roi is not None:
-            self.plot_item.vb.setXRange(*self.roi.getRegion(), padding=0)
-
-    def autoscale_roi_plot(self):
-        if self.roi_plot_item is not None:
-            self.roi_plot_item.enableAutoRange()
-
-    def set_roi_region(self):
-        if self.roi is not None:
-            self.roi.setRegion(self.plot_item.vb.viewRange()[0])
-
-    def update_roi_plot(self):
-        if self.roi is not None:
-            view_range = self.plot_item.vb.viewRange()[0]
-            self.roi.setRegion(view_range)
-    
-    def add_trace(self):
-        trace = TraceGenerator.generate_random_trace(self.trace_manager.trace_mode)
-        self.trace_manager.add_trace(trace)
-
-    def on_trace_mode_changed(self, trace_mode):
-        self.trace_manager.trace_mode = trace_mode
+        self.plot_item.vb.sigRangeChanged.connect(self.update_roi_region)
 
     def update_plot(self, trace_data):
-        self.plot_item.clear()
-        self.clear_traces()  # Clear traces without removing additional axes
-        if self.roi_plot_item is not None:
-            self.roi_plot_item.clear()
-
+        self.plot_item.clear() 
+        self.legend.setParentItem(self.plot_item) 
+        self.clear_traces()
+        self.clear_additional_axes() 
         for trace in self.trace_manager.traces:
             visible = trace.visible
             color = trace.color
@@ -271,48 +205,65 @@ class MainWindow(QtWidgets.QMainWindow):
                         axis = self.trace_axes[trace]
                     else:
                         axis = pg.AxisItem("right", pen=pen)
-                        self.plot_layout.addItem(axis, row=0, col=self.trace_manager.traces.index(trace) + 1)
+                        self.plot_item.layout.addItem(axis, 2, self.trace_manager.traces.index(trace) + 1)
                         self.additional_axes.append(axis)
 
                         view_box = pg.ViewBox()
                         axis.linkToView(view_box)
                         view_box.setXLink(self.plot_item.vb)
-                        self.plot_layout.scene().addItem(view_box)
+                        self.plot_item.scene().addItem(view_box)
                         self.additional_view_boxes.append(view_box)
 
                         self.trace_view_boxes[trace] = view_box
                         self.trace_axes[trace] = axis
-                        view_box.sigRangeChanged.connect(lambda _, t=trace: self.handle_view_box_range_changed(view_box, t))  # Connect the range changed signal
 
                     curve = pg.PlotCurveItem(x, y, pen=pen, name=legend_alias)
-                    curve.setOpacity(trace.alpha)  # Set the opacity value on the curve item
+                    curve.setOpacity(trace.alpha)
                     view_box.addItem(curve)
                     self.legend.addItem(curve, legend_alias)
                     self.traces.append(curve)
 
                     if trace.y_range is not None:
-                        view_box.setRange(yRange=trace.y_range)  # Restore the previous y-range
-                        view_box.enableAutoRange(axis='y', enable=False)  # Disable y-axis auto-range
+                        view_box.setRange(yRange=trace.y_range)
+                        view_box.enableAutoRange(axis='y', enable=False)
                     else:
-                        view_box.setRange(yRange=self.plot_item.vb.viewRange()[1])  # Set initial y-range to match the main axis
+                        view_box.setRange(yRange=self.plot_item.vb.viewRange()[1])
+                        trace.y_range = view_box.viewRange()[1]  # Store the initial y-range of the isolated trace
+            else:
+                if trace.mode == 'Isolate' and trace in self.trace_view_boxes:
+                    view_box = self.trace_view_boxes[trace]
+                    trace.y_range = view_box.viewRange()[1]  # Store the y-range when the isolated trace becomes invisible
 
-                print(f"Trace: {trace.label}, Visible: {trace.visible}, Mode: {trace.mode}, Y-Range: {trace.y_range}")  # Debug information
+            print(f"Trace: {trace.label}, Visible: {trace.visible}, Mode: {trace.mode}, Y-Range: {trace.y_range}")
 
         self.plot_item.vb.sigResized.connect(self.update_view_boxes)
-        self.restore_view_ranges()  # Restore the view ranges of the main plot and additional axes
+        self.restore_view_ranges()
+        self.update_roi_plot()
 
-    def update_roi_plot(self):
-        if self.roi_plot_item is not None:
-            self.roi_plot_item.clear()
+    def handle_view_box_range_changed(self, view_box, range_):
+        x_range, y_range = range_
+        for trace, vb in self.trace_view_boxes.items():
+            if vb == view_box:
+                trace.x_range = x_range
+                trace.y_range = y_range
+                print(f"Trace: {trace.label}, X-Range: {x_range}, Y-Range: {y_range}")
+                break
 
-            for trace in self.trace_manager.traces:
-                if trace.visible:
-                    x = np.arange(len(trace.data))
-                    y = trace.data
-                    pen = pg.mkPen(color=trace.color, width=trace.line_thickness, style=self.get_line_style(trace.line_style))
-                    roi_curve = self.roi_plot_item.plot(x, y, pen=pen, name=trace.label)
+    def clear_additional_axes(self):
+        for axis in self.additional_axes:
+            self.plot_item.layout.removeItem(axis)
+            axis.deleteLater()
+        for view_box in self.additional_view_boxes:
+            self.plot_item.scene().removeItem(view_box)
+            view_box.deleteLater()
+        self.additional_axes.clear()
+        self.additional_view_boxes.clear()
+        self.trace_view_boxes.clear()
+        self.trace_axes.clear()
 
-            self.roi_plot_item.autoRange()
+    def on_trace_mode_changed(self, trace_mode):
+        self.trace_manager.trace_mode = trace_mode
+        self.update_plot(self.trace_manager.traces)
 
     def clear_traces(self):
         for trace in self.traces:
@@ -331,7 +282,7 @@ class MainWindow(QtWidgets.QMainWindow):
         for trace, view_box in self.trace_view_boxes.items():
             if trace.y_range is not None:
                 view_box.setRange(yRange=trace.y_range, padding=0)
-                
+
     def get_line_style(self, line_style):
         if line_style == 'Solid':
             return QtCore.Qt.SolidLine
@@ -344,40 +295,123 @@ class MainWindow(QtWidgets.QMainWindow):
         else:
             return QtCore.Qt.SolidLine
 
-    def handle_view_box_range_changed(self, view_box, trace):
-        x_range, y_range = view_box.viewRange()
-        if isinstance(trace, list):
-            for t in trace:
-                if isinstance(t, Trace):  # Check if the element is a Trace object
-                    t.x_range = x_range
-                    t.y_range = y_range
-                    print(f"Trace: {t.label}, X-Range: {x_range}, Y-Range: {y_range}")
-                else:
-                    print(f"Unexpected element in trace list: {t}")
-        elif isinstance(trace, Trace):  # Check if trace is a single Trace object
-            trace.x_range = x_range
-            trace.y_range = y_range
-            print(f"Trace: {trace.label}, X-Range: {x_range}, Y-Range: {y_range}")
-        else:
-            print(f"Unexpected trace object: {trace}")
-
-    def clear_additional_axes(self):
-        for axis in self.additional_axes:
-            self.plot_layout.removeItem(axis)
-            axis.deleteLater()
-        for view_box in self.additional_view_boxes:
-            self.plot_layout.scene().removeItem(view_box)
-            view_box.deleteLater()
-        self.additional_axes.clear()
-        self.additional_view_boxes.clear()
-        self.legend.clear()
-        self.trace_view_boxes.clear()  # Clear the trace view boxes dictionary
-        self.trace_axes.clear()  # Clear the trace axes dictionary
-
     def update_view_boxes(self):
         for view_box in self.additional_view_boxes:
             view_box.setGeometry(self.plot_item.vb.sceneBoundingRect())
 
+    def on_roi_plot_enabled(self, enabled):
+        if enabled:
+            if not self.roi_plot_item:
+                self.roi_plot_item = pg.PlotWidget()
+                self.roi_plot_item.setMaximumHeight(100)  # Set the height of the ROI plot to 100 pixels
+                self.layout.addWidget(self.roi_plot_item)
+                self.roi_plot = self.roi_plot_item.getPlotItem()
+
+                self.roi = pg.LinearRegionItem()
+                self.roi.setZValue(-10)
+                self.roi_plot.addItem(self.roi)  # Add the ROI to the correct plot
+
+                self.roi.sigRegionChanged.connect(self.update_main_plot)
+                self.plot_item.sigXRangeChanged.connect(self.update_roi_region)
+        else:
+            if self.roi_plot_item:
+                self.layout.removeWidget(self.roi_plot_item)
+                self.roi_plot_item.deleteLater()
+                self.roi_plot_item = None
+                self.roi = None
+        self.update_roi_plot()
+
+    def update_roi_plot(self):
+        if self.roi_plot_item is not None:
+            self.roi_plot_item.clear()
+            for trace in self.trace_manager.traces:
+                if trace.visible:
+                    x = np.arange(len(trace.data))
+                    y = trace.data
+                    pen = pg.mkPen(color=trace.color, width=trace.line_thickness, style=self.get_line_style(trace.line_style))
+                    roi_curve = self.roi_plot_item.plot(x, y, pen=pen, name=trace.label)
+            self.roi_plot_item.autoRange()
+        self.set_roi_region()
+        self.update_roi_region()
+
+    def restore_view_ranges(self):
+        if self.plot_item.vb.viewRange()[0] is not None:
+            self.plot_item.vb.setRange(xRange=self.plot_item.vb.viewRange()[0], yRange=self.plot_item.vb.viewRange()[1], padding=0)
+        for trace, view_box in self.trace_view_boxes.items():
+            if trace.y_range is not None:
+                view_box.setRange(yRange=trace.y_range, padding=0)
+
+    def update_roi_region(self):
+        if self.roi is not None and self.roi_plot is not None:
+            self.roi.setRegion(self.plot_item.vb.viewRange()[0])
+
+    def update_main_plot(self):
+        if self.roi is not None:
+            self.plot_item.setXRange(*self.roi.getRegion(), padding=0)
+
+    def set_roi_region(self):
+        if self.roi is not None:
+            self.roi.setRegion(self.plot_item.vb.viewRange()[0])
+
+    def on_roi_plot_toggled(self, checked):
+        if checked:
+            self.roi_plot_item = self.plot_widget.addPlot(row=1, col=0)
+            self.roi_plot_item.setMaximumHeight(100)
+            self.roi_plot = self.roi_plot_item.vb
+
+            self.roi = pg.LinearRegionItem()
+            self.roi.setZValue(-10)
+            self.roi_plot.addItem(self.roi)
+
+            self.roi.sigRegionChanged.connect(self.update_main_plot)
+            self.plot_item.sigXRangeChanged.connect(self.update_roi_plot)
+
+            self.update_roi_plot()
+            self.set_roi_region()
+        else:
+            if self.roi_plot_item is not None:
+                self.plot_widget.removeItem(self.roi_plot_item)
+                self.roi_plot_item = None
+                self.roi_plot = None
+                self.roi = None
+
+    def create_roi_region(self):
+        if self.roi is None:
+            self.roi = pg.LinearRegionItem()
+            self.roi.setZValue(-10)
+            self.roi_plot_item.addItem(self.roi)
+            self.roi.sigRegionChanged.connect(self.update_main_plot)
+
+    def remove_roi_region(self):
+        if self.roi is not None:
+            self.roi_plot_item.removeItem(self.roi)
+            self.roi.sigRegionChanged.disconnect(self.update_main_plot)
+            self.roi = None
+            
+class MainWindow(QtWidgets.QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.central_widget = QtWidgets.QWidget()
+        self.layout = QtWidgets.QVBoxLayout(self.central_widget)
+
+        self.trace_manager = TraceManager()
+        self.plot_widget = PlotWidget(self.trace_manager, parent=self)
+        self.layout.addWidget(self.plot_widget)
+
+        self.trace_dock = TraceDock(self, self.trace_manager)
+        self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.trace_dock)
+
+        self.add_trace_button = QtWidgets.QPushButton("Add Trace")
+        self.add_trace_button.clicked.connect(self.add_trace)
+        self.layout.addWidget(self.add_trace_button)
+
+        self.setCentralWidget(self.central_widget)
+
+        self.trace_dock.roiPlotEnabled.connect(self.plot_widget.on_roi_plot_enabled)
+
+    def add_trace(self):
+        trace = TraceGenerator.generate_random_trace(self.trace_manager.trace_mode)
+        self.trace_manager.add_trace(trace)
 
 class TraceGenerator:
     trace_counter = 1
