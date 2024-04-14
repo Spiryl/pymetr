@@ -1,14 +1,14 @@
 
 import numpy as np
-from pymetr import Instrument, Subsystem, SwitchProperty, SelectProperty, ValueProperty, DataProperty, DataBlockProperty, Sources
+from pymetr import Instrument, Subsystem, SwitchProperty, SelectProperty, ValueProperty, DataProperty, DataBlockProperty, Sources, Trace
 
 class Oscilloscope(Instrument):
     def __init__(self, resource_string):
         super().__init__(resource_string)
 
-        self._format = "ASCII" # Global data format for all channels
-        self.sources = Sources(['CHAN1', 'CHAN2', 'CHAN3', 'CHAN4', 'MATH', 'FFT'])
-        self.sources.source = "CHAN1"
+        self._format = "BYTE" # Global data format for all channels
+        self.sources = Sources(['CHAN1', 'CHAN2', 'CHAN3', 'CHAN4'])
+        self.sources.source = ["CHAN1"]
 
         self.waveform = Waveform.build(self, ':WAVeform')
         self.trigger = Trigger.build(self, ':TRIGger')
@@ -95,44 +95,29 @@ class Oscilloscope(Instrument):
     
     @Sources.source_command(":DIGitize {}")
     def fetch_trace(self, *sources):
-        """
-        Fetches trace data from the oscilloscope.
-        """
-        
-        self.query_operation_complete() # let it digitize
+        self.query_operation_complete()  # let it digitize
 
         if not sources:
             sources = self.sources.source
 
-        trace_data_dict = {}
         for source in sources:
-            data_range = self.fetch_time(source)
-            data_values = self.fetch_data(source)
-            trace_data_dict[source] = {
-                'data': data_values,
-                'x_data': data_range,
-                'visible': True,
-                'label': source,
-            }
+            time = self.fetch_time(source)
+            data = self.fetch_data(source)
+            trace_data = Trace(data, x_data=time, label=source)
+            print(f"*** Fetched trace data for source {source}: {trace_data} ***")
+            self.trace_data_ready.emit(trace_data)  # Emit the trace data for each source
 
-        self.trace_data_ready.emit(trace_data_dict)  # Emit the trace data for the GUI
-        return trace_data_dict  # For scripting use
+        return time, data  # For scripting use
     
 # --- Subsystems -----------------------------------------------------------------------------------
     
 class Acquire(Subsystem):#
-    """
-    Manages the acquisition settings of an oscilloscope or similar instrument.
-    """
     mode = SelectProperty(":MODE", ['RTIMe', 'SEGMmented'], "Acquisition mode")
     type = SelectProperty(":TYPE", ['NORMal', 'AVERage', 'HRESolution', 'PEAK'], "Acquisition type")
     sample_rate = ValueProperty(":SRATe", type="float", range=[0.1, 1e9], units="S/s", doc_str="Sample rate in samples per second")
     count = ValueProperty(":COUNt", type="int", range=[1, 10000], doc_str="Number of acquisitions to combine")
 
 class Channel(Subsystem):
-    """
-    Represents a single channel on an oscilloscope or similar instrument.
-    """
     coupling = SelectProperty(":COUPling", ['AC', 'DC'], "Coupling mode of the channel")
     display = SwitchProperty(":DISPlay", "Display state of the channel")
     scale = ValueProperty(":SCALe", type="float", range=[1e-3, 1e3], units="V", doc_str="Vertical scale of the channel")
@@ -140,9 +125,6 @@ class Channel(Subsystem):
     probe = ValueProperty(":PROBe", type="float", doc_str="Probe attenuation factor")
 
 class Timebase(Subsystem):
-    """
-    Controls the timebase settings of an oscilloscope.
-    """
     mode = SelectProperty(":MODE", ['MAIN', 'WIND', 'XY', 'ROLL'], "Timebase mode")
     reference = SelectProperty(":REFerence", ['LEFT', 'CENTer', 'RIGHT'], "Timebase reference position")
     scale = ValueProperty(":SCALe", type="float", range=[1e-9, 1e0], units="s", doc_str="Timebase scale")
@@ -150,9 +132,6 @@ class Timebase(Subsystem):
     range = ValueProperty(":RANGe", type="float", range=[2e-9, 50e0], units="s", doc_str="Timebase range")
 
 class Trigger(Subsystem):
-    """
-    Manages the trigger settings of an oscilloscope or similar instrument.
-    """
     mode = SelectProperty(":MODe", ['EDGE', 'GLITch', 'PATTern', 'SHOL', 'NONE'], "Trigger mode")
     source = SelectProperty(":SOURce", ['CHAN1', 'CHAN2', 'CHAN3', 'CHAN4', 'EXT', 'LINE', 'WGEN'], "Trigger source")
     slope = SelectProperty(":SLOPe", ['POSitive', 'NEGative'], "Trigger slope")
@@ -160,9 +139,6 @@ class Trigger(Subsystem):
     level = ValueProperty(":LEVel", type="float", range=[-5e0, 5e0], units="V", doc_str="Trigger level")
 
 class WaveGen(Subsystem):
-    """
-    Controls the built-in waveform generator (WGEN) of an instrument.
-    """
     function = SelectProperty(":FUNC", ['SIN', 'SQUare', 'RAMP', 'PULSe', 'NOISe', 'DC'], "Waveform function")
     output = SwitchProperty(":OUTP", "Waveform output state")
     frequency = ValueProperty(":FREQ", type="float", range=[1e-3, 1e8], units="Hz", doc_str="Waveform frequency")
@@ -170,9 +146,6 @@ class WaveGen(Subsystem):
     offset = ValueProperty(":VOLT:OFFS", type="float", range=[-5e0, 5e0], units="V", doc_str="Waveform offset")
 
 class Waveform(Subsystem):
-    """
-    Manages waveform data retrieval and configuration settings on an oscilloscope or similar instrument.
-    """
     source = SelectProperty(":SOURce", ['CHAN1', 'CHAN2', 'CHAN3', 'CHAN4', 'FUNC', 'MATH', 'FFT', 'WMEM', 'BUS1', 'BUS2', 'EXT'], "Waveform source")
     format = SelectProperty(":FORMat", ['ASCII', 'WORD', 'BYTE'], "Waveform data format")
     points_mode = SelectProperty(":POINts:MODE", ['NORMal', 'MAXiumum', 'RAW'], "Waveform points mode")

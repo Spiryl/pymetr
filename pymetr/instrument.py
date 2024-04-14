@@ -112,7 +112,6 @@ class Trace:
         line_thickness (float): Thickness of the line in the plot.
         line_style (str): Style of the line (e.g., 'Solid', 'Dash').
         """
-        self.label = label if label is not None else None
         self.data = np.array(data)
         self.x_data = np.array(x_data) if x_data is not None else None
         self.z_data = np.array(z_data) if z_data is not None else None
