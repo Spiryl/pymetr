@@ -8,6 +8,7 @@ from pymetr.instrument import Trace
 
 class TraceManager(QObject):
     traceDataChanged = Signal(list)
+    traceAdded = Signal(Trace)
 
     def __init__(self):
         super().__init__()
@@ -42,6 +43,7 @@ class TraceManager(QObject):
                 self.traces.append(trace)
 
         self.emit_trace_data()
+        self.traceAdded.emit(trace)
 
     def create_trace(self, data):
         if isinstance(data, Trace):
@@ -53,6 +55,10 @@ class TraceManager(QObject):
         else:
             print(f"Unsupported data type: {type(data)}")
             return None
+
+    def clear_traces(self):
+        self.traces.clear()
+        self.emit_trace_data()
 
     def remove_trace(self, trace):
         if trace in self.traces:

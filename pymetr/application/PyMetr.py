@@ -24,10 +24,11 @@ from contextlib import contextmanager
 
 from pymetr.application.instrument_panel import InstrumentManager, InstrumentPanel
 from pymetr.application.trace_panel import TraceManager, TracePanel
-from pymetr.application.display_panel import DisplayPanel
+from pymetr.application.display_panel import DisplayPanel, QuickPanel
 from pymetr.application.trace_plot import TracePlot
 from pymetr.instrument import Instrument, Trace
 
+# TODO:  Build out MainMenuBar into its own class.
 class MainMenuBar(QMenuBar):
     def __init__(self, parent=None):
         super(MainMenuBar, self).__init__(parent)
@@ -171,25 +172,57 @@ class DynamicInstrumentGUI(QMainWindow):
         self.display_panel.traceModeChanged.connect(self.trace_manager.set_trace_mode)
         self.display_panel.roiPlotToggled.connect(self.trace_plot.on_roi_plot_enabled)
         
-        # --- Test Button -------------------------------------
-        self.add_trace_button = QPushButton("Add Trace")
-        self.add_trace_button.clicked.connect(self.add_trace)
-        self.layout.addWidget(self.add_trace_button)
+        # --- Quick Panel  -------------------------------------
+        self.quick_panel = QuickPanel(self)
+        self.layout.addWidget(self.quick_panel)
 
-        # Update connections to use the trace_plot instance
+        self.connect_signals()
+
+    def connect_signals(self):
         self.trace_manager.traceDataChanged.connect(self.trace_plot.update_plot)
         self.trace_manager.traceDataChanged.connect(self.trace_panel.update_parameter_tree)
-        self.display_panel.traceModeChanged.connect(self.on_trace_mode_changed)
-        self.display_panel.traceModeChanged.connect(self.trace_manager.on_trace_mode_changed)
-        self.display_panel.roiPlotToggled.connect(self.trace_plot.on_roi_plot_enabled)
-        self.trace_manager.traceDataChanged.connect(self.trace_plot.update_roi_plot)
+        self.trace_manager.traceAdded.connect(self.trace_plot.update_roi_plot)
+
+        self.display_panel.plotModeChanged.connect(self.trace_manager.set_plot_mode)
+        self.display_panel.traceModeChanged.connect(self.trace_manager.set_trace_mode)
+
+        self.quick_panel.addInstrumentClicked.connect(self.add_instrument_button_clicked)
+        self.quick_panel.plotModeChanged.connect(self.trace_manager.set_plot_mode)
+        self.quick_panel.roiPlotToggled.connect(self.trace_plot.on_roi_plot_enabled)
+        self.quick_panel.roiPlotToggled.connect(self.trace_manager.emit_trace_data)
+        self.quick_panel.traceModeChanged.connect(self.trace_manager.set_trace_mode)
+        self.quick_panel.groupAllClicked.connect(self.on_group_all_clicked)
+        self.quick_panel.isolateAllClicked.connect(self.on_isolate_all_clicked)
+        self.quick_panel.testTraceClicked.connect(self.add_trace)
+        self.quick_panel.clearTracesClicked.connect(self.on_clear_traces_clicked)
+        self.quick_panel.screenshotClicked.connect(self.on_screenshot_clicked)
+        self.quick_panel.clearTracesClicked.connect(self.trace_plot.clear_traces)
+
+
+    # TODO: Move these methods to the controllers and keep 'main' for aggregation and signals. 
+    def on_screenshot_clicked(self):
+        # Implement the logic to copy the plot to the clipboard
+        pass
+
+    def on_group_all_clicked(self):
+        for trace in self.trace_manager.traces:
+            trace.mode = "Group"
+        self.trace_manager.emit_trace_data()
+
+    def on_isolate_all_clicked(self):
+        for trace in self.trace_manager.traces:
+            trace.mode = "Isolate"
+        self.trace_manager.emit_trace_data()
+
+    def on_clear_traces_clicked(self):
+        self.trace_manager.clear_traces()
 
     def add_trace(self):
         trace = TraceGenerator.generate_random_trace(self.trace_manager.trace_mode)
         self.trace_manager.add_trace(trace)
 
     def on_trace_mode_changed(self, trace_mode):
-        self.trace_manager.set_trace_mode(trace_mode)
+        self.trace_manager.trace_mode = trace_mode
 
     def add_instrument_button_clicked(self):
         logger.debug(f"Add instrument button clicked")
