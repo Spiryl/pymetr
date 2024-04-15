@@ -59,6 +59,12 @@ class TraceManager(QObject):
             self.traces.remove(trace)
             self.emit_trace_data()
 
+    def on_plot_mode_changed(self, mode):
+        self.plot_mode = mode
+
+    def on_trace_mode_changed(self, mode):
+        self.trace_mode = mode
+
     def set_plot_mode(self, mode):
         self.plot_mode = mode
         self.emit_trace_data()

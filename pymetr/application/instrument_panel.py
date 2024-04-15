@@ -185,7 +185,7 @@ class InstrumentManager(QObject):
                 if param.parent() and param.parent().name() == "Sources":
                     # Synchronize the source checkbox state with the current sources.source value
                     source_name = param.name()
-                    is_selected = source_name in instrument_instance.sources.source[0]
+                    is_selected = source_name in instrument_instance.sources.source
                     logger.debug(f"Synchronizing source '{source_name}' to state: {is_selected}")
                     self.source_updated.emit(unique_id, source_name, is_selected)
                 else:

@@ -180,7 +180,9 @@ class DynamicInstrumentGUI(QMainWindow):
         self.trace_manager.traceDataChanged.connect(self.trace_plot.update_plot)
         self.trace_manager.traceDataChanged.connect(self.trace_panel.update_parameter_tree)
         self.display_panel.traceModeChanged.connect(self.on_trace_mode_changed)
+        self.display_panel.traceModeChanged.connect(self.trace_manager.on_trace_mode_changed)
         self.display_panel.roiPlotToggled.connect(self.trace_plot.on_roi_plot_enabled)
+        self.trace_manager.traceDataChanged.connect(self.trace_plot.update_roi_plot)
 
     def add_trace(self):
         trace = TraceGenerator.generate_random_trace(self.trace_manager.trace_mode)
@@ -199,8 +201,8 @@ class DynamicInstrumentGUI(QMainWindow):
             if instrument:
                 self.instrument_panel.setup_instrument_panel(instrument, unique_id)
                 instrument_instance = self.instrument_manager.instruments[unique_id]['instance']  # Access the instrument instance
+                # self.instrument_manager.synchronize_instrument(unique_id)
                 instrument_instance.trace_data_ready.connect(self.trace_manager.add_trace)
-                self.instrument_manager.synchronize_instrument(unique_id)
 
     def on_instrument_connected(self, unique_id):
         instrument = self.instrument_manager.instruments[unique_id]['instance']

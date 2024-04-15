@@ -37,11 +37,11 @@ class DisplayPanel(QWidget):
                 {'name': 'Enable', 'type': 'bool', 'value': False},
             ]},
             {'name': 'Trace Settings', 'type': 'group', 'children': [
-                {'name': 'Plot Mode', 'type': 'list', 'values': ["Add", "Replace"], 'value': "Add"},
-                {'name': 'Trace Mode', 'type': 'list', 'values': ["Group", "Isolate"], 'value': "Group"},
+                {'name': 'Plot Mode', 'type': 'list', 'limits': ["Add", "Replace"], 'value': "Add"},
+                {'name': 'Trace Mode', 'type': 'list', 'limits': ["Group", "Isolate"], 'value': "Group"},
                 {'name': 'Anti-aliasing', 'type': 'bool', 'value': True},
                 {'name': 'Default Line Thickness', 'type': 'float', 'value': 1.0},
-                {'name': 'Default Line Style', 'type': 'list', 'values': ['Solid', 'Dash', 'Dot', 'Dash-Dot'], 'value': 'Solid'},
+                {'name': 'Default Line Style', 'type': 'list', 'limits': ['Solid', 'Dash', 'Dot', 'Dash-Dot'], 'value': 'Solid'},
             ]},
         ]
 
@@ -53,11 +53,21 @@ class DisplayPanel(QWidget):
         self.connect_signals()
 
     def connect_signals(self):
-        self.parameter.param('Plot Settings', 'Grid').sigValueChanged.connect(self.gridToggled.emit)
-        self.parameter.param('Plot Settings', 'X Log Scale').sigValueChanged.connect(self.xLogScaleToggled.emit)
-        self.parameter.param('Plot Settings', 'Y Log Scale').sigValueChanged.connect(self.yLogScaleToggled.emit)
-        self.parameter.param('Region Plot Settings', 'Enable').sigValueChanged.connect(self.roiPlotToggled.emit)
+        self.parameter.param('Plot Settings', 'Grid').sigValueChanged.connect(
+            lambda param, value: self.gridToggled.emit(value)
+        )
+        self.parameter.param('Plot Settings', 'X Log Scale').sigValueChanged.connect(
+            lambda param, value: self.xLogScaleToggled.emit(value)
+        )
+        self.parameter.param('Plot Settings', 'Y Log Scale').sigValueChanged.connect(
+            lambda param, value: self.yLogScaleToggled.emit(value)
+        )
+        self.parameter.param('Region Plot Settings', 'Enable').sigValueChanged.connect(
+            lambda param, value: self.roiPlotToggled.emit(value)
+        )
         self.parameter.param('Trace Settings', 'Plot Mode').sigValueChanged.connect(
-            lambda param, val: self.plotModeChanged.emit(val))
+            lambda param, value: self.plotModeChanged.emit(value)
+        )
         self.parameter.param('Trace Settings', 'Trace Mode').sigValueChanged.connect(
-            lambda param, val: self.traceModeChanged.emit(val))
+            lambda param, value: self.traceModeChanged.emit(value)
+        )
