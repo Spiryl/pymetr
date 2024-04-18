@@ -4,7 +4,7 @@ import pyqtgraph as pg
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QPushButton, QDockWidget
 from PySide6.QtCore import QObject, Signal, Qt
 
-from pymetr.instrument import Trace
+from pymetr.core import Trace
 
 class TraceManager(QObject):
     traceDataChanged = Signal(list)
@@ -16,30 +16,38 @@ class TraceManager(QObject):
         self.plot_mode = 'Add'
         self.trace_mode = 'Group'
 
+        self.color_palette = ['#5E57FF', '#4BFF36', '#F23CA6', '#FF9535', '#02FEE4', '#2F46FA', '#FFFE13', '#55FC77']
+        self.color_index = 0
+
     def add_trace(self, data):
-        print(f"Received trace data in TraceManager: {data}")
         if self.plot_mode == "Replace":
             self.traces.clear()
+            self.color_index = 0
 
         if isinstance(data, Trace):
-            # If data is a single Trace object
-            data.mode = self.trace_mode
+            if not data.color:
+                data.color = self.color_palette[self.color_index]
+                self.color_index = (self.color_index + 1) % len(self.color_palette)
+            data.mode = self.trace_mode  # Set the trace mode to the current value
             self.traces.append(data)
         elif isinstance(data, (list, tuple)):
-            # If data is a list or tuple of Trace objects or arrays
             for item in data:
                 trace = self.create_trace(item)
                 if trace:
+                    trace.mode = self.trace_mode  # Set the trace mode for each trace
                     self.traces.append(trace)
         elif isinstance(data, dict):
-            # If data is a dictionary representing a trace
+            if 'color' not in data:
+                data['color'] = self.color_palette[self.color_index]
+                self.color_index = (self.color_index + 1) % len(self.color_palette)
             trace = self.create_trace(data)
             if trace:
+                trace.mode = self.trace_mode  # Set the trace mode for the trace
                 self.traces.append(trace)
         else:
-            # If data is a single array or list of values
             trace = self.create_trace(data)
             if trace:
+                trace.mode = self.trace_mode  # Set the trace mode for the trace
                 self.traces.append(trace)
 
         self.emit_trace_data()
@@ -58,6 +66,7 @@ class TraceManager(QObject):
 
     def clear_traces(self):
         self.traces.clear()
+        self.color_index = 0
         self.emit_trace_data()
 
     def remove_trace(self, trace):
@@ -85,12 +94,13 @@ class TraceManager(QObject):
         self.traceDataChanged.emit(self.traces)
 
 class TracePanel(QDockWidget):
-    def __init__(self, trace_manager, parent=None):
+    def __init__(self, trace_manager, trace_plot, parent=None):
         super().__init__("", parent)
         self.setMinimumWidth(200) 
         self.setAllowedAreas(Qt.RightDockWidgetArea)
 
         self.trace_manager = trace_manager
+        self.trace_plot = trace_plot
 
         self.dock_widget = QWidget()
         self.dock_layout = QVBoxLayout(self.dock_widget)
@@ -148,7 +158,7 @@ class TracePanel(QDockWidget):
             setattr(trace, parameter, value)
             if trace.mode == 'Isolate':
                 if parameter == 'color':
-                    axis = self.parent().trace_axes.get(trace.label)
+                    axis = self.trace_plot.trace_axes.get(trace.label)
                     if axis:
                         axis.setPen(pg.mkPen(color=value))
             self.trace_manager.emit_trace_data()

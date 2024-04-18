@@ -10,9 +10,8 @@ from pyqtgraph.parametertree import Parameter, ParameterTree
 from PySide6.QtCore import QObject, Signal, Qt
 from PySide6.QtWidgets import QVBoxLayout, QDockWidget, QPushButton, QWidget, QFileDialog 
 
-from pymetr.instrument import Instrument
+from pymetr.core import Instrument
 from pymetr.application.instrument_factory import InstrumentFactory
-from pymetr.application.trace_data_fetcher_thread import TraceDataFetcherThread
 
 factory = InstrumentFactory()
 

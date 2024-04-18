@@ -26,7 +26,7 @@ from pymetr.application.instrument_panel import InstrumentManager, InstrumentPan
 from pymetr.application.trace_panel import TraceManager, TracePanel
 from pymetr.application.display_panel import DisplayPanel, QuickPanel
 from pymetr.application.trace_plot import TracePlot
-from pymetr.instrument import Instrument, Trace
+from pymetr.core import Instrument, Trace
 
 # TODO:  Build out MainMenuBar into its own class.
 class MainMenuBar(QMenuBar):
@@ -77,9 +77,6 @@ class MainMenuBar(QMenuBar):
         print("Importing trace data...")
 
 class InstrumentSelectionDialog(QDialog):
-    """
-    Dialog for selecting an instrument from a list of available instruments.
-    """
     def __init__(self, parent=None):
         logger.debug(f"Opening instrument selection dialog")
         super().__init__(parent)
@@ -97,9 +94,6 @@ class InstrumentSelectionDialog(QDialog):
         self.layout.addWidget(self.buttonBox)
         
     def populate_instruments(self):
-        """
-        Populates the list widget with available instruments.
-        """
         logger.debug(f"Populating Instruments")
         instruments_data = Instrument.list_instruments("TCPIP?*::INSTR")
         for unique_key, resource in instruments_data[0].items():
@@ -114,9 +108,6 @@ class InstrumentSelectionDialog(QDialog):
                 continue    
 
     def get_selected_instrument(self):
-        """
-        Returns the selected instrument's details from the dialog.
-        """
         logger.debug(f"Getting selected instrument")
         selected_item = self.listWidget.currentItem()
         if selected_item:
@@ -139,38 +130,46 @@ class DynamicInstrumentGUI(QMainWindow):
         self.layout = QVBoxLayout(self.central_widget)
         self.setCentralWidget(self.central_widget)
 
+        ## --- Plot Dock ---------------------------------------
+        self.plot_dock = QDockWidget("Plot Controls", self)
+        self.plot_dock.setAllowedAreas(Qt.RightDockWidgetArea)
+        self.plot_dock.setMinimumWidth(250)
+        self.addDockWidget(Qt.RightDockWidgetArea, self.plot_dock)
+
+        self.plot_tabs = QTabWidget()
+        self.plot_dock.setWidget(self.plot_tabs)
+
+        # --- Trace Manager -------------------------------------
+        self.trace_manager = TraceManager()
+
         # --- Trace Plot -------------------------------------
         self.trace_plot = TracePlot(self)
         self.layout.addWidget(self.trace_plot)
 
-        # --- Control Dock -----
-        self.tabbed_dock = QDockWidget("", self)
-        self.tabbed_dock.setAllowedAreas(Qt.RightDockWidgetArea)
-        self.tabbed_dock.setMinimumWidth(250)
-        self.addDockWidget(Qt.RightDockWidgetArea, self.tabbed_dock)
-
-        self.tabbed_widget = QTabWidget()
-        self.tabbed_dock.setWidget(self.tabbed_widget)
-
         # --- Trace Panel --------------------------------------
-        self.trace_manager = TraceManager()
-        self.trace_panel = TracePanel(self.trace_manager, self)
-        self.tabbed_widget.addTab(self.trace_panel, "Traces")
-
-        # --- Instrument Panel ---------------------------------
-        self.instrument_manager = InstrumentManager()
-        self.instrument_panel = InstrumentPanel(self.instrument_manager, self)
-        self.instrument_panel.instrument_connected.connect(self.on_instrument_connected)
-        self.instrument_panel.instrument_disconnected.connect(self.on_instrument_disconnected)
-        self.instrument_panel.trace_data_ready.connect(self.trace_manager.add_trace)
-        self.tabbed_widget.addTab(self.instrument_panel, "Instruments")
+        self.trace_panel = TracePanel(self.trace_manager, self.trace_plot, self)
+        self.plot_tabs.addTab(self.trace_panel, "Traces")
 
         # --- Display Panel ---------------------------------
         self.display_panel = DisplayPanel(self)
-        self.tabbed_widget.addTab(self.display_panel, "Display")
-        self.display_panel.plotModeChanged.connect(self.trace_manager.set_plot_mode)
-        self.display_panel.traceModeChanged.connect(self.trace_manager.set_trace_mode)
-        self.display_panel.roiPlotToggled.connect(self.trace_plot.on_roi_plot_enabled)
+        self.plot_tabs.addTab(self.display_panel, "Display")
+        
+        ## --- Instrument Dock --------------------------------- 
+        self.instrument_dock = QDockWidget("Instrument Controls", self)
+        self.instrument_dock.setAllowedAreas(Qt.RightDockWidgetArea)
+        self.instrument_dock.setMinimumWidth(250)
+        self.addDockWidget(Qt.RightDockWidgetArea, self.instrument_dock)
+
+        self.instrument_tabs = QTabWidget()
+        self.instrument_dock.setWidget(self.instrument_tabs)
+
+        # --- Instrument Panel ---------------------------------
+        self.instrument_manager = InstrumentManager()
+        # self.instrument_panel = InstrumentPanel(self.instrument_manager, self)
+        # self.instrument_panel.instrument_connected.connect(self.on_instrument_connected)
+        # self.instrument_panel.instrument_disconnected.connect(self.on_instrument_disconnected)
+        # self.instrument_panel.trace_data_ready.connect(self.trace_manager.add_trace)
+        # self.instrument_tabs.addTab(self.instrument_panel, "Instrument 1")
         
         # --- Quick Panel  -------------------------------------
         self.quick_panel = QuickPanel(self)
@@ -179,13 +178,22 @@ class DynamicInstrumentGUI(QMainWindow):
         self.connect_signals()
 
     def connect_signals(self):
+        # --- Trace Manager  -------------------------------------
         self.trace_manager.traceDataChanged.connect(self.trace_plot.update_plot)
         self.trace_manager.traceDataChanged.connect(self.trace_panel.update_parameter_tree)
         self.trace_manager.traceAdded.connect(self.trace_plot.update_roi_plot)
 
-        self.display_panel.plotModeChanged.connect(self.trace_manager.set_plot_mode)
-        self.display_panel.traceModeChanged.connect(self.trace_manager.set_trace_mode)
+        # --- Display Panel  -------------------------------------
+        self.display_panel.xGridChanged.connect(self.trace_plot.set_x_grid)
+        self.display_panel.yGridChanged.connect(self.trace_plot.set_y_grid)
+        self.display_panel.titleChanged.connect(self.trace_plot.set_title)
+        self.display_panel.titleVisibilityChanged.connect(self.trace_plot.set_title_visible)
+        self.display_panel.xLabelChanged.connect(self.trace_plot.set_x_label)
+        self.display_panel.xLabelVisibilityChanged.connect(self.trace_plot.set_x_label_visible)
+        self.display_panel.yLabelChanged.connect(self.trace_plot.set_y_label)
+        self.display_panel.yLabelVisibilityChanged.connect(self.trace_plot.set_y_label_visible)
 
+        # --- Display Panel  -------------------------------------
         self.quick_panel.addInstrumentClicked.connect(self.add_instrument_button_clicked)
         self.quick_panel.plotModeChanged.connect(self.trace_manager.set_plot_mode)
         self.quick_panel.roiPlotToggled.connect(self.trace_plot.on_roi_plot_enabled)
@@ -201,8 +209,20 @@ class DynamicInstrumentGUI(QMainWindow):
 
     # TODO: Move these methods to the controllers and keep 'main' for aggregation and signals. 
     def on_screenshot_clicked(self):
-        # Implement the logic to copy the plot to the clipboard
-        pass
+        # Create a QPixmap with the size of the graphics scene
+        pixmap = QtGui.QPixmap(self.trace_plot.plot_layout.size())
+
+        # Create a QPainter to paint on the pixmap
+        painter = QtGui.QPainter(pixmap)
+
+        # Render the graphics scene onto the painter
+        self.trace_plot.plot_layout.render(painter)
+
+        # End painting
+        painter.end()
+
+        # Set the pixmap as the clipboard content
+        QtGui.QGuiApplication.clipboard().setPixmap(pixmap)
 
     def on_group_all_clicked(self):
         for trace in self.trace_manager.traces:
@@ -232,9 +252,22 @@ class DynamicInstrumentGUI(QMainWindow):
             selected_resource = dialog.get_selected_instrument()
             instrument, unique_id = self.instrument_manager.initialize_instrument(selected_resource)
             if instrument:
-                self.instrument_panel.setup_instrument_panel(instrument, unique_id)
-                instrument_instance = self.instrument_manager.instruments[unique_id]['instance']  # Access the instrument instance
-                # self.instrument_manager.synchronize_instrument(unique_id)
+                # Create the instrument dock and tabs if they don't exist
+                if not hasattr(self, 'instrument_dock'):
+                    self.instrument_dock = QDockWidget("Instruments", self)
+                    self.instrument_dock.setAllowedAreas(Qt.RightDockWidgetArea)
+                    self.instrument_dock.setMinimumWidth(250)
+                    self.instrument_tabs = QTabWidget()
+                    self.instrument_dock.setWidget(self.instrument_tabs)
+                    self.addDockWidget(Qt.RightDockWidgetArea, self.instrument_dock)
+                    self.tabifyDockWidget(self.tabbed_dock, self.instrument_dock)
+
+                # Create a new instrument panel for the connected instrument
+                new_instrument_panel = InstrumentPanel(self.instrument_manager, self)
+                new_instrument_panel.setup_instrument_panel(instrument, unique_id)
+                self.instrument_tabs.addTab(new_instrument_panel, unique_id)
+
+                instrument_instance = self.instrument_manager.instruments[unique_id]['instance']
                 instrument_instance.trace_data_ready.connect(self.trace_manager.add_trace)
 
     def on_instrument_connected(self, unique_id):
@@ -253,13 +286,10 @@ class TraceGenerator:
     def generate_random_trace(mode='Group'):
         trace_name = f"Trace {TraceGenerator.trace_counter}"
         TraceGenerator.trace_counter += 1
-        random_color = pg.intColor(random.randint(0, 255))
         x = np.arange(1000)
         y = np.random.normal(loc=0, scale=20, size=1000)
         trace_dict = {
             'label': trace_name,
-            'color': random_color,
-            'mode': mode,
             'data': y.tolist(),
             'visible': True,
             'line_thickness': 1.0,

@@ -4,7 +4,9 @@ logging.getLogger('pyvisa').setLevel(logging.CRITICAL)
 from pyvisa.constants import BufferType
 from enum import Enum
 from collections.abc import Iterable
-from PySide6.QtCore import QObject, Signal
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from PySide6.QtCore import QObject, Signal, QThread
+import functools
 import sys
 import numpy as np
 import logging
@@ -97,6 +99,18 @@ class Sources(QObject):
             return wrapper
         return decorator
 
+class TraceWorker(QThread):
+    def __init__(self, func, instance, *args, **kwargs):
+        super().__init__()
+        self.func = func
+        self.instance = instance
+        self.args = args
+        self.kwargs = kwargs
+
+    def run(self):
+        result = self.func(self.instance, *self.args, **self.kwargs)
+        self.instance.trace_data_ready.emit(result)
+
 class Trace:
     def __init__(self, data, x_data=None, z_data=None, label=None, color=None, mode=None, visible=True, line_thickness=1.0, line_style='Solid'):
         """
@@ -132,59 +146,6 @@ class Trace:
         if z_data is not None:
             self.z_data = np.array(z_data)
 
-class Subsystem:
-    """
-    Base class for creating instrument subsystems, supporting both simple and indexed instantiation, 
-    and enabling nested subsystem command prefix cascading.
-
-    Attributes:
-        instr (Instrument): Reference to the parent instrument or subsystem. This attribute 
-                              facilitates communication with the parent object.
-        cmd_prefix (str): The SCPI command prefix associated with the subsystem. This prefix is 
-                          used to construct full SCPI commands for property interactions.
-    """
-
-    def __init__(self, instr, cmd_prefix="", index=None):
-        """
-        Initializes a Subsystem instance.
-
-        Args:
-            parent (Instrument or Subsystem): The parent instrument or subsystem this instance belongs to.
-            cmd_prefix (str): The command prefix specific to this subsystem. It's used as the base for constructing SCPI commands.
-            index (int, optional): If provided, it specifies the index of this instance within an indexed subsystem setup. 
-                                   This index is appended to the command prefix.
-        """
-        self.instr = instr
-        logger.debug(f"Initializing subsystem with instrument {instr}, prefix {cmd_prefix}, and index {index}")
-        # Handle cascading of command prefixes for nested subsystems
-        self.cmd_prefix = f"{instr.cmd_prefix}{cmd_prefix}" if hasattr(instr, 'cmd_prefix') else cmd_prefix
-        if index is not None:
-            self.cmd_prefix += str(index)
-
-    @classmethod
-    def build(cls, instr, cmd_prefix, indices=None):
-        """
-        Class method to instantiate subsystems. This method simplifies the creation process by automatically handling
-        both single and indexed instances of subsystems.
-
-        Args:
-            parent (Instrument or Subsystem): The parent object to which the new subsystem instance(s) will belong.
-            cmd_prefix (str): The SCPI command prefix for the subsystem being created.
-            indices (int, optional): The number of indexed instances to create. If None, a single instance is created without indexing.
-
-        Returns:
-            Subsystem or list of Subsystem: A single instance of the subsystem if 'indices' is None, 
-                                             or a list of indexed subsystem instances if 'indices' is provided.
-        """
-        if indices is None:
-            logger.debug(f"Build method returning single instance")
-            # Creating a single instance without indexing
-            return cls(instr, cmd_prefix)
-        else:
-            # Creating multiple indexed instances
-            logger.debug(f"Build method creating {indices} instances")
-            return [cls(instr, cmd_prefix, index=idx) for idx in range(1, indices + 1)]
-
 class Instrument(QObject):
     """
     A comprehensive class for interacting with scientific and industrial instruments through VISA, 
@@ -198,6 +159,7 @@ class Instrument(QObject):
 
     # Signal needed to emit for plotting
     trace_data_ready = Signal(object)
+
     def __init__(self, resource_string, sources = None, **kwargs):
         """
         Initializes the instrument connection using the provided VISA resource string.
@@ -213,12 +175,61 @@ class Instrument(QObject):
         self.resource_string = resource_string
         self.rm = pyvisa.ResourceManager()
         self.sources = Sources(sources) if sources else Sources([])
+        self.active_trace_threads = []
         self.instrument = None
         self._data_mode = 'ASCII'  # Default to BINARY
         self._data_type = 'B'  # Default data type (e.g., for binary data)
         self.buffer_size = kwargs.pop('buffer_size', 2^16)  # Default buffer size, can be overridden via kwargs
         self.buffer_type = kwargs.pop('buffer_type', BufferType.io_in | BufferType.io_out)  # Default buffer type, can be overridden
         logger.debug(f"Initializing Instrument with resource_string: {resource_string}")
+
+    @staticmethod
+    def trace_thread(func):
+        """A decorator to run trace-related methods in a thread and handle their lifecycle."""
+        def wrapper(instance, *args, **kwargs):
+            worker = TraceWorker(func, instance, *args, **kwargs)
+            worker.start()
+            instance.active_trace_threads.append(worker)
+            worker.finished.connect(lambda: instance.active_trace_threads.remove(worker))
+            return worker
+        return wrapper
+
+    @abstractmethod
+    def fetch_trace(self):
+        """
+        Abstract method designed to fetch trace data from the instrument. Implementations should return data and optionally,
+        a corresponding range or timestamp array that matches the length of the data. The method should support returning 
+        this information in a format compatible with 'pyqtgraph' plotting functions, primarily focusing on arrays or lists.
+
+        The method should be capable of handling non-linear data points and timestamped data, ensuring flexibility in data
+        visualization.
+
+        Returns:
+            tuple: A tuple containing one or more elements depending on what is necessary for plotting:
+                   - data (np.array or list): Mandatory. The primary set of data points to be plotted.
+                   - range (np.array, list, tuple): Optional. If provided, this specifies the x-axis values associated with each data point.
+                                                    This can be a linear range (tuple) or a non-linear range/timestamps (array/list).
+                   
+                    The expected format for simple linear data:
+                    (data, )
+                   
+                    For data with a specific range or timestamps:
+                    (data, range)
+                   
+                    trace_dictionary = {
+                        'trace_id': {  # Unique identifier for each trace
+                            'data': np.array([...]) or list([...]),  # The main data points for plotting. np.array is preferred for performance, but list is also supported.
+                            'range': np.array([...]) or list([...]) or tuple(start, end),  # X-axis values. Can be linear (tuple) or non-linear (array/list).
+                            'color': 'hex_code',  # Optional. Hex code (e.g., '#FF5733') for trace color. If not provided, a default is used.
+                            'label': 'String label',  # Optional. Label for the trace, used in legends or axes.
+                            'units': 'unit string',  # Optional. Units for the data (e.g., 'V', 'A'). Important for axes labeling and data interpretation.
+                            'range-units': 'unit string',  # Optional. Units for the range (e.g., 's', 'MHz'). Important for axes labeling and data interpretation.
+                            # Additional metadata as needed
+                        },
+                        # More traces as needed
+                    }
+        """
+        pass
 
     @property
     def data_mode(self):
@@ -275,43 +286,6 @@ class Instrument(QObject):
         if type not in valid_types:
             raise ValueError(f"Invalid data type. Supported types are: {', '.join(valid_types)}")
         self._data_type = type
-
-    @abstractmethod
-    def fetch_trace(self):
-        """
-        Abstract method designed to fetch trace data from the instrument. Implementations should return data and optionally,
-        a corresponding range or timestamp array that matches the length of the data. The method should support returning 
-        this information in a format compatible with 'pyqtgraph' plotting functions, primarily focusing on arrays or lists.
-
-        The method should be capable of handling non-linear data points and timestamped data, ensuring flexibility in data
-        visualization.
-
-        Returns:
-            tuple: A tuple containing one or more elements depending on what is necessary for plotting:
-                   - data (np.array or list): Mandatory. The primary set of data points to be plotted.
-                   - range (np.array, list, tuple): Optional. If provided, this specifies the x-axis values associated with each data point.
-                                                    This can be a linear range (tuple) or a non-linear range/timestamps (array/list).
-                   
-                    The expected format for simple linear data:
-                    (data, )
-                   
-                    For data with a specific range or timestamps:
-                    (data, range)
-                   
-                    trace_dictionary = {
-                        'trace_id': {  # Unique identifier for each trace
-                            'data': np.array([...]) or list([...]),  # The main data points for plotting. np.array is preferred for performance, but list is also supported.
-                            'range': np.array([...]) or list([...]) or tuple(start, end),  # X-axis values. Can be linear (tuple) or non-linear (array/list).
-                            'color': 'hex_code',  # Optional. Hex code (e.g., '#FF5733') for trace color. If not provided, a default is used.
-                            'label': 'String label',  # Optional. Label for the trace, used in legends or axes.
-                            'markers': 'style',  # Optional. Marker style (e.g., 'o', 's'). Refer to 'pyqtgraph' documentation for supported styles.
-                            'units': 'unit string',  # Optional. Units for the data (e.g., 'V', 'A'). Important for axes labeling and data interpretation.
-                            # Additional metadata as needed
-                        },
-                        # More traces as needed
-                    }
-        """
-        pass
 
     class Status(IntFlag):
         """
@@ -649,3 +623,56 @@ class Instrument(QObject):
 
         selected_key = list(unique_instruments.keys())[selected_index]
         return unique_instruments[selected_key]
+    
+class Subsystem:
+    """
+    Base class for creating instrument subsystems, supporting both simple and indexed instantiation, 
+    and enabling nested subsystem command prefix cascading.
+
+    Attributes:
+        instr (Instrument): Reference to the parent instrument or subsystem. This attribute 
+                              facilitates communication with the parent object.
+        cmd_prefix (str): The SCPI command prefix associated with the subsystem. This prefix is 
+                          used to construct full SCPI commands for property interactions.
+    """
+
+    def __init__(self, instr, cmd_prefix="", index=None):
+        """
+        Initializes a Subsystem instance.
+
+        Args:
+            parent (Instrument or Subsystem): The parent instrument or subsystem this instance belongs to.
+            cmd_prefix (str): The command prefix specific to this subsystem. It's used as the base for constructing SCPI commands.
+            index (int, optional): If provided, it specifies the index of this instance within an indexed subsystem setup. 
+                                   This index is appended to the command prefix.
+        """
+        self.instr = instr
+        logger.debug(f"Initializing subsystem with instrument {instr}, prefix {cmd_prefix}, and index {index}")
+        # Handle cascading of command prefixes for nested subsystems
+        self.cmd_prefix = f"{instr.cmd_prefix}{cmd_prefix}" if hasattr(instr, 'cmd_prefix') else cmd_prefix
+        if index is not None:
+            self.cmd_prefix += str(index)
+
+    @classmethod
+    def build(cls, instr, cmd_prefix, indices=None):
+        """
+        Class method to instantiate subsystems. This method simplifies the creation process by automatically handling
+        both single and indexed instances of subsystems.
+
+        Args:
+            parent (Instrument or Subsystem): The parent object to which the new subsystem instance(s) will belong.
+            cmd_prefix (str): The SCPI command prefix for the subsystem being created.
+            indices (int, optional): The number of indexed instances to create. If None, a single instance is created without indexing.
+
+        Returns:
+            Subsystem or list of Subsystem: A single instance of the subsystem if 'indices' is None, 
+                                             or a list of indexed subsystem instances if 'indices' is provided.
+        """
+        if indices is None:
+            logger.debug(f"Build method returning single instance")
+            # Creating a single instance without indexing
+            return cls(instr, cmd_prefix)
+        else:
+            # Creating multiple indexed instances
+            logger.debug(f"Build method creating {indices} instances")
+            return [cls(instr, cmd_prefix, index=idx) for idx in range(1, indices + 1)]

@@ -4,15 +4,21 @@ from PySide6.QtCore import Signal
 from pyqtgraph.parametertree import ParameterTree, Parameter
 
 class DisplayPanel(QWidget):
-    plotModeChanged = Signal(str)
-    traceModeChanged = Signal(str)
-    roiPlotToggled = Signal(bool)
     gridToggled = Signal(bool)
     xLogScaleToggled = Signal(bool)
     yLogScaleToggled = Signal(bool)
+    xGridChanged = Signal(bool)
+    yGridChanged = Signal(bool)
+    titleChanged = Signal(str)
+    titleVisibilityChanged = Signal(bool)
+    xLabelChanged = Signal(str)
+    xLabelVisibilityChanged = Signal(bool)
+    yLabelChanged = Signal(str)
+    yLabelVisibilityChanged = Signal(bool)
 
-    def __init__(self, parent=None):
+    def __init__(self, trace_plot, parent=None):
         super().__init__(parent)
+        self.trace_plot = trace_plot
         self.layout = QVBoxLayout(self)
 
         self.params = [
@@ -20,25 +26,18 @@ class DisplayPanel(QWidget):
                 {'name': 'Grid', 'type': 'bool', 'value': False},
                 {'name': 'X Log Scale', 'type': 'bool', 'value': False},
                 {'name': 'Y Log Scale', 'type': 'bool', 'value': False},
+                {'name': 'X Grid', 'type': 'bool', 'value': True},
+                {'name': 'Y Grid', 'type': 'bool', 'value': True},
             ]},
-            {'name': 'Axes Settings', 'type': 'group', 'children': [
-                {'name': 'X Axis', 'type': 'group', 'children': [
-                    {'name': 'Label', 'type': 'str', 'value': 'X'},
-                    {'name': 'Start', 'type': 'float', 'value': 0},
-                    {'name': 'Stop', 'type': 'float', 'value': 100},
-                ]},
-                {'name': 'Y Axis', 'type': 'group', 'children': [
-                    {'name': 'Label', 'type': 'str', 'value': 'Y'},
-                    {'name': 'Start', 'type': 'float', 'value': 0},
-                    {'name': 'Stop', 'type': 'float', 'value': 100},
-                ]},
-            ]},
-            {'name': 'Region Plot Settings', 'type': 'group', 'children': [
-                {'name': 'Enable', 'type': 'bool', 'value': False},
+            {'name': 'Labels', 'type': 'group', 'children': [
+                {'name': 'Title', 'type': 'str', 'value': 'Plot Title'},
+                {'name': 'Show Title', 'type': 'bool', 'value': True},
+                {'name': 'X Label', 'type': 'str', 'value': 'X'},
+                {'name': 'Show X Label', 'type': 'bool', 'value': True},
+                {'name': 'Y Label', 'type': 'str', 'value': 'Y'},
+                {'name': 'Show Y Label', 'type': 'bool', 'value': True},
             ]},
             {'name': 'Trace Settings', 'type': 'group', 'children': [
-                {'name': 'Plot Mode', 'type': 'list', 'limits': ["Add", "Replace"], 'value': "Add"},
-                {'name': 'Trace Mode', 'type': 'list', 'limits': ["Group", "Isolate"], 'value': "Group"},
                 {'name': 'Anti-aliasing', 'type': 'bool', 'value': True},
                 {'name': 'Default Line Thickness', 'type': 'float', 'value': 1.0},
                 {'name': 'Default Line Style', 'type': 'list', 'limits': ['Solid', 'Dash', 'Dot', 'Dash-Dot'], 'value': 'Solid'},
@@ -62,14 +61,29 @@ class DisplayPanel(QWidget):
         self.parameter.param('Plot Settings', 'Y Log Scale').sigValueChanged.connect(
             lambda param, value: self.yLogScaleToggled.emit(value)
         )
-        self.parameter.param('Region Plot Settings', 'Enable').sigValueChanged.connect(
-            lambda param, value: self.roiPlotToggled.emit(value)
+        self.parameter.param('Plot Settings', 'X Grid').sigValueChanged.connect(
+            lambda param, value: self.xGridChanged.emit(value)
         )
-        self.parameter.param('Trace Settings', 'Plot Mode').sigValueChanged.connect(
-            lambda param, value: self.plotModeChanged.emit(value)
+        self.parameter.param('Plot Settings', 'Y Grid').sigValueChanged.connect(
+            lambda param, value: self.yGridChanged.emit(value)
         )
-        self.parameter.param('Trace Settings', 'Trace Mode').sigValueChanged.connect(
-            lambda param, value: self.traceModeChanged.emit(value)
+        self.parameter.param('Labels', 'Title').sigValueChanged.connect(
+            lambda param, value: self.titleChanged.emit(value)
+        )
+        self.parameter.param('Labels', 'Show Title').sigValueChanged.connect(
+            lambda param, value: self.titleVisibilityChanged.emit(value)
+        )
+        self.parameter.param('Labels', 'X Label').sigValueChanged.connect(
+            lambda param, value: self.xLabelChanged.emit(value)
+        )
+        self.parameter.param('Labels', 'Show X Label').sigValueChanged.connect(
+            lambda param, value: self.xLabelVisibilityChanged.emit(value)
+        )
+        self.parameter.param('Labels', 'Y Label').sigValueChanged.connect(
+            lambda param, value: self.yLabelChanged.emit(value)
+        )
+        self.parameter.param('Labels', 'Show Y Label').sigValueChanged.connect(
+            lambda param, value: self.yLabelVisibilityChanged.emit(value)
         )
 
 class QuickPanel(QWidget):

@@ -1,6 +1,7 @@
 
 import numpy as np
-from pymetr import Instrument, Subsystem, SwitchProperty, SelectProperty, ValueProperty, DataProperty, DataBlockProperty, Sources, Trace
+from pymetr.core import Instrument, Subsystem, Sources, Trace
+from pymetr.properties import SwitchProperty, SelectProperty, ValueProperty, DataProperty, DataBlockProperty
 
 class Oscilloscope(Instrument):
     def __init__(self, resource_string):
@@ -32,6 +33,10 @@ class Oscilloscope(Instrument):
 
 # --- Methods ------------------------------------------------------------------------------
 
+    # The source command decorator looks at the list of the instruments active sources
+    # and adds them as parameter arguments for commands which accept a list of sources.
+    # This allows the function to be passed with arguments of called from a GUI button
+    # based on a list of active sources.
     @Sources.source_command(":AUTOScale {}")
     def autoscale(self, *sources):
         pass
@@ -49,7 +54,7 @@ class Oscilloscope(Instrument):
         if source:
             self.waveform.source = source
 
-        try:
+        try: # The preamble data includes all of the information needed to built the voltages and timescales from the raw data.
             _preamble = self.waveform.preamble
             self._x_increment, self._x_origin, self._x_reference = _preamble[4], _preamble[5], int(_preamble[6])
             self._y_increment, self._y_origin, self._y_reference = _preamble[7], _preamble[8], int(_preamble[9])
@@ -60,39 +65,42 @@ class Oscilloscope(Instrument):
             raise ValueError(f'Issue fetching or parsing preamble: {e}')
 
     def fetch_data(self, source=None):
-
-        # Update measurement source from argument
         if source:
             self.waveform.source = source
 
-        # To handle the supported data types we need to define them. 
+        # This section is mostly just to support for all oscope data format
         self.waveform.format = self.format
-        _unsigned = self.waveform.unsigned
+        unsigned = self.waveform.unsigned
 
-        if self._format == "BYTE":
-            _data_type = 'B' if _unsigned else 'b'
-        elif self._format == "WORD":
-            _data_type = 'H' if _unsigned else 'h'
-        else:
-            _data_type = None
+        # Binary data formats based on waveform format settings
+        data_type_map = { 
+            "BYTE": 'B' if unsigned else 'b',
+            "WORD": 'H' if unsigned else 'h',
+            "ASCII": None
+        }
+        data_type = data_type_map.get(self._format)
 
-        # See the DataBlockProperty class documentation
+        # Instrument data type and mode attributes need to be configured before reading binary data properties
+        self.data_type = data_type if data_type else 'B'
         self.data_mode = "ASCII" if self._format == "ASCII" else "BINARY"
-        self.data_type = _data_type if _data_type else 'B'
-
-        # We can grab the data here.
+        
+        # Ready the data property
         waveform_data = self.waveform.data
 
-        # Binary data must be scaled
+        # Binary data needs to be converted from dac values to voltages
         if self._format in ["BYTE", "WORD"]:
-            voltages = ((waveform_data - self._y_reference) * self._y_increment + self._y_origin)
+            voltages = (waveform_data - self._y_reference) * self._y_increment + self._y_origin
         elif self._format == "ASCII":
             voltages = waveform_data
         else:
             raise ValueError(f"Unsupported data format: {self.format}")
-        
+
         return voltages
     
+    # Trace thread is a special decorator for the abstract method 
+    # fetch_trace to handle in a separate thread and emit the trace_data_ready_signal
+    # with the traces list returned by this method. 
+    @Instrument.trace_thread
     @Sources.source_command(":DIGitize {}")
     def fetch_trace(self, *sources):
         self.query_operation_complete()  # let it digitize
@@ -100,14 +108,15 @@ class Oscilloscope(Instrument):
         if not sources:
             sources = self.sources.source
 
+        traces = []
         for source in sources:
             time = self.fetch_time(source)
             data = self.fetch_data(source)
             trace_data = Trace(data, x_data=time, label=source)
             print(f"*** Fetched trace data for source {source}: {trace_data} ***")
-            self.trace_data_ready.emit(trace_data)  # Emit the trace data for each source
+            traces.append(trace_data)
 
-        return time, data  # For scripting use
+        return traces
     
 # --- Subsystems -----------------------------------------------------------------------------------
     
