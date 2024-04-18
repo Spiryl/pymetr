@@ -1,7 +1,7 @@
 # test_instrument.py
 import unittest
 from unittest.mock import patch, MagicMock
-from pymetr.instrument import Instrument
+from pymetr.core import Instrument
 
 class TestInstrument(unittest.TestCase):
 

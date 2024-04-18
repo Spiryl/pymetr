@@ -34,14 +34,22 @@ Pymetr introduces several factory functions to dynamically generate properties f
 
 GUI Builder
 -----------
+<<<<<<< HEAD
 The package also offers an **PyMetr_GUI** utility, which automatically parses compatible instruments drivers to create complete graphical interfaces for instrument control, data acquisition, and plotting. This feature leverages the properties and subsystems defined in the instrument model to provide a quick and easy way to interact with instruments without writing additional GUI code.
+=======
+The package also offers an **PyMetr_GUI** utility, which automatically generates basic graphical interfaces for instrument control, data acquisition, and plotting. This feature leverages the properties and subsystems defined in the instrument model to provide a quick and easy way to interact with instruments without writing additional GUI code.
+>>>>>>> in_progress
 
 Conclusion
 ----------
 Pymetr empowers developers and engineers with a highly abstracted, yet flexible, framework for instrument control, making it easier to focus on the experimental and testing objectives rather than the intricacies of instrument communication.
 
+<<<<<<< HEAD
 .. note:: This package requires PyVISA as a backend for communication with instruments, ensuring wide compatibility with various types of test equipment. If you are unsure of your driver you can install 'pyvisa-py'.
 
+=======
+.. note:: This package requires PyVISA and a backend for communication with instruments, if you are unsure of your visa driver install 'pyvisa-py'.
+>>>>>>> in_progress
 
 .. toctree::
    :maxdepth: 2

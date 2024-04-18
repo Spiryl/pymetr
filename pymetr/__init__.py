@@ -1,11 +1,13 @@
 # pymetr/__init__.py
 
 # Update the __all__ list to include specific classes you want to expose.
-__all__ = ['Instrument', 'Subsystem', 'data_property', 'select_property', 'switch_property', 'value_property', 'string_property']
+__all__ = [
+    'Instrument', 'Subsystem', 'Sources', 'Trace', 'TraceWorker', 'threaded',
+    'SelectProperty', 'SwitchProperty', 'ValueProperty', 'DataProperty', 'DataBlockProperty'
+]
 
 try:
-    from .instrument import Instrument, Subsystem  # Assuming Instrument is a class in the instruments module
-    from .properties import data_property, select_property, switch_property, value_property, string_property
-    
+    from .core import Instrument, Subsystem, Sources, Trace, TraceWorker
+    from .properties import SelectProperty, SwitchProperty, ValueProperty, DataProperty, DataBlockProperty
 except ImportError as e:
     print(f"Failed to import within pymetr: {e}")

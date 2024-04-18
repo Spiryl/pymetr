@@ -1,4 +1,4 @@
-from pymetr.instruments.DSOX1204G import Oscilloscope
+from pymetr.instruments.dsox1204g import Oscilloscope
 import pyqtgraph as pg
 import logging
 import sys
@@ -16,9 +16,15 @@ oscope.open()
 oscope.reset()
 oscope.autoscale()
 oscope.clear_status()
+<<<<<<< HEAD
 oscope.set_data_sources('CHAN1')
 oscope.set_data_format('WORD')
 oscope.waveform.byte_order = 'LSBFirst' # If using 16-bit 'WORD'
+=======
+oscope.source = ['CHAN1', 'CHAN2']
+oscope.set_format('BYTE')
+# oscope.waveform.byte_order = 'LSBFirst' # If using 16-bit 'WORD'
+>>>>>>> in_progress
 oscope.waveform.points_mode = 'MAX'
 oscope.waveform.points = 10000
 oscope.timebase.range = 0.1 #s

@@ -2,67 +2,149 @@ import logging
 logger = logging.getLogger(__name__)
 logging.getLogger('pyvisa').setLevel(logging.CRITICAL)
 from pyvisa.constants import BufferType
-from PySide6.QtCore import QObject, Signal
+from enum import Enum
+from collections.abc import Iterable
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from PySide6.QtCore import QObject, Signal, QThread
+import functools
 import sys
 import numpy as np
 import logging
 import pyvisa
+import random
 
 from enum import IntFlag
 from abc import abstractmethod
 
-class Subsystem:
+class Sources(QObject):
     """
-    Base class for creating instrument subsystems, supporting both simple and indexed instantiation, 
-    and enabling nested subsystem command prefix cascading.
-
+    Handles the management and operation of sources for SCPI instruments.
+    ...
     Attributes:
-        instr (Instrument): Reference to the parent instrument or subsystem. This attribute 
-                              facilitates communication with the parent object.
-        cmd_prefix (str): The SCPI command prefix associated with the subsystem. This prefix is 
-                          used to construct full SCPI commands for property interactions.
+        sourcesChanged (Signal): Emitted when the list of active sources changes.
+        allSourcesChanged (Signal): Emitted when the list of available sources changes.
     """
+    # Define signals
+    source_changed = Signal(list)
 
-    def __init__(self, instr, cmd_prefix="", index=None):
+    def __init__(self, sources):
+        super().__init__()
+        self.sources = sources
+        self._source = []
+        logger.info("Sources initialized with: %s", sources)
+
+    @property
+    def source(self):
+        """Returns the list of active sources."""
+        return self.sources
+
+    @source.setter
+    def source(self, sources):
+        """Sets the active sources from the available sources."""
+        self._source = [source for source in sources if source in self.sources]
+        logger.debug("Active source set to: %s", self.source)
+        self.source_changed.emit(self._source)
+
+    def add_source(self, source):
+        """Adds a source to the list of available sources if it's not already present."""
+        if source not in self.sources:
+            self.sources.append(source)
+            logger.info("Added new source: %s", source)
+            self.source_changed.emit(self._source)
+
+    def remove_source(self, source):
+        if source in self.sources:
+            self.sources.remove(source)
+            logger.info("Removed source: %s", source)
+            self.source_changed.emit(self.source)
+
+    @staticmethod
+    def source_command(command_template):
         """
-        Initializes a Subsystem instance.
+        A decorator to handle oscilloscope source-related commands. It determines the correct sources
+        to use (provided or global), converts Enum members to strings, generates the SCPI command,
+        and executes it.
 
         Args:
-            parent (Instrument or Subsystem): The parent instrument or subsystem this instance belongs to.
-            cmd_prefix (str): The command prefix specific to this subsystem. It's used as the base for constructing SCPI commands.
-            index (int, optional): If provided, it specifies the index of this instance within an indexed subsystem setup. 
-                                   This index is appended to the command prefix.
-        """
-        self.instr = instr
-        logger.debug(f"Initializing subsystem with instrument {instr}, prefix {cmd_prefix}, and index {index}")
-        # Handle cascading of command prefixes for nested subsystems
-        self.cmd_prefix = f"{instr.cmd_prefix}{cmd_prefix}" if hasattr(instr, 'cmd_prefix') else cmd_prefix
-        if index is not None:
-            self.cmd_prefix += str(index)
-
-    @classmethod
-    def build(cls, instr, cmd_prefix, indices=None):
-        """
-        Class method to instantiate subsystems. This method simplifies the creation process by automatically handling
-        both single and indexed instances of subsystems.
-
-        Args:
-            parent (Instrument or Subsystem): The parent object to which the new subsystem instance(s) will belong.
-            cmd_prefix (str): The SCPI command prefix for the subsystem being created.
-            indices (int, optional): The number of indexed instances to create. If None, a single instance is created without indexing.
+            command_template (str): A template string for the SCPI command, with '{}' placeholder for source(s).
 
         Returns:
-            Subsystem or list of Subsystem: A single instance of the subsystem if 'indices' is None, 
-                                             or a list of indexed subsystem instances if 'indices' is provided.
+            A decorated function.
         """
-        if indices is None:
-            logger.debug(f"Build method returning single instance")
-            # Creating a single instance without indexing
-            return cls(instr, cmd_prefix)
-        else:
-            # Creating multiple indexed instances
-            logger.debug(f"Build method creating {indices} instances")
-            return [cls(instr, cmd_prefix, index=idx) for idx in range(1, indices + 1)]
+        def decorator(func):
+            def wrapper(self, *sources, **kwargs):
+                # Check if sources is provided and not empty, otherwise use global sources or default to an empty list
+                if sources:
+                    sources_to_use = sources
+                else:
+                    sources_to_use = self.sources.source  # Special implied instance for now
+
+                # Ensure sources_to_use is iterable and not a single enum item
+                if isinstance(sources_to_use, Enum):
+                    sources_to_use = [sources_to_use]
+                elif not isinstance(sources_to_use, Iterable) or isinstance(sources_to_use, str):
+                    sources_to_use = [sources_to_use]
+
+                # Convert Enums to their string values if necessary
+                cleaned_sources = [source.value if isinstance(source, Enum) else source for source in sources_to_use]
+
+                # Generate and execute the SCPI command
+                command = command_template.format(', '.join(cleaned_sources))
+                logger.debug(f"Executing command: {command}")
+                self.write(command)
+
+                # Call the original function with the cleaned source strings
+                return func(self, *cleaned_sources, **kwargs)
+
+            return wrapper
+        return decorator
+
+class TraceWorker(QThread):
+    def __init__(self, func, instance, *args, **kwargs):
+        super().__init__()
+        self.func = func
+        self.instance = instance
+        self.args = args
+        self.kwargs = kwargs
+
+    def run(self):
+        result = self.func(self.instance, *self.args, **self.kwargs)
+        self.instance.trace_data_ready.emit(result)
+
+class Trace:
+    def __init__(self, data, x_data=None, z_data=None, label=None, color=None, mode=None, visible=True, line_thickness=1.0, line_style='Solid'):
+        """
+        Initializes a Trace object to store data and attributes for plotting.
+
+        Args:
+        label (str): Label for the trace.
+        y_data (list or np.array): Primary data points for the trace.
+        x_data (list or np.array, optional): X-axis values if different from default range(len(y_data)).
+        z_data (list or np.array, optional): Z-axis values for 3D plotting.
+        color (str): Color of the trace in hex format.
+        visible (bool): Visibility of the trace in the plot.
+        line_thickness (float): Thickness of the line in the plot.
+        line_style (str): Style of the line (e.g., 'Solid', 'Dash').
+        """
+        self.data = np.array(data)
+        self.x_data = np.array(x_data) if x_data is not None else None
+        self.z_data = np.array(z_data) if z_data is not None else None
+        self.color = color if color else "#{:06x}".format(random.randint(0, 0xFFFFFF))
+        self.label = label if label else f"Trace {id(self)}"
+        self.mode = mode
+        self.visible = visible
+        self.x_range = None
+        self.y_range = None
+        self.line_thickness = line_thickness
+        self.line_style = line_style
+
+    def update_data(self, y_data, x_data=None, z_data=None):
+        """Update the trace data."""
+        self.y_data = np.array(y_data)
+        if x_data is not None:
+            self.x_data = np.array(x_data)
+        if z_data is not None:
+            self.z_data = np.array(z_data)
 
 class Instrument(QObject):
     """
@@ -78,37 +160,76 @@ class Instrument(QObject):
     # Signal needed to emit for plotting
     trace_data_ready = Signal(object)
 
-    class Status(IntFlag):
+    def __init__(self, resource_string, sources = None, **kwargs):
         """
-        Event Status Register Bits for SCPI Instruments.
-
-        Each bit in the status register represents a specific status or error condition.
-        These are defined according to the IEEE 488.2 standard for SCPI instruments.
+        Initializes the instrument connection using the provided VISA resource string.
+        
+        Parameters:
+            resource_string (str): VISA resource string to identify the instrument.
+            timeout (int): Timeout period in milliseconds.
+            input_buffer_size (int): Size of the input buffer.
+            output_buffer_size (int): Size of the output buffer.
+            **kwargs: Additional keyword arguments for PyVISA's open_resource method.
         """
+        super().__init__()  # Initialize the QObject base class
+        self.resource_string = resource_string
+        self.rm = pyvisa.ResourceManager()
+        self.sources = Sources(sources) if sources else Sources([])
+        self.active_trace_threads = []
+        self.instrument = None
+        self._data_mode = 'ASCII'  # Default to BINARY
+        self._data_type = 'B'  # Default data type (e.g., for binary data)
+        self.buffer_size = kwargs.pop('buffer_size', 2^16)  # Default buffer size, can be overridden via kwargs
+        self.buffer_type = kwargs.pop('buffer_type', BufferType.io_in | BufferType.io_out)  # Default buffer type, can be overridden
+        logger.debug(f"Initializing Instrument with resource_string: {resource_string}")
 
-        OPC = 1 << 0  # Operation Complete
-        """Operation complete bit, set when an operation is finished."""
+    @staticmethod
+    def trace_thread(func):
+        """A decorator to run trace-related methods in a thread and handle their lifecycle."""
+        def wrapper(instance, *args, **kwargs):
+            worker = TraceWorker(func, instance, *args, **kwargs)
+            worker.start()
+            instance.active_trace_threads.append(worker)
+            worker.finished.connect(lambda: instance.active_trace_threads.remove(worker))
+            return worker
+        return wrapper
 
-        RQL = 1 << 1  # Request Control
-        """Request control bit, indicates a device is requesting control."""
+    @abstractmethod
+    def fetch_trace(self):
+        """
+        Abstract method designed to fetch trace data from the instrument. Implementations should return data and optionally,
+        a corresponding range or timestamp array that matches the length of the data. The method should support returning 
+        this information in a format compatible with 'pyqtgraph' plotting functions, primarily focusing on arrays or lists.
 
-        QYE = 1 << 2  # Query Error
-        """Query error bit, set when there is a syntax error in a query command."""
+        The method should be capable of handling non-linear data points and timestamped data, ensuring flexibility in data
+        visualization.
 
-        DDE = 1 << 3  # Device Dependent Error
-        """Device dependent error bit, indicates an error specific to the device's operation."""
-
-        EXE = 1 << 4  # Execution Error
-        """Execution error bit, set when there is an error in executing a command."""
-
-        CME = 1 << 5  # Command Error
-        """Command error bit, set when there is a syntax error in a command."""
-
-        URQ = 1 << 6  # User Request
-        """User request bit, set when there is a user request for service."""
-
-        PON = 1 << 7  # Power On
-        """Power on bit, set when the device is first powered on or reset."""
+        Returns:
+            tuple: A tuple containing one or more elements depending on what is necessary for plotting:
+                   - data (np.array or list): Mandatory. The primary set of data points to be plotted.
+                   - range (np.array, list, tuple): Optional. If provided, this specifies the x-axis values associated with each data point.
+                                                    This can be a linear range (tuple) or a non-linear range/timestamps (array/list).
+                   
+                    The expected format for simple linear data:
+                    (data, )
+                   
+                    For data with a specific range or timestamps:
+                    (data, range)
+                   
+                    trace_dictionary = {
+                        'trace_id': {  # Unique identifier for each trace
+                            'data': np.array([...]) or list([...]),  # The main data points for plotting. np.array is preferred for performance, but list is also supported.
+                            'range': np.array([...]) or list([...]) or tuple(start, end),  # X-axis values. Can be linear (tuple) or non-linear (array/list).
+                            'color': 'hex_code',  # Optional. Hex code (e.g., '#FF5733') for trace color. If not provided, a default is used.
+                            'label': 'String label',  # Optional. Label for the trace, used in legends or axes.
+                            'units': 'unit string',  # Optional. Units for the data (e.g., 'V', 'A'). Important for axes labeling and data interpretation.
+                            'range-units': 'unit string',  # Optional. Units for the range (e.g., 's', 'MHz'). Important for axes labeling and data interpretation.
+                            # Additional metadata as needed
+                        },
+                        # More traces as needed
+                    }
+        """
+        pass
 
     @property
     def data_mode(self):
@@ -166,63 +287,37 @@ class Instrument(QObject):
             raise ValueError(f"Invalid data type. Supported types are: {', '.join(valid_types)}")
         self._data_type = type
 
-    def __init__(self, resource_string, **kwargs):
+    class Status(IntFlag):
         """
-        Initializes the instrument connection using the provided VISA resource string.
-        
-        Parameters:
-            resource_string (str): VISA resource string to identify the instrument.
-            timeout (int): Timeout period in milliseconds.
-            input_buffer_size (int): Size of the input buffer.
-            output_buffer_size (int): Size of the output buffer.
-            **kwargs: Additional keyword arguments for PyVISA's open_resource method.
-        """
-        super().__init__()  # Initialize the QObject base class
-        self.resource_string = resource_string
-        self.rm = pyvisa.ResourceManager()
-        self.instrument = None
-        self._data_mode = 'BINARY'  # Default to BINARY
-        self._data_type = 'B'  # Default data type (e.g., for binary data)
-        self.buffer_size = kwargs.pop('buffer_size', 2^16)  # Default buffer size, can be overridden via kwargs
-        self.buffer_type = kwargs.pop('buffer_type', BufferType.io_in | BufferType.io_out)  # Default buffer type, can be overridden
-        logger.debug(f"Initializing Instrument with resource_string: {resource_string}")
+        Event Status Register Bits for SCPI Instruments.
 
-    @abstractmethod
-    def fetch_trace(self):
+        Each bit in the status register represents a specific status or error condition.
+        These are defined according to the IEEE 488.2 standard for SCPI instruments.
         """
-        Abstract method designed to fetch trace data from the instrument. Implementations should return data and optionally,
-        a corresponding range or timestamp array that matches the length of the data. The method should support returning 
-        this information in a format compatible with 'pyqtgraph' plotting functions, primarily focusing on arrays or lists.
 
-        The method should be capable of handling non-linear data points and timestamped data, ensuring flexibility in data
-        visualization.
+        OPC = 1 << 0  # Operation Complete
+        """Operation complete bit, set when an operation is finished."""
 
-        Returns:
-            tuple: A tuple containing one or more elements depending on what is necessary for plotting:
-                   - data (np.array or list): Mandatory. The primary set of data points to be plotted.
-                   - range (np.array, list, tuple): Optional. If provided, this specifies the x-axis values associated with each data point.
-                                                    This can be a linear range (tuple) or a non-linear range/timestamps (array/list).
-                   
-                    The expected format for simple linear data:
-                    (data, )
-                   
-                    For data with a specific range or timestamps:
-                    (data, range)
-                   
-                    trace_dictionary = {
-                        'trace_id': {  # Unique identifier for each trace
-                            'data': np.array([...]) or list([...]),  # The main data points for plotting. np.array is preferred for performance, but list is also supported.
-                            'range': np.array([...]) or list([...]) or tuple(start, end),  # X-axis values. Can be linear (tuple) or non-linear (array/list).
-                            'color': 'hex_code',  # Optional. Hex code (e.g., '#FF5733') for trace color. If not provided, a default is used.
-                            'label': 'String label',  # Optional. Label for the trace, used in legends or axes.
-                            'markers': 'style',  # Optional. Marker style (e.g., 'o', 's'). Refer to 'pyqtgraph' documentation for supported styles.
-                            'units': 'unit string',  # Optional. Units for the data (e.g., 'V', 'A'). Important for axes labeling and data interpretation.
-                            # Additional metadata as needed
-                        },
-                        # More traces as needed
-                    }
-        """
-        pass
+        RQL = 1 << 1  # Request Control
+        """Request control bit, indicates a device is requesting control."""
+
+        QYE = 1 << 2  # Query Error
+        """Query error bit, set when there is a syntax error in a query command."""
+
+        DDE = 1 << 3  # Device Dependent Error
+        """Device dependent error bit, indicates an error specific to the device's operation."""
+
+        EXE = 1 << 4  # Execution Error
+        """Execution error bit, set when there is an error in executing a command."""
+
+        CME = 1 << 5  # Command Error
+        """Command error bit, set when there is a syntax error in a command."""
+
+        URQ = 1 << 6  # User Request
+        """User request bit, set when there is a user request for service."""
+
+        PON = 1 << 7  # Power On
+        """Power on bit, set when the device is first powered on or reset."""
 
     def open(self):
         """
@@ -402,27 +497,6 @@ class Instrument(QObject):
         """
         self.write("*RST")
 
-        """
-        Checks the instrument for errors after executing a command.
-
-        Continuously queries the oscilloscope for its error queue until it's empty,
-        printing out any errors encountered. If an error is found, the program exits.
-
-        :param command: The SCPI command that was executed prior to checking for errors.
-        :type command: str
-        """
-        while True:
-            error_string = self.query(":SYSTem:ERRor?")
-            if error_string:  # If there is an error string value
-                if not error_string.startswith("+0,"):  # Not "No error"
-                    logger.error("Exited because of error.")
-                    sys.exit(1)
-                else:  # "No error"
-                    break
-            else:  # :SYSTem:ERRor? should always return a string
-                logger.error("Exited because of error.")
-                sys.exit(1)
-
     def set_service_request(self, mask):
         """
         Configures the instrument to enable certain status events to generate service requests (SRQ). 
@@ -549,3 +623,56 @@ class Instrument(QObject):
 
         selected_key = list(unique_instruments.keys())[selected_index]
         return unique_instruments[selected_key]
+    
+class Subsystem:
+    """
+    Base class for creating instrument subsystems, supporting both simple and indexed instantiation, 
+    and enabling nested subsystem command prefix cascading.
+
+    Attributes:
+        instr (Instrument): Reference to the parent instrument or subsystem. This attribute 
+                              facilitates communication with the parent object.
+        cmd_prefix (str): The SCPI command prefix associated with the subsystem. This prefix is 
+                          used to construct full SCPI commands for property interactions.
+    """
+
+    def __init__(self, instr, cmd_prefix="", index=None):
+        """
+        Initializes a Subsystem instance.
+
+        Args:
+            parent (Instrument or Subsystem): The parent instrument or subsystem this instance belongs to.
+            cmd_prefix (str): The command prefix specific to this subsystem. It's used as the base for constructing SCPI commands.
+            index (int, optional): If provided, it specifies the index of this instance within an indexed subsystem setup. 
+                                   This index is appended to the command prefix.
+        """
+        self.instr = instr
+        logger.debug(f"Initializing subsystem with instrument {instr}, prefix {cmd_prefix}, and index {index}")
+        # Handle cascading of command prefixes for nested subsystems
+        self.cmd_prefix = f"{instr.cmd_prefix}{cmd_prefix}" if hasattr(instr, 'cmd_prefix') else cmd_prefix
+        if index is not None:
+            self.cmd_prefix += str(index)
+
+    @classmethod
+    def build(cls, instr, cmd_prefix, indices=None):
+        """
+        Class method to instantiate subsystems. This method simplifies the creation process by automatically handling
+        both single and indexed instances of subsystems.
+
+        Args:
+            parent (Instrument or Subsystem): The parent object to which the new subsystem instance(s) will belong.
+            cmd_prefix (str): The SCPI command prefix for the subsystem being created.
+            indices (int, optional): The number of indexed instances to create. If None, a single instance is created without indexing.
+
+        Returns:
+            Subsystem or list of Subsystem: A single instance of the subsystem if 'indices' is None, 
+                                             or a list of indexed subsystem instances if 'indices' is provided.
+        """
+        if indices is None:
+            logger.debug(f"Build method returning single instance")
+            # Creating a single instance without indexing
+            return cls(instr, cmd_prefix)
+        else:
+            # Creating multiple indexed instances
+            logger.debug(f"Build method creating {indices} instances")
+            return [cls(instr, cmd_prefix, index=idx) for idx in range(1, indices + 1)]

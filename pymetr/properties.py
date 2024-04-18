@@ -1,268 +1,311 @@
 import logging
-logger = logging.getLogger(__name__)
-
 import re
 import numpy as np
 
-def switch_property(cmd_str, doc_str="", access="read-write"):
-    """
-    Updated definition to handle boolean values directly and string representations of boolean values.
-    """
-    true_values = ["on", "1", "true", "yep", "aye", "yes"]
-    false_values = ["off", "0", "false", "nope", "nay", "no"]
+logger = logging.getLogger(__name__)
 
-    def normalize_value_to_bool(value):
-        """Normalize various representations to Python bool."""
+class Property:
+    """
+    Base class for all property types.
+
+    This class defines the basic structure and behavior of properties, including getter and setter methods.
+    Subclasses should inherit from this class and implement their own specific getter and setter methods.
+
+    Args:
+        cmd_str (str): The SCPI command string associated with the property.
+        doc_str (str, optional): The documentation string for the property. Defaults to an empty string.
+        access (str, optional): The access mode of the property. Can be 'read', 'write', or 'read-write'. Defaults to 'read-write'.
+    """
+    def __init__(self, cmd_str, doc_str="", access="read-write"):
+        self.cmd_str = cmd_str
+        self.doc_str = doc_str
+        self.access = access
+
+    def __get__(self, instance, owner):
+        if instance is None:
+            return self
+        return self.getter(instance)
+
+    def __set__(self, instance, value):
+        if self.access in ["write", "read-write"]:
+            self.setter(instance, value)
+        else:
+            raise AttributeError(f"{self.cmd_str} property is read-only.")
+
+    def getter(self, instance):
+        raise NotImplementedError("Subclasses must implement the getter method.")
+
+    def setter(self, instance, value):
+        raise NotImplementedError("Subclasses must implement the setter method.")
+
+class SwitchProperty(Property):
+    """
+    Represents a switch property that can be turned on or off.
+
+    This property handles boolean values and provides a convenient way to control switch-like settings of an instrument.
+    It normalizes various boolean-like values to Python's True or False.
+
+    Args:
+        cmd_str (str): The SCPI command string associated with the switch property.
+        doc_str (str, optional): The documentation string for the switch property. Defaults to an empty string.
+        access (str, optional): The access mode of the switch property. Can be 'read', 'write', or 'read-write'. Defaults to 'read-write'.
+    """
+    def __init__(self, cmd_str, doc_str="", access="read-write"):
+        super().__init__(cmd_str, doc_str, access)
+        self.true_values = ["on", "1", "true", "yep", "aye", "yes"]
+        self.false_values = ["off", "0", "false", "nope", "nay", "no"]
+
+    def normalize_value_to_bool(self, value):
         if isinstance(value, bool):
             return value
         try:
             value_str = str(value).lower()
-            if value_str in true_values:
+            if value_str in self.true_values:
                 return True
-            elif value_str in false_values:
+            elif value_str in self.false_values:
                 return False
         except ValueError:
-            pass  # If we're here, the value conversion failed
-        
-        raise ValueError("Invalid boolean value: {}. Use True/False or one of 'ON', 'OFF', '1', '0', 'TRUE', 'FALSE', etc.".format(value))
+            pass
+        raise ValueError(f"Invalid boolean value: {value}. Use True/False or one of {', '.join(self.true_values + self.false_values)}")
 
-    def getter(self):
-        response = self.instr.query(f"{self.cmd_prefix}{cmd_str}?").strip()
-        logger.debug(f"Getting {self.cmd_prefix}{cmd_str}? {response}")
-        # Return True or False based on the response
+    def getter(self, instance):
+        response = instance.instr.query(f"{instance.cmd_prefix}{self.cmd_str}?").strip()
+        logger.debug(f"Getting {instance.cmd_prefix}{self.cmd_str}? {response}")
         return response == "1"
 
-    def setter(self, value):
-        # Normalize the input value to boolean and then convert to '1' or '0'
-        normalized_value = "1" if normalize_value_to_bool(value) else "0"
-        logger.debug(f"Setting {self.cmd_prefix}{cmd_str} to {normalized_value}")
-        self.instr.write(f"{self.cmd_prefix}{cmd_str} {normalized_value}")
+    def setter(self, instance, value):
+        normalized_value = "1" if self.normalize_value_to_bool(value) else "0"
+        logger.debug(f"Setting {instance.cmd_prefix}{self.cmd_str} to {normalized_value}")
+        instance.instr.write(f"{instance.cmd_prefix}{self.cmd_str} {normalized_value}")
 
-    if "read-write" in access:
-        return property(fget=getter, fset=setter, doc=doc_str)
-    elif "read" in access:
-        return property(fget=getter, doc=doc_str)
-    elif "write" in access:
-        return property(fset=setter, doc=doc_str)
-
-def value_property(cmd_str, range=None, doc_str="", access="read-write", type=None, units=""):
+class ValueProperty(Property):
     """
-    Creates a property for handling numerical values, ensuring they fall within specified ranges if provided,
-    and optionally enforcing a specific numerical type (float or int).
+    Represents a numeric value property with optional range and unit validation.
+
+    This property handles numeric values (float or int) and ensures they fall within a specified range if provided.
+    It also supports specifying the units of the value for better readability and validation.
 
     Args:
-        cmd_str (str): The base command string for the property.
-        range (list of float|int, optional): A list specifying the minimum and maximum acceptable values for the property.
-                                             Defaults to None, which means no constraints.
-        doc_str (str): Documentation string for the property.
-        access (str): Specifies the access type for the property ('read', 'write', 'read-write').
-        type (str, optional): The type of the value ('float', 'int', None). Specifies if the value should be 
-                              explicitly cast or checked against a certain type.
-
-    Returns:
-        property: A property object with custom getter and setter for numerical communication.
+        cmd_str (str): The SCPI command string associated with the value property.
+        range (tuple, optional): A tuple specifying the minimum and maximum allowed values for the property. Defaults to None.
+        doc_str (str, optional): The documentation string for the value property. Defaults to an empty string.
+        access (str, optional): The access mode of the value property. Can be 'read', 'write', or 'read-write'. Defaults to 'read-write'.
+        type (str, optional): The type of the value. Can be 'float', 'int', or None. Defaults to None.
+        units (str, optional): The units of the value. Defaults to an empty string.
     """
-    def getter(self):
-        response = self.instr.query(f"{self.cmd_prefix}{cmd_str}?").strip()
+    def __init__(self, cmd_str, range=None, doc_str="", access="read-write", type=None, units=""):
+        super().__init__(cmd_str, doc_str, access)
+        self.range = range
+        self.type = type
+        self.units = units
+
+    def getter(self, instance):
+        response = instance.instr.query(f"{instance.cmd_prefix}{self.cmd_str}?").strip()
         try:
-            # Cast response to specified type if 'type' is not None
-            value = float(response) if type == 'float' else int(response) if type == 'int' else response
-            logger.debug(f"Getting {self.cmd_prefix}{cmd_str}? {value}")
+            value = float(response) if self.type == 'float' else int(response) if self.type == 'int' else response
+            logger.debug(f"Getting {instance.cmd_prefix}{self.cmd_str}? {value}")
             return value
         except ValueError:
-            logger.error(f"Invalid numerical response for {self.cmd_prefix}{cmd_str}? {response}")
+            logger.error(f"Invalid numerical response for {instance.cmd_prefix}{self.cmd_str}? {response}")
             raise
 
-    def setter(self, value):
-        # Type checking and conversion if 'type' is specified
-        if type == 'float':
+    def setter(self, instance, value):
+        if self.type == 'float':
             try:
                 value = float(value)
             except ValueError:
-                raise ValueError(f"Value for {self.cmd_prefix}{cmd_str} must be a float: {value}")
-        elif type == 'int':
+                raise ValueError(f"Value for {instance.cmd_prefix}{self.cmd_str} must be a float: {value}")
+        elif self.type == 'int':
             try:
                 value = int(value)
             except ValueError:
-                raise ValueError(f"Value for {self.cmd_prefix}{cmd_str} must be an int: {value}")
+                raise ValueError(f"Value for {instance.cmd_prefix}{self.cmd_str} must be an int: {value}")
 
-        # Value range checking if 'range' is specified
-        min_value, max_value = range if range else (None, None)
+        min_value, max_value = self.range if self.range else (None, None)
         if min_value is not None and value < min_value or max_value is not None and value > max_value:
-            logger.error(f"Value for {self.cmd_prefix}{cmd_str} must be between {min_value}{units} and {max_value}{units}: {value}{units}")
-            raise ValueError(f"Value for {self.cmd_prefix}{cmd_str} must be between {min_value}{units} and {max_value}{units}: {value}{units}")
-        
-        logger.debug(f"Setting {self.cmd_prefix}{cmd_str} to {value}{units}")
-        self.instr.write(f"{self.cmd_prefix}{cmd_str} {value}{units}")
+            raise ValueError(f"Value for {instance.cmd_prefix}{self.cmd_str} must be between {min_value}{self.units} and {max_value}{self.units}: {value}{self.units}")
 
-    if "read-write" in access:
-        return property(fget=getter, fset=setter, doc=doc_str)
-    elif "read" in access:
-        return property(fget=getter, doc=doc_str)
-    elif "write" in access:
-        return property(fset=setter, doc=doc_str)
+        logger.debug(f"Setting {instance.cmd_prefix}{self.cmd_str} to {value}{self.units}")
+        instance.instr.write(f"{instance.cmd_prefix}{self.cmd_str} {value}{self.units}")
 
-def select_property(cmd_str, choices, doc_str="", access="read-write"):
+class SelectProperty(Property):
     """
-    Creates a property for selecting from a list of string options.
-    This simplifies interaction with instrument settings by directly specifying acceptable values.
+    Represents a property that allows selecting from a predefined set of choices.
+
+    This property provides a convenient way to handle instrument settings that have a limited set of valid options.
+    It ensures that only valid choices are accepted and allows for easy selection by providing partial matches.
 
     Args:
-        cmd_str (str): The command string associated with the property.
-        choices (list of str): A list defining valid options for the property.
-        doc_str (str): A brief description of the property.
-        access (str): Specifies the property access level ('read', 'write', 'read-write').
-
-    Returns:
-        property: A configured property for handling selection from a list of strings.
+        cmd_str (str): The SCPI command string associated with the select property.
+        choices (list): A list of valid choices for the property.
+        doc_str (str, optional): The documentation string for the select property. Defaults to an empty string.
+        access (str, optional): The access mode of the select property. Can be 'read', 'write', or 'read-write'. Defaults to 'read-write'.
     """
-    def getter(self):
-        response = self.instr.query(f"{self.cmd_prefix}{cmd_str}?").strip()
-        # Check if the response starts with any of the valid command beginnings
-        for choice in choices:
+    def __init__(self, cmd_str, choices, doc_str="", access="read-write"):
+        super().__init__(cmd_str, doc_str, access)
+        self.choices = choices
+
+    def getter(self, instance):
+        response = instance.instr.query(f"{instance.cmd_prefix}{self.cmd_str}?").strip()
+        for choice in self.choices:
             if choice.startswith(response) or response.startswith(choice):
-                logger.debug(f"Getting {self.cmd_prefix}{cmd_str}? {response}")
-                return choice  # return the full command string from choices list
-        # If no match is found, raise an error
-        logger.error(f"Unexpected response for {self.cmd_prefix}{cmd_str}? {response}")
-        raise ValueError(f"Unexpected response for {self.cmd_prefix}{cmd_str}? {response}")
+                logger.debug(f"Getting {instance.cmd_prefix}{self.cmd_str}? {response}")
+                return choice
+        logger.error(f"Unexpected response for {instance.cmd_prefix}{self.cmd_str}? {response}")
+        raise ValueError(f"Unexpected response for {instance.cmd_prefix}{self.cmd_str}? {response}")
 
-    def setter(self, value):
-        # Find the full command string that starts with the given value (allowing abbreviations)
-        match = next((choice for choice in choices if choice.startswith(value)), None)
-        
+    def setter(self, instance, value):
+        match = next((choice for choice in self.choices if choice.startswith(value)), None)
         if match is not None:
-            logger.debug(f"Setting {self.cmd_prefix}{cmd_str} to {match}")
-            self.instr.write(f"{self.cmd_prefix}{cmd_str} {match}")
+            logger.debug(f"Setting {instance.cmd_prefix}{self.cmd_str} to {match}")
+            instance.instr.write(f"{instance.cmd_prefix}{self.cmd_str} {match}")
         else:
-            valid_options = ', '.join(choices)
-            logger.error(f"Invalid value for {self.cmd_prefix}{cmd_str}: {value}. Valid options are: {valid_options}")
-            raise ValueError(f"Invalid value for {self.cmd_prefix}{cmd_str}: {value}. Valid options are: {valid_options}")
+            valid_options = ', '.join(self.choices)
+            logger.error(f"Invalid value for {instance.cmd_prefix}{self.cmd_str}: {value}. Valid options are: {valid_options}")
+            raise ValueError(f"Invalid value for {instance.cmd_prefix}{self.cmd_str}: {value}. Valid options are: {valid_options}")
 
-    if 'read' in access and 'write' in access:
-        return property(fget=getter, fset=setter, doc=doc_str)
-    elif 'read' in access:
-        return property(fget=getter, doc=doc_str)
-    elif 'write' in access:
-        return property(fset=setter, doc=doc_str)
-    
-def string_property(cmd_str, doc_str="", access="read"):
+class StringProperty(Property):
     """
-    Factory function to create a property for handling string responses from SCPI commands. 
-    Particularly useful for commands that return comma-separated values or other string formats.
-    
+    Represents a string property for handling string-based instrument settings.
+
+    This property is useful for settings that return or accept string values, such as instrument identifiers or custom commands.
+
     Args:
-        cmd_str (str): The command string associated with the property.
-        doc_str (str): A brief description of the property.
-        access (str): Specifies the property access level ('read', 'write', 'read-write'), though typically 'read' for such properties.
-
-    Returns:
-        property: A configured property for handling string responses.
+        cmd_str (str): The SCPI command string associated with the string property.
+        doc_str (str, optional): The documentation string for the string property. Defaults to an empty string.
+        access (str, optional): The access mode of the string property. Can be 'read', 'write', or 'read-write'. Defaults to 'read'.
     """
-    def getter(self):
-        response = self.instr.query(f"{self.cmd_prefix}{cmd_str}?")
-        logger.debug(f"Getting {cmd_str} property returned string: {response}")
+    def getter(self, instance):
+        response = instance.instr.query(f"{instance.cmd_prefix}{self.cmd_str}?")
+        logger.debug(f"Getting {self.cmd_str} property returned string: {response}")
         return response.strip()
 
-    def setter(self, value):
-        if 'write' in access:
-            self.instr.write(f"{self.cmd_prefix}{cmd_str} {value}")
-            logger.debug(f"Setting {cmd_str} property to string: {value}")
+    def setter(self, instance, value):
+        if 'write' in self.access:
+            instance.instr.write(f"{instance.cmd_prefix}{self.cmd_str} {value}")
+            logger.debug(f"Setting {self.cmd_str} property to string: {value}")
         else:
-            raise AttributeError(f"{cmd_str} property is read-only.")
-
-    if 'read' in access:
-        return property(fget=getter, doc=doc_str)
-    elif 'write' in access:
-        return property(fset=setter, doc=doc_str)
-    
-def data_property(cmd_str, access='read-write', doc_str="", container=np.array, converter=float, ieee_header=False):
+            raise AttributeError(f"{self.cmd_str} property is read-only.")
+        
+class DataProperty(Property):
     """
-    Factory function to create a data handling property for SCPI commands that deal with data,
-    with options to handle IEEE headers for ASCII data, support for writing data, and customization for binary data types.
+    Represents a property for handling ASCII data from an instrument.
+
+    This property supports fetching ASCII data and provides options for handling different delimiters and data conversion.
 
     Args:
-        cmd_str (str): The base command string for the property.
-        access (str, optional): Specifies the property access mode ('read', 'write', 'read-write'). Defaults to 'read-write'.
-        container (type, optional): Container type to use for the data, e.g., numpy.array. Defaults to numpy.array.
-        converter (callable, optional): A function to convert data to/from the desired format. Defaults to float.
-        ieee_header (bool, optional): Specifies whether the instrument's response includes an IEEE header for ASCII data. Defaults to False.
-        data_type (str, optional): The data type for binary data, following Python's struct module notation. Defaults to 'B' (unsigned byte).
-
-    Returns:
-        property: A custom property object for instrument communication.
+        cmd_str (str): The SCPI command string associated with the data property.
+        access (str, optional): The access mode of the data property. Can be 'read', 'write', or 'read-write'. Defaults to 'read-write'.
+        doc_str (str, optional): The documentation string for the data property. Defaults to an empty string.
+        container (type, optional): The container type to use for the data, e.g., numpy.array. Defaults to numpy.array.
+        converter (callable, optional): A function to convert the data elements to the desired type. Defaults to float.
+        delimiter (str, optional): The delimiter used to separate the data elements in the ASCII response. Defaults to ','.
     """
-    def getter(self):
-        data_mode = self.instr._data_mode # Global instrument configuration
-        data_type = self.instr._data_type # Global instrument configuration
-        full_cmd_str = f"{self.cmd_prefix}{cmd_str}?"
-        logger.debug(f"Getting data with command: {full_cmd_str}, format: {data_mode}, data_type: {data_type}")
-        
-        try:
-            if data_mode == 'ASCII' and not ieee_header:
-                data = self.instr.query_ascii_values(full_cmd_str, converter=converter)
-                logger.debug(f"Data fetched in ASCII format with {len(data)} elements using PyVISA's automatic handling.")
-                return container(data)
+    def __init__(self, cmd_str, access='read-write', doc_str="", container=np.array, converter=float, delimiter=','):
+        super().__init__(cmd_str, doc_str, access)
+        self.container = container
+        self.converter = converter
+        self.delimiter = delimiter
 
-            elif data_mode == 'ASCII' and ieee_header:
-                raw_response = self.instr.query(full_cmd_str)
+    def getter(self, instance):
+        full_cmd_str = f"{instance.cmd_prefix}{self.cmd_str}?"
+        logger.debug(f"Getting data with command: {full_cmd_str}")
+
+        try:
+            raw_response = instance.instr.query(full_cmd_str)
+            ascii_data = raw_response.strip().split(self.delimiter)
+            data = self.container([self.converter(val) for val in ascii_data])
+            logger.debug(f"Data fetched in ASCII format with {len(data)} elements using delimiter '{self.delimiter}'.")
+            return self.container(data)
+
+        except Exception as e:
+            logger.error(f"Exception while fetching data: {e}")
+            raise
+
+    def setter(self, instance, value):
+        if self.access not in ['write', 'read-write']:
+            raise AttributeError(f"{self.cmd_str} property is read-only.")
+
+        try:
+            full_cmd_str = f"{instance.cmd_prefix}{self.cmd_str}"
+            ascii_data = self.delimiter.join(str(v) for v in value)
+            instance.instr.write(f"{full_cmd_str} {ascii_data}")
+            logger.debug(f"Data sent in ASCII format: {value}")
+        except Exception as e:
+            logger.error(f"Failed to send data with command {full_cmd_str}: {e}")
+            raise e
+
+class DataBlockProperty(Property):
+    """
+    Represents a property for handling instrument data blocks, such as waveforms or measurement results.
+
+    This property supports fetching data blocks in various formats (ASCII, binary) and provides options for handling IEEE headers and data conversion.
+
+    Args:
+        cmd_str (str): The SCPI command string associated with the data block property.
+        access (str, optional): The access mode of the data block property. Can be 'read', 'write', or 'read-write'. Defaults to 'read-write'.
+        doc_str (str, optional): The documentation string for the data block property. Defaults to an empty string.
+        container (type, optional): The container type to use for the data, e.g., numpy.array. Defaults to numpy.array.
+        converter (callable, optional): A function to convert the data elements to the desired type. Defaults to float.
+        ieee_header (bool, optional): Specifies whether the instrument's response includes an IEEE header. Defaults to False.
+    """
+    def __init__(self, cmd_str, access='read-write', doc_str="", container=np.array, converter=float, ieee_header=False):
+        super().__init__(cmd_str, doc_str, access)
+        self.container = container
+        self.converter = converter
+        self.ieee_header = ieee_header
+
+    def getter(self, instance):
+        data_mode = instance.instr._data_mode
+        data_type = instance.instr._data_type
+        full_cmd_str = f"{instance.cmd_prefix}{self.cmd_str}?"
+        logger.debug(f"Getting data with command: {full_cmd_str}, format: {data_mode}, data_type: {data_type}")
+
+        try:
+            if data_mode == 'ASCII' and not self.ieee_header:
+                data = instance.instr.query_ascii_values(full_cmd_str, converter=self.converter)
+                logger.debug(f"Data fetched in ASCII format with {len(data)} elements using PyVISA's automatic handling.")
+                return self.container(data)
+
+            elif data_mode == 'ASCII' and self.ieee_header:
+                raw_response = instance.instr.query(full_cmd_str)
                 header_match = re.match(r'#(\d)(\d+)\s', raw_response)
                 if header_match:
                     num_digits = int(header_match.group(1))
                     length_of_data_block = int(header_match.group(2)[:num_digits])
                     data_start = num_digits + len(str(length_of_data_block)) - 2
                     ascii_data = raw_response[data_start:].strip().split(',')
-                    data = container([converter(val) for val in ascii_data])
+                    data = self.container([self.converter(val) for val in ascii_data])
                     logger.debug(f"Data fetched in ASCII format with {len(data)} elements using manual IEEE header parsing.")
-                    return container(data)
+                    return self.container(data)
                 else:
                     raise ValueError("Failed to parse IEEE header from ASCII response.")
 
             elif data_mode == 'BINARY':
-                # Use query_binary_values for binary data, specifying the data type dynamically
-                data = self.instr.query_binary_values(full_cmd_str, datatype=data_type, container=container, is_big_endian=False)
+                data = instance.instr.query_binary_values(full_cmd_str, datatype=data_type, container=self.container, is_big_endian=False)
                 logger.debug(f"Data fetched in binary format with {len(data)} elements using PyVISA's automatic handling.")
-                return container(data)
+                return self.container(data)
 
         except Exception as e:
             logger.error(f"Exception while fetching data: {e}")
             raise
 
-    def setter(self, value):
-        if access not in ['write', 'read-write']:
-            raise AttributeError(f"{cmd_str} property is read-only.")
+    def setter(self, instance, value):
+        if self.access not in ['write', 'read-write']:
+            raise AttributeError(f"{self.cmd_str} property is read-only.")
 
         try:
-            data_mode = self.instr.data_mode
-            data_type = self.instr.data_type
-            full_cmd_str = f"{self.cmd_prefix}{cmd_str}" 
+            data_mode = instance.instr.data_mode
+            data_type = instance.instr.data_type
+            full_cmd_str = f"{instance.cmd_prefix}{self.cmd_str}"
             logger.debug(f"Sending data with command: {full_cmd_str}")
 
             if data_mode == 'ASCII':
-                self.instr.write_ascii_values(full_cmd_str, value, converter=str)
+                instance.instr.write_ascii_values(full_cmd_str, value, converter=str)
                 logger.debug(f"Data sent in ASCII format: {value}")
             elif data_mode == 'BINARY':
-                self.instr.write_binary_values(full_cmd_str, value, datatype=data_type)
+                instance.instr.write_binary_values(full_cmd_str, value, datatype=data_type)
                 logger.debug(f"Data sent in binary format: {value}")
         except Exception as e:
             logger.error(f"Failed to send data with command {full_cmd_str}: {e}")
             raise e
-
-    return property(fget=getter if 'read' in access else None,
-                    fset=setter if 'write' in access else None,
-                    doc=doc_str)
-
-# Property Factories in properties.py
-def reg_value_property(minor_offset, size, format='uint', mask=None, access="read-write"):
-    # Factory method logic
-    pass
-
-# Property Factories in properties.py
-def reg_select_property(minor_offset, size, format='uint', mask=None, access="read-write"):
-    # Factory method logic
-    pass
-
-# Property Factories in properties.py
-def reg_switch_property(minor_offset, size, format='uint', mask=None, access="read-write"):
-    # Factory method logic
-    pass

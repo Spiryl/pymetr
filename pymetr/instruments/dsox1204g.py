@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import logging
 from enum import Enum
 from collections.abc import Iterable
@@ -45,268 +46,121 @@ def source_command(command_template):
 
         return wrapper
     return decorator
+=======
+
+import numpy as np
+from pymetr.core import Instrument, Subsystem, Sources, Trace
+from pymetr.properties import SwitchProperty, SelectProperty, ValueProperty, DataProperty, DataBlockProperty
+>>>>>>> in_progress
 
 class Oscilloscope(Instrument):
-    """
-    This class represents an oscilloscope, providing a high-level interface to control and manage its functionalities.
-    
-    Arguments:
-        resource_string (str): VISA resource string for connecting to the oscilloscope.
-    
-    Attributes:
-        trigger (Trigger): Manages the oscilloscope's trigger settings.
-        timebase (Timebase): Manages the oscilloscope's timebase settings.
-        waveform (Waveform): Manages waveform acquisition and processing.
-        wavegen (WaveGen): Controls the oscilloscope's waveform generator.
-        acquire (Acquire): Manages the oscilloscope's data acquisition settings.
-        channel (dict): Represents each oscilloscope channel as a Channel object.
-    """
-
-    class Sources(Enum):
-        """
-        Enumeration for the oscilloscope sources.
-
-        This helps keep source references tight and prevents the chaos of string typos
-        from messing up your slick command flow.
-
-        Attributes:
-            CH1 to CH4: Represent the four channels on the oscilloscope.
-            FUNCTION: For the function source.
-            MATH: Alias for the function source, 'cause math is cool like that.
-            BUS: For the bus source.
-            FFT: For the Fast Fourier Transform source.
-            MEMORY: For memory source references.
-            EXT: For external source, exclusive to those 2-channel scope ballers.
-        """
-        CH1 = 'CHAN1'
-        CH2 = 'CHAN2'
-        CH3 = 'CHAN3'
-        CH4 = 'CHAN4'
-        FUNCTION = 'FUNC'
-        MATH = 'FUNC'
-        BUS = 'BUS'
-        FFT = 'FFT'
-        MEMORY = 'MEMORY'
-        EXT = 'EXT'
-
-        def __str__(self):
-            # When the enum is used in a string context, return its value instead of its name
-            return self.value
-
     def __init__(self, resource_string):
         super().__init__(resource_string)
-        logger.info("Initializing Oscilloscope with resource string: %s", resource_string)
 
-        self._sources = None
-        self._format = "ASCII"
+        self._format = "BYTE" # Global data format for all channels
+        self.sources = Sources(['CHAN1', 'CHAN2', 'CHAN3', 'CHAN4'])
+        self.sources.source = ["CHAN1"]
 
-        # Use the build method to create subsystem instances
         self.waveform = Waveform.build(self, ':WAVeform')
         self.trigger = Trigger.build(self, ':TRIGger')
         self.timebase = Timebase.build(self, ':TIMebase')
         self.wavegen = WaveGen.build(self, ':WGEN')
         self.acquire = Acquire.build(self, ':ACQuire')
-
-        # For indexed subsystems, specify the number of indices in the build call
         self.channel = Channel.build(self, ':CHANnel', indices=4)
 
-    def set_data_format(self, format):
-        self._format = format
+    # Waveform.format must be set for each data source 
+    # we keep a global setting and pull it in fetch data method
+    @property
+    def format(self):
+        return self._format
 
-    @source_command(":VIEW {}")
-    def set_data_sources(self, *sources):
-        """
-        Sets the data sources to be displayed on the oscilloscope. If sources are specified,
-        it turns off the display for all channels and then turns on the display for the specified sources.
-        If no sources are specified, it uses the global sources set previously.
-        """
-        self.blank()  # Turn off all sources before setting new ones
-        if sources:
-            # If sources are explicitly provided, update the global sources
-            self._sources = sources
-            logger.info(f"Sources set to: {sources}")
+    @format.setter
+    def format(self, format):
+        if format in ["ASCII", "BYTE", "WORD"]:
+            self._format = format
         else:
-            # If no sources are provided, use the global sources
-            if not self._sources:
-                logger.warning("No sources provided and no global sources set. No action taken.")
-                return
-            
-    @source_command(":AUTOScale {}")
+            raise ValueError("Invalid data format. Must be 'ASCII', 'BYTE', or 'WORD'.")
+
+# --- Methods ------------------------------------------------------------------------------
+
+    # The source command decorator looks at the list of the instruments active sources
+    # and adds them as parameter arguments for commands which accept a list of sources.
+    # This allows the function to be passed with arguments of called from a GUI button
+    # based on a list of active sources.
+    @Sources.source_command(":AUTOScale {}")
     def autoscale(self, *sources):
-        """
-        Automatically scales the oscilloscope to optimize the display of specified sources.
-        """
-        pass  # The decorator handles command execution
+        pass
 
-    @source_command(":DIGItize {}")
-    def digitize(self, *sources):
-        """
-        Digitizes the specified sources on the oscilloscope.
-        """
-        pass  # The decorator handles command execution
-
-    @source_command(":VIEW {}")
-    def view(self, *sources):
-        """
-        Turns on the display for specified sources.
-        """
-        pass  # The decorator handles command execution
-
-    @source_command(":BLANk {}")
-    def blank(self, *sources):
-        """
-        Turns off the display for specified sources.
-        """
-        pass  # The decorator handles command execution
-
-    def run(self):
-        """
-        Engages the oscilloscope to start repetitive waveform acquisitions, just like
-        hitting that Run button on its face. This function is all about keeping the waves
-        coming in a steady stream.
-
-        Parameters:
-            None
-
-        Usage:
-            osc.run()  # Kick off that continuous acquisition, no stopping
-        """
-        logger.debug("Engaging continuous waveform acquisition.")
+    def run(self): # Start continuous
         self.write(":RUN")
 
-    def stop(self):
-        """
-        Throws the brakes on waveform acquisition. It's like you've walked up to the
-        oscilloscope and slapped the Stop button. Everything comes to a standstill, 
-        nice and easy.
-
-        Parameters:
-            None
-
-        Usage:
-            osc.stop()  # Halt the waves, we need a breather
-        """
-        logger.debug("Halting continuous waveform acquisition.")
+    def stop(self): # Stop continuous trigger
         self.write(":STOP")
 
-    def single(self):
-        """
-        Sets the oscilloscope to snag just one trigger of data. Picture yourself
-        pressing the Single key, and the scope captures a single moment in the electrical
-        symphony.
-
-        Parameters:
-            None
-
-        Usage:
-            osc.single()  # One and done, grab a single wave and hold onto it
-        """
-        logger.debug("Initiating single waveform acquisition.")
+    def single(self): # Single trigger
         self.write(":SINGLE")
 
-    def fetch_preamble(self):
-        """
-        Fetches and parses the preamble from the instrument, updating class attributes for waveform scaling.
-        """
-        logger.debug("Attempting to fetch preamble...")
-        try:
-            preamble_str = self.waveform.preamble  # Utilizes the getter from the string_property
-            logger.debug(f"Raw preamble string: {preamble_str}")
-            preamble_values = [float(val) for val in preamble_str.split(',')]
-            
-            # Log each preamble value for debugging
-            logger.debug(f"Format: {preamble_values[0]}")
-            logger.debug(f"Type: {preamble_values[1]}")
-            logger.debug(f"Points: {preamble_values[2]}")
-            logger.debug(f"Count: {preamble_values[3]}")
-            logger.debug(f"X Increment: {preamble_values[4]}")
-            logger.debug(f"X Origin: {preamble_values[5]}")
-            logger.debug(f"X Reference: {preamble_values[6]}")
-            logger.debug(f"Y Increment: {preamble_values[7]}")
-            logger.debug(f"Y Origin: {preamble_values[8]}")
-            logger.debug(f"Y Reference: {preamble_values[9]}")
-            
-            self._x_increment, self._x_origin, self._x_reference = preamble_values[4], preamble_values[5], int(preamble_values[6])
-            self._y_increment, self._y_origin, self._y_reference = preamble_values[7], preamble_values[8], int(preamble_values[9])
-            
-        except Exception as e:
-            logger.error(f'Issue fetching or parsing preamble: {e}')
-
     def fetch_time(self, source=None):
-        """
-        Calculates and returns the time array for the waveform data based on preamble info.
-        """
-        logger.info(f"Fetching time for source: {source}")
         if source:
-            self.waveform.source = source  # Set the waveform source if specified.
-            logger.debug(f"Waveform source set to: {source}")
+            self.waveform.source = source
 
-        # Need to set the format to read the preamble
-        self.waveform.format = self._format
-        logger.debug(f"Waveform format set to: {self._format}")
-
-        self.fetch_preamble()
-        timestamps = (np.arange(self.waveform.points) - self._x_reference) * self._x_increment + self._x_origin
-        return timestamps
+        try: # The preamble data includes all of the information needed to built the voltages and timescales from the raw data.
+            _preamble = self.waveform.preamble
+            self._x_increment, self._x_origin, self._x_reference = _preamble[4], _preamble[5], int(_preamble[6])
+            self._y_increment, self._y_origin, self._y_reference = _preamble[7], _preamble[8], int(_preamble[9])
+            self.waveform.format = self._format
+            timestamps = (np.arange(self.waveform.points) - self._x_reference) * self._x_increment + self._x_origin
+            return timestamps
+        except Exception as e:
+            raise ValueError(f'Issue fetching or parsing preamble: {e}')
 
     def fetch_data(self, source=None):
-        """
-        Fetches and returns waveform data in voltage units, performing necessary conversions based on the selected data format.
-        Adjusts for probe attenuation.
-        """
-        logger.info(f"Fetching data for source: {source}")
-
         if source:
-            self.waveform.source = source  # Set the waveform source if specified.
-            logger.debug(f"Waveform source set to: {source}")
+            self.waveform.source = source
 
-        # Set the waveform format for the specific channel - We keep them all the same!
-        # What kind of mad man is swapping data formats between sources?!
-        self.waveform.format = self._format
+        # This section is mostly just to support for all oscope data format
+        self.waveform.format = self.format
+        unsigned = self.waveform.unsigned
 
-        # Check if the channel data is unsigned and set the format for binary transfer
-        _unsigned = self.waveform.unsigned
-        if self._format == "BYTE":
-            _data_type = 'B' if _unsigned else 'b'
-        elif self._format == "WORD":
-            _data_type = 'H' if _unsigned else 'h'
-        else:
-            _data_type = None
- 
-        # Keep the instrument mode synced with the waveform settings
+        # Binary data formats based on waveform format settings
+        data_type_map = { 
+            "BYTE": 'B' if unsigned else 'b',
+            "WORD": 'H' if unsigned else 'h',
+            "ASCII": None
+        }
+        data_type = data_type_map.get(self._format)
+
+        # Instrument data type and mode attributes need to be configured before reading binary data properties
+        self.data_type = data_type if data_type else 'B'
         self.data_mode = "ASCII" if self._format == "ASCII" else "BINARY"
-        self.data_type = _data_type if _data_type else 'B'
-
-        logger.debug(f"Instrument data format set to: {self.data_mode}")
-        logger.debug(f"Instrument data type set to: {self.data_type}")
-
-        # Fetch probe attenuation for the current source if it is a channel
-        probe_attenuation = 1  # Default value for non-channel sources
-        if source.startswith("CHAN"):
-            channel_index = int(source.replace("CHAN", "")) - 1
-            probe_attenuation = int(self.channel[channel_index].probe)
-            logger.debug(f"Probe attenuation for {source}: {probe_attenuation}")
-
-        # Ensure preamble attributes are up to date
-        self.fetch_preamble()
-
-        # Fetch waveform data
+        
+        # Ready the data property
         waveform_data = self.waveform.data
 
-        # Convert binary data to voltages using scaling factors from the preamble and adjust for probe attenuation
+        # Binary data needs to be converted from dac values to voltages
         if self._format in ["BYTE", "WORD"]:
-            voltages = ((waveform_data - self._y_reference) * self._y_increment + self._y_origin)  # * probe_attenuation
-            logger.debug(f"Binary data converted to voltages: {voltages}")
+            voltages = (waveform_data - self._y_reference) * self._y_increment + self._y_origin
         elif self._format == "ASCII":
-            # ASCII data is assumed to be pre-scaled by the oscilloscope and directly parsed
             voltages = waveform_data
-            logger.debug(f"ASCII data assigned to voltages directly: {voltages}")
         else:
             raise ValueError(f"Unsupported data format: {self.format}")
+<<<<<<< HEAD
         if self._format in ["WORD"]:
             voltages = voltages
-        return voltages
+=======
 
+>>>>>>> in_progress
+        return voltages
+    
+    # Trace thread is a special decorator for the abstract method 
+    # fetch_trace to handle in a separate thread and emit the trace_data_ready_signal
+    # with the traces list returned by this method. 
+    @Instrument.trace_thread
+    @Sources.source_command(":DIGitize {}")
+    def fetch_trace(self, *sources):
+        self.query_operation_complete()  # let it digitize
+
+<<<<<<< HEAD
     def fetch_trace(self):
         """
         Fetches trace data from the oscilloscope, utilizing global settings for sources
@@ -330,10 +184,20 @@ class Oscilloscope(Instrument):
             return trace_data_dict
 
         logger.info(f"Fetching traces for sources: {', '.join(str(source) for source in sources_to_fetch)}")
+=======
+        if not sources:
+            sources = self.sources.source
+>>>>>>> in_progress
 
-        self.digitize(*sources_to_fetch)
-        self.query_operation_complete()  # Ensures the oscilloscope is ready
+        traces = []
+        for source in sources:
+            time = self.fetch_time(source)
+            data = self.fetch_data(source)
+            trace_data = Trace(data, x_data=time, label=source)
+            print(f"*** Fetched trace data for source {source}: {trace_data} ***")
+            traces.append(trace_data)
 
+<<<<<<< HEAD
         for source in sources_to_fetch:
             # Ensure source is passed as a string to fetch_time and fetch_data
             source_str = str(source)
@@ -357,62 +221,58 @@ class Acquire(Subsystem):
     type = select_property(":TYPE", ['NORMal', 'AVERage', 'HRESolution', 'PEAK'], "Acquisition type")
     sample_rate = value_property(":SRATe", type="float", range=[0.1, 1e9], doc_str="Sample rate in samples per second [S/s]")
     count = value_property(":COUNt", type="int", range=[1, 10000], doc_str="Number of acquisitions to combine [n]")
+=======
+        return traces
+    
+# --- Subsystems -----------------------------------------------------------------------------------
+    
+class Acquire(Subsystem):#
+    mode = SelectProperty(":MODE", ['RTIMe', 'SEGMmented'], "Acquisition mode")
+    type = SelectProperty(":TYPE", ['NORMal', 'AVERage', 'HRESolution', 'PEAK'], "Acquisition type")
+    sample_rate = ValueProperty(":SRATe", type="float", range=[0.1, 1e9], units="S/s", doc_str="Sample rate in samples per second")
+    count = ValueProperty(":COUNt", type="int", range=[1, 10000], doc_str="Number of acquisitions to combine")
+>>>>>>> in_progress
 
 class Channel(Subsystem):
-    """
-    Represents a single channel on an oscilloscope or similar instrument.
-    """
-    coupling = select_property(":COUPling", ['AC', 'DC'], "Coupling mode of the channel")
-    display = switch_property(":DISPlay", "Display state of the channel")
-    scale = value_property(":SCALe", type="float", range=[1e-3, 1e3], doc_str="Vertical scale of the channel [V/div]")
-    offset = value_property(":OFFset", type="float", range=[-1e2, 1e2], doc_str="Vertical offset of the channel [V]")
-    probe = value_property(":PROBe", type="float", doc_str="Probe attenuation factor")
+    coupling = SelectProperty(":COUPling", ['AC', 'DC'], "Coupling mode of the channel")
+    display = SwitchProperty(":DISPlay", "Display state of the channel")
+    scale = ValueProperty(":SCALe", type="float", range=[1e-3, 1e3], units="V", doc_str="Vertical scale of the channel")
+    offset = ValueProperty(":OFFset", type="float", range=[-1e2, 1e2], units="V", doc_str="Vertical offset of the channel")
+    probe = ValueProperty(":PROBe", type="float", doc_str="Probe attenuation factor")
 
 class Timebase(Subsystem):
-    """
-    Controls the timebase settings of an oscilloscope.
-    """
-    mode = select_property(":MODE", ['MAIN', 'WIND', 'XY', 'ROLL'], "Timebase mode")
-    reference = select_property(":REFerence", ['LEFT', 'CENTer', 'RIGHT'], "Timebase reference position")
-    scale = value_property(":SCALe", type="float", range=[1e-9, 1e0], doc_str="Timebase scale [s/div]")
-    position = value_property(":POSition", type="float", range=[-5e0, 5e0], doc_str="Timebase position [s]")
-    range = value_property(":RANGe", type="float", range=[2e-9, 50e0], doc_str="Timebase range [s]")
+    mode = SelectProperty(":MODE", ['MAIN', 'WIND', 'XY', 'ROLL'], "Timebase mode")
+    reference = SelectProperty(":REFerence", ['LEFT', 'CENTer', 'RIGHT'], "Timebase reference position")
+    scale = ValueProperty(":SCALe", type="float", range=[1e-9, 1e0], units="s", doc_str="Timebase scale")
+    position = ValueProperty(":POSition", type="float", range=[-5e0, 5e0], units="s", doc_str="Timebase position")
+    range = ValueProperty(":RANGe", type="float", range=[2e-9, 50e0], units="s", doc_str="Timebase range")
 
 class Trigger(Subsystem):
-    """
-    Manages the trigger settings of an oscilloscope or similar instrument.
-    """
-    mode = select_property(":MODe", ['EDGE', 'GLITch', 'PATTern', 'SHOL', 'NONE'], "Trigger mode")
-    source = select_property(":SOURce", ['CHAN1', 'CHAN2', 'CHAN3', 'CHAN4', 'EXT', 'LINE', 'WGEN'], "Trigger source")
-    slope = select_property(":SLOPe", ['POSitive', 'NEGative'], "Trigger slope")
-    sweep = select_property(":SWEep", ['AUTO', 'NORMAL'], "This controls the sweep mode")
-    level = value_property(":LEVel", type="float", range=[-5e0, 5e0], doc_str="Trigger level [V]")
+    mode = SelectProperty(":MODe", ['EDGE', 'GLITch', 'PATTern', 'SHOL', 'NONE'], "Trigger mode")
+    source = SelectProperty(":SOURce", ['CHAN1', 'CHAN2', 'CHAN3', 'CHAN4', 'EXT', 'LINE', 'WGEN'], "Trigger source")
+    slope = SelectProperty(":SLOPe", ['POSitive', 'NEGative'], "Trigger slope")
+    sweep = SelectProperty(":SWEep", ['AUTO', 'NORMAL'], "Sweep mode")
+    level = ValueProperty(":LEVel", type="float", range=[-5e0, 5e0], units="V", doc_str="Trigger level")
 
 class WaveGen(Subsystem):
-    """
-    Controls the built-in waveform generator (WGEN) of an instrument.
-    """
-    function = select_property(":FUNC", ['SIN', 'SQUare', 'RAMP', 'PULSe', 'NOISe', 'DC'], "Waveform function")
-    output = switch_property(":OUTP", "Waveform output state")
-    frequency = value_property(":FREQ", type="float", range=[1e-3, 1e8], doc_str="Waveform frequency [Hz]")
-    amplitude = value_property(":VOLT", type="float", range=[1e-3, 10e0], doc_str="Waveform amplitude [V]")
-    offset = value_property(":VOLT:OFFS", type="float", range=[-5e0, 5e0], doc_str="Waveform offset [V]")
+    function = SelectProperty(":FUNC", ['SIN', 'SQUare', 'RAMP', 'PULSe', 'NOISe', 'DC'], "Waveform function")
+    output = SwitchProperty(":OUTP", "Waveform output state")
+    frequency = ValueProperty(":FREQ", type="float", range=[1e-3, 1e8], units="Hz", doc_str="Waveform frequency")
+    amplitude = ValueProperty(":VOLT", type="float", range=[1e-3, 10e0], units="V", doc_str="Waveform amplitude")
+    offset = ValueProperty(":VOLT:OFFS", type="float", range=[-5e0, 5e0], units="V", doc_str="Waveform offset")
 
 class Waveform(Subsystem):
-    """
-    Manages waveform data retrieval and configuration settings on an oscilloscope or similar instrument.
-    """
-    source = select_property(":SOURce", ['CHAN1', 'CHAN2', 'CHAN3', 'CHAN4', 'FUNC', 'MATH', 'FFT', 'WMEM', 'BUS1', 'BUS2', 'EXT'], "Waveform source")
-    format = select_property(":FORMat", ['ASCII', 'WORD', 'BYTE'], "Waveform data format")
-    points_mode = select_property(":POINts:MODE", ['NORMal', 'MAXiumum', 'RAW'], "Waveform points mode")
-    byte_order = select_property(":BYTeorder", ['LSBFirst', 'MSBFirst'], "Byte order for 16 bit data capture")
-    unsigned = switch_property(":UNSigned", "Indicates if the returned data is signed or unsigned")
-    points = value_property(":POINts", type="float", doc_str="Number of trace points to pull")
-    x_increment = value_property(":XINCrement", type="float", doc_str="Waveform X increment")
-    x_origin = value_property(":XORigin", type="float", doc_str="Waveform X origin")
-    x_reference = value_property(":XREFerence", type="int", doc_str="Waveform X reference point")
-    y_increment = value_property(":YINCrement", type="float", doc_str="Waveform Y increment")
-    y_origin = value_property(":YORigin", type="float", doc_str="Waveform Y origin")
-    y_reference = value_property(":YREFerence", type="int", doc_str="Waveform Y reference point")
-    preamble = string_property(":PREamble", access='read', doc_str="Preamble info including scale factors and offsets.")
-    data = data_property(":DATa", access='read', ieee_header=True, doc_str="Returns the data array of the waveform as a numpy array.")
+    source = SelectProperty(":SOURce", ['CHAN1', 'CHAN2', 'CHAN3', 'CHAN4', 'FUNC', 'MATH', 'FFT', 'WMEM', 'BUS1', 'BUS2', 'EXT'], "Waveform source")
+    format = SelectProperty(":FORMat", ['ASCII', 'WORD', 'BYTE'], "Waveform data format")
+    points_mode = SelectProperty(":POINts:MODE", ['NORMal', 'MAXiumum', 'RAW'], "Waveform points mode")
+    byte_order = SelectProperty(":BYTeorder", ['LSBFirst', 'MSBFirst'], "Byte order for 16 bit data capture")
+    unsigned = SwitchProperty(":UNSigned", "Indicates if the returned data is signed or unsigned")
+    points = ValueProperty(":POINts", type="int", access='write', doc_str="Number of trace points to pull")
+    x_increment = DataProperty(":XINCrement", doc_str="Waveform X increment")
+    x_origin = DataProperty(":XORigin", doc_str="Waveform X origin")
+    x_reference = DataProperty(":XREFerence", doc_str="Waveform X reference point")
+    y_increment = DataProperty(":YINCrement", doc_str="Waveform Y increment")
+    y_origin = DataProperty(":YORigin", doc_str="Waveform Y origin")
+    y_reference = DataProperty(":YREFerence", doc_str="Waveform Y reference point")
+    preamble = DataProperty(":PREamble", access='read', doc_str="Preamble info including scale factors and offsets.")
+    data = DataBlockProperty(":DATa", access='read', ieee_header=True, doc_str="Returns the data array of the waveform as a numpy array.")
