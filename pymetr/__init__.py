@@ -2,7 +2,7 @@
 
 # Update the __all__ list to include specific classes you want to expose.
 __all__ = [
-    'Instrument', 'Subsystem', 'Sources', 'Trace', 'TraceWorker', 'threaded',
+    'Instrument', 'Subsystem', 'Sources', 'Trace', 'TraceWorker',
     'SelectProperty', 'SwitchProperty', 'ValueProperty', 'DataProperty', 'DataBlockProperty'
 ]
 

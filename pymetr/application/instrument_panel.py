@@ -122,7 +122,6 @@ class InstrumentManager(QObject):
         self.instruments[unique_id] = {
             'instance': instr,
             'instr_data': instrument_data,
-            'fetch_thread': self.create_fetch_thread(instr),
             'parameters': self.parameters,
             'methods': instrument_data['methods'],
             'sources': instrument_data['sources'],
@@ -131,7 +130,6 @@ class InstrumentManager(QObject):
         logger.debug(f"Instrument {unique_id} added to the tracking dictionary.")
 
         self.connect_signals_and_slots(unique_id)
-        self.start_fetch_thread(unique_id)
 
         return self.instruments[unique_id], unique_id
 
@@ -141,16 +139,10 @@ class InstrumentManager(QObject):
         instr.sources.source = sources
         # self.source_updated.emit(unique_id, sources) 
 
-    def create_fetch_thread(self, instr):
-        return TraceDataFetcherThread(instr)
-
     def connect_signals_and_slots(self, unique_id):
         instr = self.instruments[unique_id]['instance']
         instr.trace_data_ready.connect(lambda data: self.trace_data_ready.emit(data))
         # instr.sources.source_changed.connect(lambda sources: self.update_sources(sources, unique_id))
-
-    def start_fetch_thread(self, unique_id):
-        self.instruments[unique_id]['fetch_thread'].start()
 
     def synchronize_instrument(self, unique_id):
         parameters = self.instruments[unique_id]['parameters']
