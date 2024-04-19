@@ -1,57 +1,6 @@
-<<<<<<< HEAD
-import logging
-from enum import Enum
-from collections.abc import Iterable
-import numpy as np
-logger = logging.getLogger(__name__)
-from pymetr import Instrument, Subsystem, switch_property, select_property, value_property, string_property, data_property
-
-
-def source_command(command_template):
-    """
-    A decorator to handle oscilloscope source-related commands. It determines the correct sources
-    to use (provided or global), converts Enum members to strings, generates the SCPI command,
-    and executes it.
-
-    Args:
-        command_template (str): A template string for the SCPI command, with '{}' placeholder for source(s).
-
-    Returns:
-        A decorated function.
-    """
-    def decorator(func):
-        def wrapper(self, *sources, **kwargs):
-            # Check if sources is provided and not empty, otherwise use global sources or default to an empty list
-            if sources:
-                sources_to_use = sources
-            else:
-                sources_to_use = self._sources if self._sources else []
-
-            # Ensure sources_to_use is iterable and not a single enum item
-            if isinstance(sources_to_use, Enum):
-                sources_to_use = [sources_to_use]
-            elif not isinstance(sources_to_use, Iterable) or isinstance(sources_to_use, str):
-                sources_to_use = [sources_to_use]
-
-            # Convert Enums to their string values if necessary
-            cleaned_sources = [source.value if isinstance(source, Enum) else source for source in sources_to_use]
-
-            # Generate and execute the SCPI command
-            command = command_template.format(', '.join(cleaned_sources))
-            logger.debug(f"Executing command: {command}")
-            self.write(command)
-
-            # Call the original function with the cleaned source strings
-            return func(self, *cleaned_sources, **kwargs)
-
-        return wrapper
-    return decorator
-=======
-
 import numpy as np
 from pymetr.core import Instrument, Subsystem, Sources, Trace
 from pymetr.properties import SwitchProperty, SelectProperty, ValueProperty, DataProperty, DataBlockProperty
->>>>>>> in_progress
 
 class Oscilloscope(Instrument):
     def __init__(self, resource_string):
@@ -144,12 +93,7 @@ class Oscilloscope(Instrument):
             voltages = waveform_data
         else:
             raise ValueError(f"Unsupported data format: {self.format}")
-<<<<<<< HEAD
-        if self._format in ["WORD"]:
-            voltages = voltages
-=======
 
->>>>>>> in_progress
         return voltages
     
     # Trace thread is a special decorator for the abstract method 
@@ -160,35 +104,6 @@ class Oscilloscope(Instrument):
     def fetch_trace(self, *sources):
         self.query_operation_complete()  # let it digitize
 
-<<<<<<< HEAD
-    def fetch_trace(self):
-        """
-        Fetches trace data from the oscilloscope, utilizing global settings for sources
-        and data format if set; otherwise, defaults to fetching from displayed channels.
-        """
-        trace_data_dict = {}
-        
-        # Ensure self._sources is iterable (even if it's a single source) or find which channels are displayed
-        if isinstance(self._sources, Enum):
-            sources_to_fetch = [self._sources]
-        elif not self._sources:
-            # Fetch from displayed channels by default
-            sources_to_fetch = [
-                self.Sources(f"CHAN{num}") for num in range(1, 5) if getattr(self.channel[num-1], 'display', False)
-            ]
-        else:
-            sources_to_fetch = self._sources
-
-        if not sources_to_fetch:
-            logger.warning("No sources specified for fetching traces, and no channels marked as displayed.")
-            return trace_data_dict
-
-        logger.info(f"Fetching traces for sources: {', '.join(str(source) for source in sources_to_fetch)}")
-=======
-        if not sources:
-            sources = self.sources.source
->>>>>>> in_progress
-
         traces = []
         for source in sources:
             time = self.fetch_time(source)
@@ -196,32 +111,6 @@ class Oscilloscope(Instrument):
             trace_data = Trace(data, x_data=time, label=source)
             print(f"*** Fetched trace data for source {source}: {trace_data} ***")
             traces.append(trace_data)
-
-<<<<<<< HEAD
-        for source in sources_to_fetch:
-            # Ensure source is passed as a string to fetch_time and fetch_data
-            source_str = str(source)
-            data_range = self.fetch_time(source_str)  # Fetches time base for the source
-            data_values = self.fetch_data(source_str)  # Fetches waveform data adjusted for probe attenuation
-            
-            trace_data_dict[source_str] = {
-                'data': data_values,
-                'range': data_range,
-                'visible': True,  # Adjust based on your implementation or the channel's display attribute
-            }
-        
-        self.trace_data_ready.emit(trace_data_dict)  # Emit the trace data for the GUI
-        return trace_data_dict  # This is for using a script
-
-class Acquire(Subsystem):
-    """
-    Manages the acquisition settings of an oscilloscope or similar instrument.
-    """
-    mode = select_property(":MODE", ['RTIMe', 'SEGMmented'], "Acquisition mode")
-    type = select_property(":TYPE", ['NORMal', 'AVERage', 'HRESolution', 'PEAK'], "Acquisition type")
-    sample_rate = value_property(":SRATe", type="float", range=[0.1, 1e9], doc_str="Sample rate in samples per second [S/s]")
-    count = value_property(":COUNt", type="int", range=[1, 10000], doc_str="Number of acquisitions to combine [n]")
-=======
         return traces
     
 # --- Subsystems -----------------------------------------------------------------------------------
@@ -231,7 +120,6 @@ class Acquire(Subsystem):#
     type = SelectProperty(":TYPE", ['NORMal', 'AVERage', 'HRESolution', 'PEAK'], "Acquisition type")
     sample_rate = ValueProperty(":SRATe", type="float", range=[0.1, 1e9], units="S/s", doc_str="Sample rate in samples per second")
     count = ValueProperty(":COUNt", type="int", range=[1, 10000], doc_str="Number of acquisitions to combine")
->>>>>>> in_progress
 
 class Channel(Subsystem):
     coupling = SelectProperty(":COUPling", ['AC', 'DC'], "Coupling mode of the channel")
