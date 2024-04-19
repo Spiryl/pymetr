@@ -34,6 +34,8 @@ class TraceManager(QObject):
             for item in data:
                 trace = self.create_trace(item)
                 if trace:
+                    trace.color = self.color_palette[self.color_index]
+                    self.color_index = (self.color_index + 1) % len(self.color_palette)
                     trace.mode = self.trace_mode  # Set the trace mode for each trace
                     self.traces.append(trace)
         elif isinstance(data, dict):
@@ -42,6 +44,7 @@ class TraceManager(QObject):
                 self.color_index = (self.color_index + 1) % len(self.color_palette)
             trace = self.create_trace(data)
             if trace:
+                trace.color = self.color_palette[self.color_index]
                 trace.mode = self.trace_mode  # Set the trace mode for the trace
                 self.traces.append(trace)
         else:
