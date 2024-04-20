@@ -6,7 +6,7 @@ from PySide6.QtCore import Qt
 from pymetr.core import Trace
 
 class TracePlot(QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, trace_manager, parent=None):
         super().__init__(parent)
         self.plot_layout = pg.GraphicsLayoutWidget()
         self.plot_item = self.plot_layout.addPlot(row=0, col=0)
@@ -22,9 +22,11 @@ class TracePlot(QWidget):
         self.additional_axes = []
         self.additional_view_boxes = []
         self.trace_view_boxes = {}
+
+        self.trace_manager = trace_manager
         self.trace_axes = {}
-        self.traces = {}  # Storing Trace objects
-        self.trace_curves = {}  # Storing PlotCurveItem references
+        self.traces = {}
+        self.trace_curves = {} 
 
         self.init_roi_plot()
         layout = QVBoxLayout(self)
@@ -165,7 +167,7 @@ class TracePlot(QWidget):
                             print(f"Y-range is None, Setting: {trace}.{trace.y_range}")
 
                         # Connect the viewRangeChanged signal
-                        view_box.sigRangeChanged.connect(lambda _, obj=view_box, t=trace: self.handle_view_box_range_changed(obj, t))
+                        view_box.sigRangeChanged.connect(lambda view_box, _: self.handle_view_box_range_changed(view_box, trace))
                     else:
                         view_box = self.trace_view_boxes[trace.label]
                         axis = self.trace_axes[trace.label]
@@ -205,11 +207,10 @@ class TracePlot(QWidget):
         for trace in trace_data:
             if trace.mode == "Isolate":
                 view_box = self.trace_view_boxes.get(trace.label)
-                if view_box:
-                    if trace.y_range is not None:
-                        view_box.setRange(yRange=trace.y_range, padding=0)
-                    else:
-                        view_box.enableAutoRange(axis='y')
+                if view_box and trace.y_range is not None:
+                    view_box.setRange(yRange=trace.y_range, padding=0)
+                else:
+                    view_box.enableAutoRange(axis='y')
 
     def get_line_style(self, line_style):
         if line_style == 'Solid':
@@ -223,16 +224,14 @@ class TracePlot(QWidget):
         else:
             return Qt.SolidLine
 
-    def handle_view_box_range_changed(self, view_box, trace):
+    def handle_view_box_range_changed(self, view_box, _):
         if isinstance(view_box, pg.ViewBox):
-            _, y_range = view_box.viewRange()[1]
-            if isinstance(trace, Trace):
-                trace.y_range = y_range
-                print(f"Trace: {trace.label}, Y-Range: {y_range}")
-            elif isinstance(trace, list):
-                for t in trace:
-                    t.y_range = y_range
-                    print(f"Trace: {t.label}, Y-Range: {y_range}")
+            _, y_range = view_box.viewRange()
+            for trace in self.trace_manager.traces:
+                if trace.label in self.trace_view_boxes and self.trace_view_boxes[trace.label] == view_box:
+                    trace.y_range = y_range
+                    print(f"Trace: {trace.label}, Y-Range: {y_range}")
+                    break
         else:
             print(f"Unexpected view_box object: {view_box}")
 

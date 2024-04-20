@@ -1,3 +1,4 @@
+
 import numpy as np
 from pymetr.core import Instrument, Subsystem, Sources, Trace
 from pymetr.properties import SwitchProperty, SelectProperty, ValueProperty, DataProperty, DataBlockProperty
@@ -104,6 +105,9 @@ class Oscilloscope(Instrument):
     def fetch_trace(self, *sources):
         self.query_operation_complete()  # let it digitize
 
+        if not sources:
+            sources = self.sources.source
+
         traces = []
         for source in sources:
             time = self.fetch_time(source)
@@ -111,6 +115,7 @@ class Oscilloscope(Instrument):
             trace_data = Trace(data, x_data=time, label=source)
             print(f"*** Fetched trace data for source {source}: {trace_data} ***")
             traces.append(trace_data)
+
         return traces
     
 # --- Subsystems -----------------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 import logging
 logger = logging.getLogger()
-logger.setLevel(logging.CRITICAL)
+logger.setLevel(logging.DEBUG)
 logging.getLogger('pyvisa').setLevel(logging.CRITICAL)
 handler = logging.StreamHandler()
 formatter = logging.Formatter("%(name)s - %(message)s")
@@ -143,7 +143,7 @@ class DynamicInstrumentGUI(QMainWindow):
         self.trace_manager = TraceManager()
 
         # --- Trace Plot -------------------------------------
-        self.trace_plot = TracePlot(self)
+        self.trace_plot = TracePlot(self.trace_manager, self)
         self.layout.addWidget(self.trace_plot)
 
         # --- Trace Panel --------------------------------------
@@ -162,6 +162,9 @@ class DynamicInstrumentGUI(QMainWindow):
 
         self.instrument_tabs = QTabWidget()
         self.instrument_dock.setWidget(self.instrument_tabs)
+
+        # Tab the instrument dock beneath the plot dock
+        self.tabifyDockWidget(self.plot_dock, self.instrument_dock)
 
         # --- Instrument Panel ---------------------------------
         self.instrument_manager = InstrumentManager()
