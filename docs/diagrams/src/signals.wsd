@@ -1,0 +1,56 @@
+@startuml fetch_trace
+participant Instrument
+participant TraceWorker
+participant TraceManager
+participant TracePlot
+
+-> Instrument: fetch_trace()
+activate Instrument
+Instrument -> TraceWorker: start()
+activate TraceWorker
+TraceWorker -> Instrument: fetch_trace()
+Instrument -> TraceWorker: trace_data_ready(data)
+deactivate Instrument
+TraceWorker -> TraceManager: add_trace(data)
+deactivate TraceWorker
+
+TraceManager -> TraceManager: process_trace(trace)
+TraceManager -> TraceManager: emit_trace_data()
+TraceManager -> TracePlot: traceDataChanged(trace)
+
+alt trace label exists
+  TracePlot -> TraceManager: update_trace_data(trace_label, new_data)
+  TraceManager -> TraceManager: update trace data
+  TraceManager -> TracePlot: traceDataChanged(trace)
+  TracePlot -> TracePlot: update_trace_data(trace)
+else
+  TracePlot -> TracePlot: update_plot(trace_data)
+end
+@enduml
+
+@startuml continuous_fetch
+participant Instrument
+participant TraceManager
+participant TracePlot
+
+-> Instrument: set continuous_mode = True
+activate Instrument
+-> Instrument: fetch_trace()
+alt continuous_mode = True
+Instrument -> TraceManager: trace_data_ready(data)
+activate TraceManager
+TraceManager -> TraceManager: update_traces_in_continuous_mode(data)
+TraceManager -> TracePlot: traceDataUpdated(data)
+deactivate TraceManager
+TracePlot -> TracePlot: update_trace_data(trace_data)
+else
+Instrument -> TraceManager: trace_data_ready(data)
+activate TraceManager
+TraceManager -> TraceManager: process_trace(trace)
+TraceManager -> TraceManager: emit_trace_data()
+TraceManager -> TracePlot: traceDataChanged(trace)
+deactivate TraceManager
+TracePlot -> TracePlot: update_plot(trace_data)
+end
+deactivate Instrument
+@enduml

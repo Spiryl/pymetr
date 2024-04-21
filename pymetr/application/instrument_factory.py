@@ -176,7 +176,7 @@ class InstrumentFactory:
             tree_dict.append(class_group)
             logger.debug(f"🌲 Added class group: {class_name} to the tree 🌲")
 
-        logger.debug(f"🚀 Generated parameter tree dictionary: {tree_dict} 🚀")
+        # logger.debug(f"🚀 Generated parameter tree dictionary: {tree_dict} 🚀") # MAybe YAML Display
         logger.debug("🏁 Finished generating the parameter tree 🏁")
         return tree_dict
 

@@ -113,7 +113,6 @@ class Oscilloscope(Instrument):
             time = self.fetch_time(source)
             data = self.fetch_data(source)
             trace_data = Trace(data, x_data=time, label=source)
-            print(f"*** Fetched trace data for source {source}: {trace_data} ***")
             traces.append(trace_data)
 
         return traces

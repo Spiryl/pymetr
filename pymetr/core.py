@@ -1,12 +1,12 @@
+# --- core.py ---
 import logging
 logger = logging.getLogger(__name__)
 logging.getLogger('pyvisa').setLevel(logging.CRITICAL)
 from pyvisa.constants import BufferType
+from PySide6.QtCore import QWaitCondition, QMutex
 from enum import Enum
 from collections.abc import Iterable
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from PySide6.QtCore import QObject, Signal, QThread
-import functools
+from PySide6.QtCore import QObject, Signal, QThread, QTimer
 import sys
 import numpy as np
 import logging
@@ -212,7 +212,7 @@ class Trace:
         self.data = np.array(data)
         self.x_data = np.array(x_data) if x_data is not None else None
         self.z_data = np.array(z_data) if z_data is not None else None
-        self.color = color if color else "#{:06x}".format(random.randint(0, 0xFFFFFF))
+        self.color = None
         self.label = label if label else f"Trace {id(self)}"
         self.mode = mode
         self.visible = visible
@@ -229,43 +229,25 @@ class Trace:
         if z_data is not None:
             self.z_data = np.array(z_data)
 
-class AcquisitionWorker(QObject):
-    trace_data_ready = Signal(object)
-    finished = Signal()
-
-    def __init__(self, instrument):
-        super().__init__()
-        self.instrument = instrument
-        self.running = False
-
-    def run(self):
-        self.running = True
-        while self.running:
-            self.instrument.fetch_trace()
-            self.trace_data_ready.wait()  # Wait for the trace_data_ready signal
-        self.finished.emit()
-
-    def stop(self):
-        self.running = False
-        
 class Instrument(QObject):
     """
-    A comprehensive class for interacting with scientific and industrial instruments through VISA, 
-    specifically tailored for devices that support the Standard Commands for Programmable Instruments (SCPI) protocol. 
-    It simplifies the process of establishing connections, sending commands, reading responses, and managing instrument 
+    A comprehensive class for interacting with scientific and industrial instruments through VISA,
+    specifically tailored for devices that support the Standard Commands for Programmable Instruments (SCPI) protocol.
+    It simplifies the process of establishing connections, sending commands, reading responses, and managing instrument
     status, whether communicating in ASCII or binary format.
 
-    This class is designed to serve as the foundation for specialized instrument control by providing common SCPI 
+    This class is designed to serve as the foundation for specialized instrument control by providing common SCPI
     command support and direct VISA communication capabilities.
     """
 
     # Signal needed to emit for plotting
     trace_data_ready = Signal(object)
+    trace_data_processed = Signal()  # New signal to notify when trace data has been processed
 
-    def __init__(self, resource_string, sources = None, **kwargs):
+    def __init__(self, resource_string, sources=None, **kwargs):
         """
         Initializes the instrument connection using the provided VISA resource string.
-        
+
         Parameters:
             resource_string (str): VISA resource string to identify the instrument.
             timeout (int): Timeout period in milliseconds.
@@ -279,24 +261,16 @@ class Instrument(QObject):
         self.sources = Sources(sources) if sources else Sources([])
         self.active_trace_threads = []
         self.instrument = None
+        self.continuous_mode = False
+        self.timer = QTimer()
         self._data_mode = 'ASCII'  # Default to BINARY
         self._data_type = 'B'  # Default data type (e.g., for binary data)
-        self.buffer_size = kwargs.pop('buffer_size', 2^16)  # Default buffer size, can be overridden via kwargs
+        self.buffer_size = kwargs.pop('buffer_size', 2 ** 16)  # Default buffer size, can be overridden via kwargs
         self.buffer_type = kwargs.pop('buffer_type', BufferType.io_in | BufferType.io_out)  # Default buffer type, can be overridden
         logger.debug(f"Initializing Instrument with resource_string: {resource_string}")
 
-    def start_continuous_acquisition(self):
-        self.acquisition_thread = QThread()
-        self.acquisition_worker = AcquisitionWorker(self)
-        self.acquisition_worker.moveToThread(self.acquisition_thread)
-        self.acquisition_thread.started.connect(self.acquisition_worker.run)
-        self.acquisition_worker.trace_data_ready.connect(self.trace_data_ready.emit)
-        self.acquisition_thread.start()
-
-    def stop_continuous_acquisition(self):
-        if self.acquisition_thread and self.acquisition_thread.isRunning():
-            self.acquisition_thread.quit()
-            self.acquisition_thread.wait()
+    def set_continuous_mode(self, enabled):
+        self.continuous_mode = enabled
 
     @staticmethod
     def trace_thread(func):
@@ -312,37 +286,43 @@ class Instrument(QObject):
     @abstractmethod
     def fetch_trace(self):
         """
-        Abstract method designed to fetch trace data from the instrument. Implementations should return data and optionally,
-        a corresponding range or timestamp array that matches the length of the data. The method should support returning 
-        this information in a format compatible with 'pyqtgraph' plotting functions, primarily focusing on arrays or lists.
+        Abstract method designed to fetch trace data from the instrument. Implementations should return data as `Trace` objects,
+        which encapsulate the data points, optional range or timestamp information, and other metadata.
 
-        The method should be capable of handling non-linear data points and timestamped data, ensuring flexibility in data
-        visualization.
+        The method should support returning data in a format compatible with 'pyqtgraph' plotting functions, primarily focusing
+        on arrays or lists. It should be capable of handling non-linear data points and timestamped data, ensuring flexibility
+        in data visualization.
 
         Returns:
-            tuple: A tuple containing one or more elements depending on what is necessary for plotting:
-                   - data (np.array or list): Mandatory. The primary set of data points to be plotted.
-                   - range (np.array, list, tuple): Optional. If provided, this specifies the x-axis values associated with each data point.
-                                                    This can be a linear range (tuple) or a non-linear range/timestamps (array/list).
-                   
-                    The expected format for simple linear data:
-                    (data, )
-                   
-                    For data with a specific range or timestamps:
-                    (data, range)
-                   
-                    trace_dictionary = {
-                        'trace_id': {  # Unique identifier for each trace
-                            'data': np.array([...]) or list([...]),  # The main data points for plotting. np.array is preferred for performance, but list is also supported.
-                            'range': np.array([...]) or list([...]) or tuple(start, end),  # X-axis values. Can be linear (tuple) or non-linear (array/list).
-                            'color': 'hex_code',  # Optional. Hex code (e.g., '#FF5733') for trace color. If not provided, a default is used.
-                            'label': 'String label',  # Optional. Label for the trace, used in legends or axes.
-                            'units': 'unit string',  # Optional. Units for the data (e.g., 'V', 'A'). Important for axes labeling and data interpretation.
-                            'range-units': 'unit string',  # Optional. Units for the range (e.g., 's', 'MHz'). Important for axes labeling and data interpretation.
-                            # Additional metadata as needed
-                        },
-                        # More traces as needed
-                    }
+            Trace or List[Trace]: A single `Trace` object or a list of `Trace` objects representing the fetched data.
+
+        Notes:
+            - If the instrument provides multiple traces, return a list of `Trace` objects.
+            - If the instrument provides a single trace, return a single `Trace` object.
+
+        Example usage:
+            def fetch_trace(self):
+                # Fetch data from the instrument
+                data = self.instrument.query_ascii_values("FETCH?")
+                
+                # Create a Trace object
+                trace = Trace(
+                    data=data,
+                    label="Channel1",
+                    units="V",
+                    color="#FF5733"
+                )
+                
+                return trace
+        
+        Trace object parameters:
+            - data (np.array or list): The main data points for plotting. np.array is preferred for performance, but list is also supported.
+            - x_data (np.array or list, optional): The x-axis values associated with each data point. If not provided, the default range starts from 0.
+            - label (str, optional): Label for the trace, used in legends or axes.
+            - color (str, optional): Hex code (e.g., '#FF5733') for trace color. If not provided, a default color is assigned.
+            - units (str, optional): Units for the data (e.g., 'V', 'A'). Important for axes labeling and data interpretation.
+            - line_thickness (float, optional): Thickness of the trace line. Defaults to 1.0.
+            - line_style (str, optional): Style of the trace line. Supported values: 'solid', 'dash', 'dot', 'dash-dot'. Defaults to 'solid'.
         """
         pass
 
