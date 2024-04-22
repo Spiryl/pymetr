@@ -6,14 +6,8 @@ os.environ['PYQTGRAPH_QT_LIB'] = 'PySide6'
 
 import importlib.util
 from pyqtgraph.parametertree import Parameter, ParameterTree
-<<<<<<< Updated upstream
-
-from PySide6.QtCore import QObject, Signal, Qt
-from PySide6.QtWidgets import QVBoxLayout, QDockWidget, QPushButton, QWidget, QFileDialog 
-=======
-from PySide6.QtCore import Signal, Qt, Slot, QTimer
+from PySide6.QtCore import Signal, Qt, Slot, QTimer, QObject
 from PySide6.QtWidgets import QVBoxLayout, QDockWidget, QPushButton, QWidget, QApplication
->>>>>>> Stashed changes
 
 from pymetr.core import Instrument
 from pymetr.application.instrument_factory import InstrumentFactory

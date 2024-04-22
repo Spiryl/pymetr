@@ -131,13 +131,8 @@ class Trace:
         self.data = np.array(data)
         self.x_data = np.array(x_data) if x_data is not None else None
         self.z_data = np.array(z_data) if z_data is not None else None
-<<<<<<< Updated upstream
-        self.color = color if color else "#{:06x}".format(random.randint(0, 0xFFFFFF))
-        self.label = label if label else f"Trace {id(self)}"
-=======
         self.color = None
         self.label = None
->>>>>>> Stashed changes
         self.mode = mode
         self.visible = visible
         self.x_range = None
