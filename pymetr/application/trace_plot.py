@@ -1,14 +1,9 @@
 import numpy as np
 import pyqtgraph as pg
 from PySide6.QtWidgets import QWidget, QVBoxLayout
-<<<<<<< Updated upstream
-from PySide6.QtCore import Qt
-
-=======
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QPainter, QPixmap, QGuiApplication
 from PySide6.QtWidgets import QApplication
->>>>>>> Stashed changes
 from pymetr.core import Trace
 
 class TracePlot(QWidget):
@@ -29,26 +24,14 @@ class TracePlot(QWidget):
         self.additional_view_boxes = []
         self.trace_view_boxes = {}
         self.trace_axes = {}
-<<<<<<< Updated upstream
-        self.traces = {}  # Storing Trace objects
-        self.trace_curves = {}  # Storing PlotCurveItem references
-=======
         self.traces = {}
         self.trace_curves = {}
         self.trace_data_updated = False
->>>>>>> Stashed changes
 
         self.init_roi_plot()
         layout = QVBoxLayout(self)
         layout.addWidget(self.plot_layout)
 
-<<<<<<< Updated upstream
-        # TODO: move this to new method connect_signals when we get more stuff. 
-        self.plot_item.scene().sigMouseClicked.connect(self.handleMouseClicked)
-
-
-    # --- Plot Label Methods ----------------
-=======
         # self.update_timer = QTimer()
         # self.update_timer.timeout.connect(self.update_plot)
         # self.update_timer.start(0)  # Set the timer interval to 0 for maximum update speed
@@ -57,7 +40,6 @@ class TracePlot(QWidget):
 
      # --- Plot Label Methods ----------------
 
->>>>>>> Stashed changes
     def set_title(self, title):
         # Set the title of the plot
         self.plot_item.setTitle(title)

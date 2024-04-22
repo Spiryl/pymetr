@@ -7,26 +7,26 @@ formatter = logging.Formatter("%(name)s - %(message)s")
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 
+
+import sys
+import inspect
 import os
 os.environ['PYQTGRAPH_QT_LIB'] = 'PySide6'
-import sys
-import numpy as np
-import random
-import inspect
-import pyqtgraph as pg
-from pyqtgraph.Qt import QtCore, QtGui
-from PySide6.QtGui import QColor, QAction
-from PySide6.QtWidgets import QDialog, QVBoxLayout, QListWidget, QDialogButtonBox, QDockWidget, QPushButton
-from PySide6.QtWidgets import QWidget, QMainWindow, QFileDialog, QComboBox, QSizePolicy, QTabWidget
-from PySide6.QtWidgets import QMenuBar
-from PySide6.QtCore import QObject, Signal, Qt
-from contextlib import contextmanager
 
-from pymetr.application.instrument_panel import InstrumentManager, InstrumentPanel
-from pymetr.application.trace_panel import TraceManager, TracePanel
+import pyqtgraph as pg
+from PySide6.QtGui import QAction
+from PySide6.QtWidgets import QDialog, QVBoxLayout, QListWidget, QDialogButtonBox, QDockWidget
+from PySide6.QtWidgets import QWidget, QMainWindow, QTabWidget
+from PySide6.QtWidgets import QMenuBar
+from PySide6.QtCore import Qt
+
+from pymetr.application.instrument_manager import InstrumentManager
+from pymetr.application.instrument_panel import InstrumentPanel
+from pymetr.application.trace_manager import TraceManager
+from pymetr.application.trace_panel import TracePanel
 from pymetr.application.display_panel import DisplayPanel, QuickPanel
 from pymetr.application.trace_plot import TracePlot
-from pymetr.core import Instrument, Trace
+from pymetr.core import Instrument
 
 # TODO:  Build out MainMenuBar into its own class.
 class MainMenuBar(QMenuBar):
@@ -143,7 +143,7 @@ class DynamicInstrumentGUI(QMainWindow):
         self.trace_manager = TraceManager()
 
         # --- Trace Plot -------------------------------------
-        self.trace_plot = TracePlot(self)
+        self.trace_plot = TracePlot(self.trace_manager, self)
         self.layout.addWidget(self.trace_plot)
 
         # --- Trace Panel --------------------------------------
@@ -163,6 +163,9 @@ class DynamicInstrumentGUI(QMainWindow):
         self.instrument_tabs = QTabWidget()
         self.instrument_dock.setWidget(self.instrument_tabs)
 
+        # Tab the instrument dock beneath the plot dock
+        self.tabifyDockWidget(self.plot_dock, self.instrument_dock)
+
         # --- Instrument Panel ---------------------------------
         self.instrument_manager = InstrumentManager()
         
@@ -173,12 +176,10 @@ class DynamicInstrumentGUI(QMainWindow):
         self.connect_signals()
 
     def connect_signals(self):
+
         # --- Trace Manager  -------------------------------------
         # self.trace_manager.traceDataChanged.connect(self.trace_plot.update_plot)
         self.trace_manager.traceDataChanged.connect(self.trace_panel.update_parameter_tree)
-<<<<<<< Updated upstream
-        self.trace_manager.traceAdded.connect(self.trace_plot.update_roi_plot)
-=======
         self.trace_manager.traceDataChanged.connect(self.trace_plot.update_plot)
         self.trace_manager.traceAdded.connect(self.trace_plot.update_roi_plot)
         self.trace_manager.traceVisibilityChanged.connect(self.trace_plot.update_trace_visibility)
@@ -188,7 +189,6 @@ class DynamicInstrumentGUI(QMainWindow):
         self.trace_manager.traceLineStyleChanged.connect(self.trace_plot.update_trace_line_style)
         self.trace_manager.traceRemoved.connect(self.trace_plot.remove_trace)
         self.trace_manager.traceDataUpdated.connect(self.trace_plot.on_trace_data_updated)
->>>>>>> Stashed changes
 
         # --- Display Panel  -------------------------------------
         self.display_panel.xGridChanged.connect(self.trace_plot.set_x_grid)
@@ -200,56 +200,20 @@ class DynamicInstrumentGUI(QMainWindow):
         self.display_panel.yLabelChanged.connect(self.trace_plot.set_y_label)
         self.display_panel.yLabelVisibilityChanged.connect(self.trace_plot.set_y_label_visible)
 
-        # --- Display Panel  -------------------------------------
+        # --- Display Panel -------------------------------------
         self.quick_panel.addInstrumentClicked.connect(self.add_instrument_button_clicked)
         self.quick_panel.plotModeChanged.connect(self.trace_manager.set_plot_mode)
         self.quick_panel.roiPlotToggled.connect(self.trace_plot.on_roi_plot_enabled)
         self.quick_panel.roiPlotToggled.connect(self.trace_manager.emit_trace_data)
         self.quick_panel.traceModeChanged.connect(self.trace_manager.set_trace_mode)
-        self.quick_panel.groupAllClicked.connect(self.on_group_all_clicked)
-        self.quick_panel.isolateAllClicked.connect(self.on_isolate_all_clicked)
-        self.quick_panel.testTraceClicked.connect(self.add_trace)
-        self.quick_panel.clearTracesClicked.connect(self.on_clear_traces_clicked)
-        self.quick_panel.screenshotClicked.connect(self.on_screenshot_clicked)
+        self.quick_panel.groupAllClicked.connect(self.trace_manager.group_all_traces)
+        self.quick_panel.isolateAllClicked.connect(self.trace_manager.isolate_all_traces)
+        self.quick_panel.testTraceClicked.connect(self.trace_manager.add_random_trace)
+        self.quick_panel.clearTracesClicked.connect(self.trace_manager.clear_traces)
         self.quick_panel.clearTracesClicked.connect(self.trace_plot.clear_traces)
+        self.quick_panel.screenshotClicked.connect(self.trace_plot.capture_screenshot)
 
     # TODO: Move these methods to the controllers and keep 'main' for aggregation and signals. 
-    def on_screenshot_clicked(self):
-        # Create a QPixmap with the size of the graphics scene
-        pixmap = QtGui.QPixmap(self.trace_plot.plot_layout.size())
-
-        # Create a QPainter to paint on the pixmap
-        painter = QtGui.QPainter(pixmap)
-
-        # Render the graphics scene onto the painter
-        self.trace_plot.plot_layout.render(painter)
-
-        # End painting
-        painter.end()
-
-        # Set the pixmap as the clipboard content
-        QtGui.QGuiApplication.clipboard().setPixmap(pixmap)
-
-    def on_group_all_clicked(self):
-        for trace in self.trace_manager.traces:
-            trace.mode = "Group"
-        self.trace_manager.emit_trace_data()
-
-    def on_isolate_all_clicked(self):
-        for trace in self.trace_manager.traces:
-            trace.mode = "Isolate"
-        self.trace_manager.emit_trace_data()
-
-    def on_clear_traces_clicked(self):
-        self.trace_manager.clear_traces()
-
-    def add_trace(self):
-        trace = TraceGenerator.generate_random_trace(self.trace_manager.trace_mode)
-        self.trace_manager.add_trace(trace)
-
-    def on_trace_mode_changed(self, trace_mode):
-        self.trace_manager.trace_mode = trace_mode
-
     def add_instrument_button_clicked(self):
         logger.debug(f"Add instrument button clicked")
         logger.debug(f"Caller: {inspect.stack()[1][3]}")
@@ -269,14 +233,6 @@ class DynamicInstrumentGUI(QMainWindow):
                     self.tabifyDockWidget(self.tabbed_dock, self.instrument_dock)
 
                 # Create a new instrument panel for the connected instrument
-<<<<<<< Updated upstream
-                new_instrument_panel = InstrumentPanel(self.instrument_manager, self)
-                new_instrument_panel.setup_instrument_panel(instrument, unique_id)
-                self.instrument_tabs.addTab(new_instrument_panel, unique_id)
-
-                instrument_instance = self.instrument_manager.instruments[unique_id]['instance']
-                instrument_instance.trace_data_ready.connect(self.trace_manager.add_trace)
-=======
                 instrument_panel = InstrumentPanel(self.instrument_manager, self)
                 instrument_panel.setup_instrument_panel(instrument, unique_id)
                 instrument_panel.continuous_mode_changed.connect(self.on_continuous_mode_changed)
@@ -284,7 +240,6 @@ class DynamicInstrumentGUI(QMainWindow):
                 self.instrument_tabs.addTab(instrument_panel, unique_id)
                 self.quick_panel.plotModeChanged.connect(instrument_panel.set_plot_mode)
                 instrument_panel.trace_data_ready.connect(self.trace_manager.add_trace)   
->>>>>>> Stashed changes
 
     def on_instrument_connected(self, unique_id):
         logger.debug(f"Connecting trace_data_ready signal for instrument {unique_id}")
@@ -292,25 +247,6 @@ class DynamicInstrumentGUI(QMainWindow):
 
     def on_instrument_disconnected(self, unique_id):
         logger.debug(f"Instrument {unique_id} disconnected.")
-
-
-class TraceGenerator:
-    trace_counter = 1
-
-    @staticmethod
-    def generate_random_trace(mode='Group'):
-        trace_name = f"Trace {TraceGenerator.trace_counter}"
-        TraceGenerator.trace_counter += 1
-        x = np.arange(1000)
-        y = np.random.normal(loc=0, scale=20, size=1000)
-        trace_dict = {
-            'label': trace_name,
-            'data': y.tolist(),
-            'visible': True,
-            'line_thickness': 1.0,
-            'line_style': 'Solid'
-        }
-        return trace_dict
     
     def update_plot(self):
         self.trace_plot.update_plot()
