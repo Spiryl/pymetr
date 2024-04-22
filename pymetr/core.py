@@ -184,22 +184,16 @@ class Instrument(QObject):
         self.sources = Sources(sources) if sources else Sources([])
         self.active_trace_threads = []
         self.instrument = None
-<<<<<<< Updated upstream
-=======
         self.continuous_mode = False
->>>>>>> Stashed changes
         self._data_mode = 'ASCII'  # Default to BINARY
         self._data_type = 'B'  # Default data type (e.g., for binary data)
         self.buffer_size = kwargs.pop('buffer_size', 2^16)  # Default buffer size, can be overridden via kwargs
         self.buffer_type = kwargs.pop('buffer_type', BufferType.io_in | BufferType.io_out)  # Default buffer type, can be overridden
         logger.debug(f"Initializing Instrument with resource_string: {resource_string}")
 
-<<<<<<< Updated upstream
-=======
     def set_continuous_mode(self, mode):
         self.continuous_mode = mode
 
->>>>>>> Stashed changes
     @staticmethod
     def trace_thread(func):
         """A decorator to run trace-related methods in a thread and handle their lifecycle."""

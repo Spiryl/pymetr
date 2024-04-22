@@ -451,14 +451,10 @@ class InstrumentPanel(QDockWidget):
             logger.error(f"Source parameter '{source_name}' not found in parameter tree")
 
     def setup_instrument_panel(self, instrument, unique_id):
-<<<<<<< Updated upstream
-        
-=======
 
         logger.debug(f"Setting up instrument panel for {unique_id}")
         self.unique_id = unique_id
 
->>>>>>> Stashed changes
         self.setup_method_buttons(instrument['methods'], instrument['instance'])
         self.setup_parameter_tree(instrument, unique_id)
         self.setup_sources_group(instrument['sources'])
@@ -473,8 +469,6 @@ class InstrumentPanel(QDockWidget):
         self.layout.addWidget(syncInstrumentButton)
         instrument['instance'].trace_data_ready.connect(self.on_trace_data_ready)
 
-<<<<<<< Updated upstream
-=======
     def on_trace_data_ready(self, trace_data):
         logger.debug("Received trace data")
         QApplication.processEvents()
@@ -540,7 +534,6 @@ class InstrumentPanel(QDockWidget):
         self.update_acquire_button(instrument_instance)
 
 
->>>>>>> Stashed changes
 if __name__ == "__main__":
     from PySide6.QtWidgets import QApplication, QMainWindow
     from PyMetr import Instrument

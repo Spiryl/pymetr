@@ -93,26 +93,6 @@ class TracePlot(QWidget):
         # Set the visibility of the y-axis grid
         self.plot_item.showGrid(y=visible)
 
-<<<<<<< Updated upstream
-     # --- Region Plot Methods ----------------       
-    def init_roi_plot(self):
-        self.roi_plot_item = self.plot_layout.addPlot(row=1, col=0)
-        self.roi_plot_item.setMaximumHeight(100)
-        self.roi_plot_item.hide()  # Start as hidden
-        self.roi = pg.LinearRegionItem()
-        self.roi.setZValue(10)
-        self.roi_plot = self.roi_plot_item.vb  # Properly assign the viewbox of the ROI plot item
-        self.roi_plot.addItem(self.roi)  # Add the LinearRegionItem to the correct viewbox
-        self.roi.sigRegionChanged.connect(self.update_main_plot)
-        self.plot_item.sigXRangeChanged.connect(self.on_main_plot_range_changed)
-
-    def on_roi_plot_enabled(self, enabled):
-        if self.roi_plot_item is not None:
-            self.roi_plot_item.setVisible(enabled)  # Toggle visibility
-            if enabled:
-                self.update_roi_plot(self.traces)  # Ensure this uses current traces
-                self.set_roi_region()  # Adjust the ROI to current range
-=======
     # --- Trace Update Methods ---------------
     def update_trace_data(self, trace_data):
         # Update the trace data for a single trace or a list of traces
@@ -126,7 +106,6 @@ class TracePlot(QWidget):
         # Update the data for a single trace and its corresponding view
         if trace.label in self.trace_curves:
             self.trace_curves[trace.label].setData(trace.x_data, trace.data)
->>>>>>> Stashed changes
 
     def update_roi_plot(self, traces):
         if self.roi_plot_item is None or not self.roi_plot_item.isVisible():
@@ -134,104 +113,6 @@ class TracePlot(QWidget):
 
         self.roi_plot_item.clear()
 
-<<<<<<< Updated upstream
-        if isinstance(traces, Trace):
-            traces = [traces]  # Convert single Trace object to a list
-
-        for trace in traces:
-            if trace.visible:
-                x_data = trace.x_data if trace.x_data is not None else np.arange(len(trace.data))
-                self.roi_plot_item.plot(x_data, trace.data, pen=pg.mkPen(trace.color, width=trace.line_thickness))
-
-        self.autoscale_roi_plot()
-
-    def set_roi_region(self):
-        if self.roi is not None and self.plot_item is not None:
-            current_range = self.plot_item.viewRange()[0]
-            self.roi.setRegion(current_range)
-
-    def autoscale_roi_plot(self):
-        if self.roi_plot_item is not None:
-            self.roi_plot.enableAutoRange()
-
-    def on_main_plot_range_changed(self, view_box, range_):
-        if self.roi is not None:
-            self.roi.setRegion(view_box.viewRange()[0])
-
-    def clear_roi_plot(self):
-        if self.roi_plot_item is not None:
-            self.roi_plot_item.clear()
-
-    def update_main_plot(self):
-        if self.roi is not None:
-            self.plot_item.vb.setXRange(*self.roi.getRegion(), padding=0)
-
-    def update_plot(self, trace_data):
-        self.plot_item.clear()
-        self.clear_additional_axes()
-
-        # Add print statements to check the range before making any changes
-        print(f"Main plot range before update: {self.plot_item.viewRange()}")
-
-        for trace in trace_data:
-            visible = trace.visible
-            color = trace.color
-            legend_alias = trace.label
-            x = trace.x_data if trace.x_data is not None else np.arange(len(trace.data))
-            y = trace.data
-            mode = trace.mode
-
-            if visible:
-                pen = pg.mkPen(color=color, width=trace.line_thickness, style=self.get_line_style(trace.line_style))
-
-                if mode == "Group":
-                    curve = pg.PlotCurveItem(x, y, pen=pen, name=legend_alias)
-                    self.plot_item.addItem(curve)
-                    self.legend.addItem(curve, legend_alias)
-                    self.trace_curves[trace.label] = curve
-                else:  # Isolate mode
-                    if trace.label not in self.trace_view_boxes:
-                        axis = pg.AxisItem("right", pen=pen)
-                        self.plot_layout.addItem(axis, row=0, col=len(self.additional_axes) + 1)
-                        self.additional_axes.append(axis)
-
-                        view_box = pg.ViewBox()
-                        axis.linkToView(view_box)
-                        view_box.setXLink(self.plot_item.vb)
-                        self.plot_layout.scene().addItem(view_box)
-                        self.additional_view_boxes.append(view_box)
-
-                        self.trace_view_boxes[trace.label] = view_box
-                        self.trace_axes[trace.label] = axis
-
-                        if trace.y_range is not None:
-                            print(f"Y-range is not None: {trace}.{trace.y_range}")
-                            view_box.setRange(yRange=trace.y_range)
-                            view_box.enableAutoRange(axis='y', enable=False)
-                        else:
-                            trace.y_range = view_box.viewRange()[1]
-                            print(f"Y-range is None, Setting: {trace}.{trace.y_range}")
-
-                        # Connect the viewRangeChanged signal
-                        view_box.sigRangeChanged.connect(lambda _, obj=view_box, t=trace: self.handle_view_box_range_changed(obj, t))
-                    else:
-                        view_box = self.trace_view_boxes[trace.label]
-                        axis = self.trace_axes[trace.label]
-
-                    curve = pg.PlotCurveItem(x, y, pen=pen, name=legend_alias)
-                    view_box.addItem(curve)
-                    self.legend.addItem(curve, legend_alias)
-                    self.trace_curves[trace.label] = curve
-
-        self.plot_item.vb.sigResized.connect(self.update_view_boxes)  # Connect the sigResized signal
-        print(f"Main plot range before viewbox update: {self.plot_item.viewRange()}")
-        self.update_view_boxes()  # Update the position and size of the view boxes initially
-        print(f"Main plot range after viewbox update: {self.plot_item.viewRange()}")
-        self.restore_view_ranges(trace_data)
-        print(f"Main plot range after restore view ranges update: {self.plot_item.viewRange()}")
-        self.update_roi_plot(trace_data)
-
-=======
     def update_trace_visibility(self, trace_id, visible):
         # Update the visibility of a trace
         if trace_id in self.trace_curves:
@@ -264,7 +145,6 @@ class TracePlot(QWidget):
             pen.setStyle(self.get_line_style(style))
             self.trace_curves[trace_id].setPen(pen)
 
->>>>>>> Stashed changes
     def clear_traces(self):
         # Clear all traces from the plot, legend, and additional axes
         for curve in self.trace_curves.values():
@@ -282,8 +162,6 @@ class TracePlot(QWidget):
             axis.deleteLater()
         self.additional_axes.clear()
 
-<<<<<<< Updated upstream
-=======
     def on_trace_data_updated(self):
         self.trace_data_updated = True
 
@@ -472,7 +350,6 @@ class TracePlot(QWidget):
         self.clear_additional_axes()
 
     # --- Isolated Trace Methods ----------------
->>>>>>> Stashed changes
     def restore_view_ranges(self, trace_data):
         if self.plot_item.vb.viewRange()[0] is not None:
             self.plot_item.vb.setRange(xRange=self.plot_item.vb.viewRange()[0], yRange=self.plot_item.vb.viewRange()[1], padding=0)
@@ -480,17 +357,10 @@ class TracePlot(QWidget):
         for trace in trace_data:
             if trace.mode == "Isolate":
                 view_box = self.trace_view_boxes.get(trace.label)
-<<<<<<< Updated upstream
-                if view_box:
-                    if trace.y_range is not None:
-                        view_box.setRange(yRange=trace.y_range, padding=0)
-                    else:
-=======
                 if view_box and trace.y_range is not None:
                     view_box.setRange(yRange=trace.y_range, padding=0)
                 else:
                     if view_box is not None:
->>>>>>> Stashed changes
                         view_box.enableAutoRange(axis='y')
 
     def get_line_style(self, line_style):
@@ -507,22 +377,11 @@ class TracePlot(QWidget):
 
     def handle_view_box_range_changed(self, view_box, trace):
         if isinstance(view_box, pg.ViewBox):
-<<<<<<< Updated upstream
-            _, y_range = view_box.viewRange()[1]
-            if isinstance(trace, Trace):
-                trace.y_range = y_range
-                print(f"Trace: {trace.label}, Y-Range: {y_range}")
-            elif isinstance(trace, list):
-                for t in trace:
-                    t.y_range = y_range
-                    print(f"Trace: {t.label}, Y-Range: {y_range}")
-=======
             _, y_range = view_box.viewRange()
             for trace in self.trace_manager.traces:
                 if trace.label in self.trace_view_boxes and self.trace_view_boxes[trace.label] == view_box:
                     trace.y_range = y_range
                     break
->>>>>>> Stashed changes
         else:
             print(f"Unexpected view_box object: {view_box}")
 
@@ -552,8 +411,6 @@ class TracePlot(QWidget):
                 else:
                     view_box.enableAutoRange(axis='y')
 
-<<<<<<< Updated upstream
-=======
     # --- Region Plot Methods ----------------
     def init_roi_plot(self):
         self.roi_plot_item = self.plot_layout.addPlot(row=1, col=0)
@@ -612,15 +469,11 @@ class TracePlot(QWidget):
             self.plot_item.vb.setXRange(roi_region[0], roi_region[1], padding=0)
 
     # --- Misc Methods ----------------
->>>>>>> Stashed changes
     def handleMouseClicked(self, event):
         # Handle the mouse click event to autoscale the main plot and isolated view boxes
         if event.double():
             self.plot_item.autoRange()  # Autoscale the main plot
             for view_box in self.trace_view_boxes.values():
-<<<<<<< Updated upstream
-                view_box.autoRange()  # Autoscale each isolated view box
-=======
                 view_box.autoRange()  # Autoscale each isolated view box
 
     def capture_screenshot(self):
@@ -643,4 +496,3 @@ class TracePlot(QWidget):
             return Qt.DashDotLine
         else:
             return Qt.SolidLine
->>>>>>> Stashed changes
