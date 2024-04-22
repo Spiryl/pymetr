@@ -236,6 +236,7 @@ class DynamicInstrumentGUI(QMainWindow):
                 instrument_panel = InstrumentPanel(self.instrument_manager, self)
                 instrument_panel.setup_instrument_panel(instrument, unique_id)
                 instrument_panel.continuous_mode_changed.connect(self.on_continuous_mode_changed)
+                instrument_panel.plot_update_requested.connect(self.trace_plot.update_plot)
                 
                 self.instrument_tabs.addTab(instrument_panel, unique_id)
                 self.quick_panel.plotModeChanged.connect(instrument_panel.set_plot_mode)
@@ -247,9 +248,6 @@ class DynamicInstrumentGUI(QMainWindow):
 
     def on_instrument_disconnected(self, unique_id):
         logger.debug(f"Instrument {unique_id} disconnected.")
-    
-    def update_plot(self):
-        self.trace_plot.update_plot()
 
     def on_continuous_mode_changed(self, enabled):
         if enabled:

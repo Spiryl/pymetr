@@ -13,7 +13,6 @@ class TracePanel(QDockWidget):
         self.setAllowedAreas(Qt.RightDockWidgetArea)
 
         self.trace_manager = trace_manager
-        self.trace_manager.traceDataChanged.connect(self.update_parameter_tree)
         self.trace_plot = trace_plot
 
         self.dock_widget = QWidget()
@@ -43,7 +42,10 @@ class TracePanel(QDockWidget):
                 trace_id = param.name()
                 self.trace_manager.traceRemoved.emit(trace_id)
 
-    def update_parameter_tree(self, trace_data):
+    def update_parameter_tree(self, trace_data=None):
+        if trace_data is None:
+            trace_data = self.trace_manager.traces
+    
         self.trace_parameter_tree.clear()
         self.trace_parameters = Parameter.create(name='Traces', type='group', children=[])
 

@@ -1,3 +1,6 @@
+# --- trace_plot.py ---
+import logging
+logger = logging.getLogger()
 import numpy as np
 import pyqtgraph as pg
 from PySide6.QtWidgets import QWidget, QVBoxLayout
@@ -7,7 +10,7 @@ from PySide6.QtWidgets import QApplication
 from pymetr.core import Trace
 
 class TracePlot(QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, trace_manager, parent=None):
         super().__init__(parent)
         self.plot_layout = pg.GraphicsLayoutWidget()
         self.plot_item = self.plot_layout.addPlot(row=0, col=0)
@@ -23,6 +26,8 @@ class TracePlot(QWidget):
         self.additional_axes = []
         self.additional_view_boxes = []
         self.trace_view_boxes = {}
+
+        self.trace_manager = trace_manager
         self.trace_axes = {}
         self.traces = {}
         self.trace_curves = {}
@@ -76,25 +81,6 @@ class TracePlot(QWidget):
         self.plot_item.showGrid(y=visible)
 
     # --- Trace Update Methods ---------------
-    def update_trace_data(self, trace_data):
-        # Update the trace data for a single trace or a list of traces
-        if isinstance(trace_data, list):
-            for trace in trace_data:
-                self._update_single_trace(trace)
-        else:
-            self._update_single_trace(trace_data)
-
-    def _update_single_trace(self, trace):
-        # Update the data for a single trace and its corresponding view
-        if trace.label in self.trace_curves:
-            self.trace_curves[trace.label].setData(trace.x_data, trace.data)
-
-    def update_roi_plot(self, traces):
-        if self.roi_plot_item is None or not self.roi_plot_item.isVisible():
-            return
-
-        self.roi_plot_item.clear()
-
     def update_trace_visibility(self, trace_id, visible):
         # Update the visibility of a trace
         if trace_id in self.trace_curves:
@@ -170,6 +156,10 @@ class TracePlot(QWidget):
         self.update_roi_plot(trace_data)
 
     def _update_existing_trace(self, trace):
+        logger.debug(f"Updating existing trace: {trace.label}")
+        logger.debug(f"Trace color: {trace.color}")
+        logger.debug(f"Trace line thickness: {trace.line_thickness}")
+        logger.debug(f"Trace line style: {trace.line_style}")
         curve = self.trace_curves[trace.label]
         curve.setData(trace.x_data, trace.data)
         curve.setVisible(trace.visible)
@@ -345,19 +335,7 @@ class TracePlot(QWidget):
                     if view_box is not None:
                         view_box.enableAutoRange(axis='y')
 
-    def get_line_style(self, line_style):
-        if line_style == 'Solid':
-            return Qt.SolidLine
-        elif line_style == 'Dash':
-            return Qt.DashLine
-        elif line_style == 'Dot':
-            return Qt.DotLine
-        elif line_style == 'Dash-Dot':
-            return Qt.DashDotLine
-        else:
-            return Qt.SolidLine
-
-    def handle_view_box_range_changed(self, view_box, trace):
+    def handle_view_box_range_changed(self, view_box, _):
         if isinstance(view_box, pg.ViewBox):
             _, y_range = view_box.viewRange()
             for trace in self.trace_manager.traces:

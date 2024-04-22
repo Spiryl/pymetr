@@ -34,10 +34,12 @@ class TraceManager(QObject):
             self.trace_counter = 1  # Reset the trace counter
 
         if isinstance(data, Trace):
+            logger.debug(f"Adding single trace: Label: {data.label}")
             self.process_trace(data)
         elif isinstance(data, (list, tuple)):
             for trace in data:
                 if isinstance(trace, Trace):
+                    logger.debug(f"Adding trace from list: Label: {trace.label}")
                     self.process_trace(trace)
                 else:
                     logger.warning(f"Skipping non-Trace object: {trace}")
@@ -48,6 +50,10 @@ class TraceManager(QObject):
         self.traceDataUpdated.emit()
 
     def process_trace(self, trace):
+        # Print out the attributes of the trace and their values
+        logger.debug(f"Processing trace: Label: {trace.label}, Color: {trace.color}, Mode: {trace.mode}, "
+                    f"Visible: {trace.visible}, Line Thickness: {trace.line_thickness}, Line Style: {trace.line_style}")
+
         if self.plot_mode == "Single":
             if trace.label:
                 trace.label = trace.label
