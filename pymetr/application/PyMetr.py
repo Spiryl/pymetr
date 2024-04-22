@@ -165,11 +165,6 @@ class DynamicInstrumentGUI(QMainWindow):
 
         # --- Instrument Panel ---------------------------------
         self.instrument_manager = InstrumentManager()
-        # self.instrument_panel = InstrumentPanel(self.instrument_manager, self)
-        # self.instrument_panel.instrument_connected.connect(self.on_instrument_connected)
-        # self.instrument_panel.instrument_disconnected.connect(self.on_instrument_disconnected)
-        # self.instrument_panel.trace_data_ready.connect(self.trace_manager.add_trace)
-        # self.instrument_tabs.addTab(self.instrument_panel, "Instrument 1")
         
         # --- Quick Panel  -------------------------------------
         self.quick_panel = QuickPanel(self)
@@ -179,9 +174,21 @@ class DynamicInstrumentGUI(QMainWindow):
 
     def connect_signals(self):
         # --- Trace Manager  -------------------------------------
-        self.trace_manager.traceDataChanged.connect(self.trace_plot.update_plot)
+        # self.trace_manager.traceDataChanged.connect(self.trace_plot.update_plot)
         self.trace_manager.traceDataChanged.connect(self.trace_panel.update_parameter_tree)
+<<<<<<< Updated upstream
         self.trace_manager.traceAdded.connect(self.trace_plot.update_roi_plot)
+=======
+        self.trace_manager.traceDataChanged.connect(self.trace_plot.update_plot)
+        self.trace_manager.traceAdded.connect(self.trace_plot.update_roi_plot)
+        self.trace_manager.traceVisibilityChanged.connect(self.trace_plot.update_trace_visibility)
+        self.trace_manager.traceColorChanged.connect(self.trace_plot.update_trace_color)
+        self.trace_manager.traceLabelChanged.connect(self.trace_plot.update_trace_label)
+        self.trace_manager.traceLineThicknessChanged.connect(self.trace_plot.update_trace_line_thickness)
+        self.trace_manager.traceLineStyleChanged.connect(self.trace_plot.update_trace_line_style)
+        self.trace_manager.traceRemoved.connect(self.trace_plot.remove_trace)
+        self.trace_manager.traceDataUpdated.connect(self.trace_plot.on_trace_data_updated)
+>>>>>>> Stashed changes
 
         # --- Display Panel  -------------------------------------
         self.display_panel.xGridChanged.connect(self.trace_plot.set_x_grid)
@@ -205,7 +212,6 @@ class DynamicInstrumentGUI(QMainWindow):
         self.quick_panel.clearTracesClicked.connect(self.on_clear_traces_clicked)
         self.quick_panel.screenshotClicked.connect(self.on_screenshot_clicked)
         self.quick_panel.clearTracesClicked.connect(self.trace_plot.clear_traces)
-
 
     # TODO: Move these methods to the controllers and keep 'main' for aggregation and signals. 
     def on_screenshot_clicked(self):
@@ -263,15 +269,24 @@ class DynamicInstrumentGUI(QMainWindow):
                     self.tabifyDockWidget(self.tabbed_dock, self.instrument_dock)
 
                 # Create a new instrument panel for the connected instrument
+<<<<<<< Updated upstream
                 new_instrument_panel = InstrumentPanel(self.instrument_manager, self)
                 new_instrument_panel.setup_instrument_panel(instrument, unique_id)
                 self.instrument_tabs.addTab(new_instrument_panel, unique_id)
 
                 instrument_instance = self.instrument_manager.instruments[unique_id]['instance']
                 instrument_instance.trace_data_ready.connect(self.trace_manager.add_trace)
+=======
+                instrument_panel = InstrumentPanel(self.instrument_manager, self)
+                instrument_panel.setup_instrument_panel(instrument, unique_id)
+                instrument_panel.continuous_mode_changed.connect(self.on_continuous_mode_changed)
+                
+                self.instrument_tabs.addTab(instrument_panel, unique_id)
+                self.quick_panel.plotModeChanged.connect(instrument_panel.set_plot_mode)
+                instrument_panel.trace_data_ready.connect(self.trace_manager.add_trace)   
+>>>>>>> Stashed changes
 
     def on_instrument_connected(self, unique_id):
-        instrument = self.instrument_manager.instruments[unique_id]['instance']
         logger.debug(f"Connecting trace_data_ready signal for instrument {unique_id}")
         logger.debug(f"Instrument {unique_id} connected.")
 
@@ -297,6 +312,17 @@ class TraceGenerator:
         }
         return trace_dict
     
+    def update_plot(self):
+        self.trace_plot.update_plot()
+
+    def on_continuous_mode_changed(self, enabled):
+        if enabled:
+            # Disconnect the traceDataChanged signal when in continuous mode
+            self.trace_manager.traceDataChanged.disconnect(self.trace_plot.update_plot)
+        else:
+            # Reconnect the traceDataChanged signal when not in continuous mode
+            self.trace_manager.traceDataChanged.connect(self.trace_plot.update_plot)
+
 if __name__ == "__main__":
 
     sys.argv += ['-platform', 'windows:darkmode=2']

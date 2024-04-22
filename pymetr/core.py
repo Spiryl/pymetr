@@ -108,8 +108,10 @@ class TraceWorker(QThread):
         self.kwargs = kwargs
 
     def run(self):
+        logger.debug(f"Running TraceWorker for {self.instance}")
         result = self.func(self.instance, *self.args, **self.kwargs)
-        self.instance.trace_data_ready.emit(result)
+        if result is not None:
+            self.instance.trace_data_ready.emit(result)
 
 class Trace:
     def __init__(self, data, x_data=None, z_data=None, label=None, color=None, mode=None, visible=True, line_thickness=1.0, line_style='Solid'):
@@ -129,8 +131,13 @@ class Trace:
         self.data = np.array(data)
         self.x_data = np.array(x_data) if x_data is not None else None
         self.z_data = np.array(z_data) if z_data is not None else None
+<<<<<<< Updated upstream
         self.color = color if color else "#{:06x}".format(random.randint(0, 0xFFFFFF))
         self.label = label if label else f"Trace {id(self)}"
+=======
+        self.color = None
+        self.label = None
+>>>>>>> Stashed changes
         self.mode = mode
         self.visible = visible
         self.x_range = None
@@ -177,21 +184,57 @@ class Instrument(QObject):
         self.sources = Sources(sources) if sources else Sources([])
         self.active_trace_threads = []
         self.instrument = None
+<<<<<<< Updated upstream
+=======
+        self.continuous_mode = False
+>>>>>>> Stashed changes
         self._data_mode = 'ASCII'  # Default to BINARY
         self._data_type = 'B'  # Default data type (e.g., for binary data)
         self.buffer_size = kwargs.pop('buffer_size', 2^16)  # Default buffer size, can be overridden via kwargs
         self.buffer_type = kwargs.pop('buffer_type', BufferType.io_in | BufferType.io_out)  # Default buffer type, can be overridden
         logger.debug(f"Initializing Instrument with resource_string: {resource_string}")
 
+<<<<<<< Updated upstream
+=======
+    def set_continuous_mode(self, mode):
+        self.continuous_mode = mode
+
+>>>>>>> Stashed changes
     @staticmethod
     def trace_thread(func):
         """A decorator to run trace-related methods in a thread and handle their lifecycle."""
+        class TraceThread(QThread):
+            def __init__(self, instance, *args, **kwargs):
+                super().__init__()
+                self.instance = instance
+                self.args = args
+                self.kwargs = kwargs
+
+            def run(self):
+                logger.debug(f"Entering run method for function '{func.__name__}'")
+                while True:
+                    logger.debug(f"Calling decorated function '{func.__name__}' for instance {self.instance}")
+                    result = func(self.instance, *self.args, **self.kwargs)
+                    logger.debug(f"Result from decorated function: {result}")
+                    if result is not None:
+                        logger.debug(f"Emitting trace_data_ready signal with result: {result}")
+                        self.instance.trace_data_ready.emit(result)
+                    if not self.instance.continuous_mode:
+                        logger.debug(f"Continuous mode is off, breaking the loop")
+                        break
+                    else:
+                        logger.debug(f"Continuous mode is on, continuing the loop")
+                logger.debug(f"Exiting run method for function '{func.__name__}'")
+
         def wrapper(instance, *args, **kwargs):
-            worker = TraceWorker(func, instance, *args, **kwargs)
-            worker.start()
-            instance.active_trace_threads.append(worker)
-            worker.finished.connect(lambda: instance.active_trace_threads.remove(worker))
-            return worker
+            logger.debug(f"Creating TraceThread for function '{func.__name__}'")
+            thread = TraceThread(instance, *args, **kwargs)
+            instance.active_trace_threads.append(thread)
+            thread.finished.connect(lambda: instance.active_trace_threads.remove(thread))
+            logger.debug(f"Starting TraceThread")
+            thread.start()
+            logger.debug(f"Returning from wrapper for function '{func.__name__}'")
+
         return wrapper
 
     @abstractmethod

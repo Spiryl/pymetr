@@ -109,7 +109,7 @@ class QuickPanel(QWidget):
         self.layout.addWidget(QFrame(frameShape=QFrame.VLine))
 
         self.plot_mode_combo_box = QComboBox()
-        self.plot_mode_combo_box.addItems(["Add", "Replace"])
+        self.plot_mode_combo_box.addItems(["Single", "Stack", "Run"])
         self.plot_mode_combo_box.currentTextChanged.connect(self.on_plot_mode_changed)
         self.layout.addWidget(self.plot_mode_combo_box)
 

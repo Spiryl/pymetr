@@ -112,8 +112,9 @@ class TracePanel(QDockWidget):
 
         self.trace_manager.traceDataChanged.connect(self.update_parameter_tree)
 
-    def update_parameter_tree(self, trace_data):
+    def update_parameter_tree(self):
         self.trace_parameter_tree.clear()
+<<<<<<< Updated upstream
         for trace in trace_data:
             if isinstance(trace, Trace):
                 trace_label = trace.label
@@ -126,6 +127,18 @@ class TracePanel(QDockWidget):
                 continue
 
             trace_param = pg.parametertree.Parameter.create(name=trace_label, type='group', children=[
+=======
+        self.trace_parameters = Parameter.create(name='Traces', type='group', children=[])
+
+        for trace in self.trace_manager.traces:
+            if not isinstance(trace, Trace):
+                continue
+
+            trace_label = trace.label
+            trace_attrs = trace.__dict__
+
+            trace_param = Parameter.create(name=trace_label, type='group', children=[
+>>>>>>> Stashed changes
                 {'name': 'Label', 'type': 'str', 'value': trace_label},
                 {'name': 'Visible', 'type': 'bool', 'value': trace_attrs.get('visible', True)},
                 {'name': 'Color', 'type': 'color', 'value': trace_attrs.get('color', 'ffffff')},
@@ -136,6 +149,7 @@ class TracePanel(QDockWidget):
                 ]},
                 {'name': 'Delete', 'type': 'action'}
             ])
+
             trace_param.child('Delete').sigActivated.connect(lambda _, tid=trace_label: self.remove_trace(tid))
             trace_param.child('Label').sigValueChanged.connect(lambda param, val, tid=trace_label: self.update_trace_label(tid, val))
             trace_param.child('Visible').sigValueChanged.connect(lambda param, val, tid=trace_label: self.update_trace_parameter(tid, 'visible', val))
@@ -143,7 +157,15 @@ class TracePanel(QDockWidget):
             trace_param.child('Mode').sigValueChanged.connect(lambda param, val, tid=trace_label: self.update_trace_parameter(tid, 'mode', val))
             trace_param.child('Extra').child('Line Thickness').sigValueChanged.connect(lambda param, val, tid=trace_label: self.update_trace_parameter(tid, 'line_thickness', val))
             trace_param.child('Extra').child('Line Style').sigValueChanged.connect(lambda param, val, tid=trace_label: self.update_trace_parameter(tid, 'line_style', val))
+<<<<<<< Updated upstream
             self.trace_parameter_tree.addParameters(trace_param)
+=======
+
+            self.trace_parameters.addChild(trace_param)
+
+        self.trace_parameter_tree.setParameters(self.trace_parameters, showTop=False)
+        self.trace_parameters.sigTreeStateChanged.connect(self.handle_trace_parameter_changes)
+>>>>>>> Stashed changes
 
     def update_trace_label(self, trace_id, label):
         for trace in self.trace_manager.traces:

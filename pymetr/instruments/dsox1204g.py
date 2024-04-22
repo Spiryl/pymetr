@@ -1,4 +1,5 @@
-
+import logging
+logger = logging.getLogger(__name__)
 import numpy as np
 from pymetr.core import Instrument, Subsystem, Sources, Trace
 from pymetr.properties import SwitchProperty, SelectProperty, ValueProperty, DataProperty, DataBlockProperty
@@ -104,7 +105,7 @@ class Oscilloscope(Instrument):
     @Sources.source_command(":DIGitize {}")
     def fetch_trace(self, *sources):
         self.query_operation_complete()  # let it digitize
-
+        logger.debug(f"Fetching trace data from instrument {self}")
         if not sources:
             sources = self.sources.source
 
@@ -115,7 +116,7 @@ class Oscilloscope(Instrument):
             trace_data = Trace(data, x_data=time, label=source)
             print(f"*** Fetched trace data for source {source}: {trace_data} ***")
             traces.append(trace_data)
-
+        logger.debug(f"Fetched trace data: {traces}")
         return traces
     
 # --- Subsystems -----------------------------------------------------------------------------------

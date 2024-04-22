@@ -6,9 +6,14 @@ os.environ['PYQTGRAPH_QT_LIB'] = 'PySide6'
 
 import importlib.util
 from pyqtgraph.parametertree import Parameter, ParameterTree
+<<<<<<< Updated upstream
 
 from PySide6.QtCore import QObject, Signal, Qt
 from PySide6.QtWidgets import QVBoxLayout, QDockWidget, QPushButton, QWidget, QFileDialog 
+=======
+from PySide6.QtCore import Signal, Qt, Slot, QTimer
+from PySide6.QtWidgets import QVBoxLayout, QDockWidget, QPushButton, QWidget, QApplication
+>>>>>>> Stashed changes
 
 from pymetr.core import Instrument
 from pymetr.application.instrument_factory import InstrumentFactory
@@ -311,6 +316,10 @@ class InstrumentPanel(QDockWidget):
         self.layout = QVBoxLayout(self.widget)
         self.setWidget(self.widget)
         self.instruments = {}  # Dictionary to store connected instruments
+        self.plot_mode = 'Single'
+        self.colors = ['#5E57FF', '#4BFF36', '#F23CA6', '#FF9535']
+        self.continuous_mode = False
+        self.update_timer = QTimer()
 
     def setup_parameters(self, parameters):
         """
@@ -432,7 +441,7 @@ class InstrumentPanel(QDockWidget):
         return current_params
     
     def handle_source_update(self, unique_id, source_name, is_selected):
-        # Construct the full path for the source parameter
+        # TODO: Fix Oscilloscope here. 
         source_param_path = f"Oscilloscope.Sources.{source_name}"
         param = self.find_parameter_by_path(source_param_path)
         if param:
@@ -442,15 +451,96 @@ class InstrumentPanel(QDockWidget):
             logger.error(f"Source parameter '{source_name}' not found in parameter tree")
 
     def setup_instrument_panel(self, instrument, unique_id):
+<<<<<<< Updated upstream
         
+=======
+
+        logger.debug(f"Setting up instrument panel for {unique_id}")
+        self.unique_id = unique_id
+
+>>>>>>> Stashed changes
         self.setup_method_buttons(instrument['methods'], instrument['instance'])
         self.setup_parameter_tree(instrument, unique_id)
         self.setup_sources_group(instrument['sources'])
 
+        self.acquire_button = QPushButton("Acquire")
+        self.acquire_button.clicked.connect(instrument['instance'].fetch_trace)  # Initially connect to fetch_trace
+        logger.debug("Acquire button initially connected to fetch_trace")
+        self.layout.addWidget(self.acquire_button)
+
         syncInstrumentButton = QPushButton(f"Sync {unique_id}")
         syncInstrumentButton.clicked.connect(lambda: self.instrument_manager.synchronize_instrument(unique_id))
         self.layout.addWidget(syncInstrumentButton)
+        instrument['instance'].trace_data_ready.connect(self.on_trace_data_ready)
 
+<<<<<<< Updated upstream
+=======
+    def on_trace_data_ready(self, trace_data):
+        logger.debug("Received trace data")
+        QApplication.processEvents()
+        self.trace_data_ready.emit(trace_data)  # Emit the trace_data_ready signal
+
+    def toggle_acquisition(self, instrument_instance):
+        logger.debug(f"Toggling acquisition for {self.unique_id}")
+        self.continuous_mode = not self.continuous_mode
+        logger.debug(f"Setting continuous mode to {self.continuous_mode} for instrument {instrument_instance}")
+        instrument_instance.set_continuous_mode(self.continuous_mode)
+        logger.debug(f"Emitting continuous_mode_changed signal with value {self.continuous_mode}")
+        self.continuous_mode_changed.emit(self.continuous_mode)
+        self.update_acquire_button(instrument_instance)
+        if self.continuous_mode and self.plot_mode == 'Run':
+            logger.debug(f"Starting continuous update timer")
+            self.start_continuous_update_timer()
+        else:
+            logger.debug(f"Stopping continuous update timer")
+            self.stop_continuous_update_timer()
+
+    def start_continuous_update_timer(self):
+        self.update_timer.start(100)  # Update the plot at 50 fps (1000 ms / 50 fps = 20 ms)
+
+    def stop_continuous_update_timer(self):
+        self.update_timer.stop()
+
+    def emit_trace_data(self):
+        instrument_instance = self.instrument_manager.instruments[self.unique_id]['instance']
+        trace_data = instrument_instance.fetch_trace()
+        self.trace_data_ready.emit(trace_data)
+
+    def fetch_trace(self):
+        logger.debug(f"Fetching trace for {self.unique_id}")
+        instrument_instance = self.instrument_manager.instruments[self.unique_id]['instance']
+        instrument_instance.fetch_trace()
+
+    def update_acquire_button(self, instrument_instance):
+        logger.debug(f"Updating acquire button for {self.unique_id}")
+        if self.plot_mode == 'Run':
+            logger.debug("Plot mode is 'Run'")
+            self.acquire_button.setCheckable(True)
+            self.acquire_button.setText("Stop" if self.continuous_mode else "Run")
+            self.acquire_button.setStyleSheet(f"background-color: {self.colors[1 if instrument_instance.continuous_mode else 0]}")
+            self.acquire_button.clicked.disconnect()  # Disconnect the previous signal
+            logger.debug("Disconnected previous signal from acquire button")
+            self.acquire_button.clicked.connect(lambda: self.toggle_acquisition(instrument_instance))
+            logger.debug("Connected acquire button to toggle_acquisition")
+        else:
+            logger.debug("Plot mode is not 'Run'")
+            self.acquire_button.setCheckable(False)
+            self.acquire_button.setText("Acquire")
+            self.acquire_button.setStyleSheet("")
+            self.acquire_button.clicked.disconnect()  # Disconnect the previous signal
+            logger.debug("Disconnected previous signal from acquire button")
+            self.acquire_button.clicked.connect(instrument_instance.fetch_trace)
+            logger.debug("Connected acquire button to fetch_trace")
+
+    @Slot(str)
+    def set_plot_mode(self, mode):
+        logger.debug(f"Setting plot mode to {mode}")
+        self.plot_mode = mode
+        instrument_instance = self.instrument_manager.instruments[self.unique_id]['instance']
+        self.update_acquire_button(instrument_instance)
+
+
+>>>>>>> Stashed changes
 if __name__ == "__main__":
     from PySide6.QtWidgets import QApplication, QMainWindow
     from PyMetr import Instrument
