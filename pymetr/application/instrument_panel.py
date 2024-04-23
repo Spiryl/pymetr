@@ -26,7 +26,7 @@ class InstrumentPanel(QDockWidget):
         self.setWidget(self.widget)
         self.instruments = {}  # Dictionary to store connected instruments
         self.plot_mode = 'Single'
-        self.colors = ['#5E57FF', '#4BFF36', '#F23CA6', '#FF9535']
+        self.color_palette = ['#5E57FF', '#4BFF36', '#F23CA6', '#FF9535', '#02FEE4', '#2F46FA', '#FFFE13', '#55FC77']
         self.continuous_mode = False
         self.update_timer = QTimer()
         self.update_timer.timeout.connect(self.request_plot_update)
@@ -81,11 +81,10 @@ class InstrumentPanel(QDockWidget):
         for param_dict in self.parameters_dict:
             update_param_attributes(param_dict)
 
-    def setup_method_buttons(self, methods_dict, instr):
-        for method_name, method_info in methods_dict.items():
-            if method_info.get('is_source_method', False):
-                method_func = getattr(instr, method_name)
-                self.add_action_button(method_name, method_func)
+    def setup_method_buttons(self, gui_methods_dict, instr):
+        for method_name, method_info in gui_methods_dict.items():
+            method_func = getattr(instr, method_name)
+            self.add_action_button(method_name, method_func)
 
     def setup_sources_group(self, sources_list):
         sources_group = {
@@ -106,12 +105,13 @@ class InstrumentPanel(QDockWidget):
                     if change == 'activated':  # Ensure the change type is an action activation
                         logger.debug(f"Action parameter activated: {param_name}")
                         # Dynamically find and call the associated method on the instrument
-                        if hasattr(self.instrument_manager.instruments[unique_id]['instance'], param_name):
-                            method = getattr(self.instrument_manager.instruments[unique_id]['instance'], param_name)
+                        if hasattr(self.instrument_manager.connected_instruments[unique_id]['instrument'], param_name):
+                            method = getattr(self.instrument_manager.connected_instruments[unique_id]['instrument'], param_name)
                             method()  # Execute the method
                             logger.debug(f"Executed action method: {param_name}")
                         else:
                             logger.error(f"No method found for action parameter: {param_name}")
+
                 # Check if the parameter is in the "Sources" group
                 elif param.parent() and param.parent().name() == "Sources":
                     logger.debug(f"Source {param_name} changed to {data}")
@@ -120,8 +120,8 @@ class InstrumentPanel(QDockWidget):
                         self.instrument_manager.instruments[unique_id]['instance'].sources.add_source(param_name)
                     else:
                         self.instrument_manager.instruments[unique_id]['instance'].sources.remove_source(param_name)
-                else:
-                    # For non-action parameters, handle them as usual
+                # For non-action parameters, handle them as usual
+                else:    
                     full_param_path = self.instrument_manager.construct_parameter_path(param).lstrip(unique_id)
                     full_param_path = full_param_path.lstrip(".")  
                     logger.debug(f"Constructed full parameter path: {full_param_path}")
@@ -164,27 +164,28 @@ class InstrumentPanel(QDockWidget):
             logger.error(f"Source parameter '{source_name}' not found in parameter tree")
 
     def setup_instrument_panel(self, instrument, unique_id):
-
         logger.debug(f"Setting up instrument panel for {unique_id}")
         self.unique_id = unique_id
-
-        self.setup_method_buttons(instrument['methods'], instrument['instance'])
+        self.setup_method_buttons(instrument['gui_methods'], instrument['instance'])
         self.setup_parameter_tree(instrument, unique_id)
         self.setup_sources_group(instrument['sources'])
 
         self.acquire_button = QPushButton("Acquire Data")
+        self.acquire_button.setStyleSheet(f"background-color: {self.color_palette[0]}; color: #333333; font-weight: bold;")  # Set initial color (blue)
         self.acquire_button.clicked.connect(instrument['instance'].fetch_trace)  # Initially connect to fetch_trace
         logger.debug("Acquire button initially connected to fetch_trace")
         self.layout.addWidget(self.acquire_button)
 
         syncInstrumentButton = QPushButton(f"Sync Settings")
+        syncInstrumentButton.setStyleSheet(f"background-color: {self.color_palette[3]}; color: #333333; font-weight: bold;")  # Set initial color (yellow)
         syncInstrumentButton.clicked.connect(lambda: self.instrument_manager.synchronize_instrument(unique_id))
         self.layout.addWidget(syncInstrumentButton)
+
         instrument['instance'].trace_data_ready.connect(self.on_trace_data_ready)
 
     def on_trace_data_ready(self, trace_data):
         logger.debug("Received trace data")
-        QApplication.processEvents()
+        # QApplication.processEvents()
         self.trace_data_ready.emit(trace_data)  # Emit the trace_data_ready signal
 
     def toggle_acquisition(self, instrument_instance):
@@ -201,27 +202,17 @@ class InstrumentPanel(QDockWidget):
 
         if self.continuous_mode and self.plot_mode == 'Run':
             logger.debug(f"Starting continuous update timer")
-            self.start_continuous_update_timer()
+            # self.start_continuous_update_timer()
             instrument_instance.fetch_trace()
         else:
             logger.debug(f"Stopping continuous update timer")
-            self.stop_continuous_update_timer()
+            # self.stop_continuous_update_timer()
 
     def start_continuous_update_timer(self):
-        self.update_timer.start(100)  # Update the plot at 50 fps (1000 ms / 50 fps = 20 ms)
+        self.update_timer.start(20)  # Update the plot at 50 fps (1000 ms / 50 fps = 20 ms)
 
     def stop_continuous_update_timer(self):
         self.update_timer.stop()
-
-    def emit_trace_data(self):
-        instrument_instance = self.instrument_manager.instruments[self.unique_id]['instance']
-        trace_data = instrument_instance.fetch_trace()
-        self.trace_data_ready.emit(trace_data)
-
-    def fetch_trace(self):
-        logger.debug(f"Fetching trace for {self.unique_id}")
-        instrument_instance = self.instrument_manager.instruments[self.unique_id]['instance']
-        instrument_instance.fetch_trace()
 
     def update_acquire_button(self, instrument_instance):
         logger.debug(f"Updating acquire button for {self.unique_id}")
@@ -229,7 +220,17 @@ class InstrumentPanel(QDockWidget):
             logger.debug("Plot mode is 'Run'")
             self.acquire_button.setCheckable(True)
             self.acquire_button.setText("Stop" if self.continuous_mode else "Run")
-            self.acquire_button.setStyleSheet(f"background-color: {self.colors[1 if instrument_instance.continuous_mode else 0]}")
+
+            # Set the acquire button color and text color based on the text
+            if self.continuous_mode:
+                self.acquire_button.setStyleSheet(
+                    f"background-color: {self.color_palette[2]}; color: #333333; font-weight: bold;"  # Red color, white text
+                )
+            else:
+                self.acquire_button.setStyleSheet(
+                    f"background-color: {self.color_palette[1]}; color: #333333; font-weight: bold;"  # Green color, dark gray text
+                )
+
             self.acquire_button.clicked.disconnect()  # Disconnect the previous signal
             logger.debug("Disconnected previous signal from acquire button")
             self.acquire_button.clicked.connect(lambda: self.toggle_acquisition(instrument_instance))
@@ -238,7 +239,9 @@ class InstrumentPanel(QDockWidget):
             logger.debug("Plot mode is not 'Run'")
             self.acquire_button.setCheckable(False)
             self.acquire_button.setText("Acquire Data")
-            self.acquire_button.setStyleSheet("")
+            self.acquire_button.setStyleSheet(
+                f"background-color: {self.color_palette[0]}; color: #333333;"  # Blue color, white text
+            )
             self.acquire_button.clicked.disconnect()  # Disconnect the previous signal
             logger.debug("Disconnected previous signal from acquire button")
             self.acquire_button.clicked.connect(instrument_instance.fetch_trace)

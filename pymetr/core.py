@@ -243,7 +243,7 @@ class Instrument(QObject):
     # Signal needed to emit for plotting
     trace_data_ready = Signal(object)
 
-    def __init__(self, resource_string, sources = None, **kwargs):
+    def __init__(self, resource_string, sources=None, **kwargs):
         """
         Initializes the instrument connection using the provided VISA resource string.
         
@@ -265,12 +265,14 @@ class Instrument(QObject):
         self._data_type = 'B'  # Default data type (e.g., for binary data)
         self.buffer_size = kwargs.pop('buffer_size', 2^16)  # Default buffer size, can be overridden via kwargs
         self.buffer_type = kwargs.pop('buffer_type', BufferType.io_in | BufferType.io_out)  # Default buffer type, can be overridden
-        logger.debug(f"Initializing Instrument with resource_string: {resource_string}")
+        self._ready_for_data = True
 
     def set_continuous_mode(self, mode):
         self.continuous_mode = mode
 
-    # TODO: Clean up debug when method is solid. 
+    def set_ready_for_data(self, ready):
+        self._ready_for_data = ready
+
     @staticmethod
     def trace_thread(func):
         """A decorator to run trace-related methods in a thread and handle their lifecycle."""
@@ -282,32 +284,61 @@ class Instrument(QObject):
                 self.kwargs = kwargs
 
             def run(self):
-                # logger.debug(f"Entering run method for function '{func.__name__}'")
                 while True:
-                    # logger.debug(f"Calling decorated function '{func.__name__}' for instance {self.instance}")
-                    result = func(self.instance, *self.args, **self.kwargs)
-                    # logger.debug(f"Result from decorated function: {result}")
-                    if result is not None:
-                        # logger.debug(f"Emitting trace_data_ready signal with result: {result}")
-                        self.instance.trace_data_ready.emit(result)
-                        QApplication.processEvents()
+                    if self.instance._ready_for_data:
+                        self.instance._ready_for_data = False
+                        result = func(self.instance, *self.args, **self.kwargs)
+                        if result is not None:
+                            self.instance.trace_data_ready.emit(result)
+                        QThread.msleep(1)  # Add a short sleep to keep things stable
+                    else:
+                        QThread.msleep(1)  # Add a small delay when data is not ready
+
                     if not self.instance.continuous_mode:
-                        # logger.debug(f"Continuous mode is off, breaking the loop")
                         break
-                    # else:
-                    #     logger.debug(f"Continuous mode is on, continuing the loop")
-                # logger.debug(f"Exiting run method for function '{func.__name__}'")
 
         def wrapper(instance, *args, **kwargs):
-            # logger.debug(f"Creating TraceThread for function '{func.__name__}'")
             thread = TraceThread(instance, *args, **kwargs)
             instance.active_trace_threads.append(thread)
             thread.finished.connect(lambda: instance.active_trace_threads.remove(thread))
-            # logger.debug(f"Starting TraceThread")
             thread.start()
-            # logger.debug(f"Returning from wrapper for function '{func.__name__}'")
 
         return wrapper
+    
+    def gui_command(func):
+        """
+        Decorator for marking methods as GUI commands.
+
+        This decorator is used to identify methods in an instrument class that should be exposed as buttons or commands in the GUI.
+        When applied to a method, it indicates that the method is intended to be triggered by user interaction through the GUI.
+
+        The decorated method should have a docstring that provides a clear description of what the command does and how to use it.
+        The docstring will be displayed as help text or a tooltip in the GUI to assist users in understanding the purpose and usage of the command.
+
+        Example usage:
+            class MyInstrument(Instrument):
+                @gui_command
+                def start_measurement(self):
+                    '''
+                    Starts a measurement on the instrument.
+
+                    This command initiates a new measurement cycle on the connected instrument.
+                    The measurement settings should be configured prior to invoking this command.
+
+                    Returns:
+                        None
+                    '''
+                    # Method implementation goes here
+                    ...
+
+        By decorating the `start_measurement` method with `@gui_command`, it will be recognized by the InstrumentVisitor
+        and displayed as a button or command in the generated GUI.
+
+        Note:
+            - The decorator does not modify the behavior of the method itself; it only serves as a marker for the InstrumentVisitor.
+            - The docstring of the decorated method will be used as the help text or tooltip for the corresponding GUI element.
+        """
+        return func
 
     @abstractmethod
     def fetch_trace(self):

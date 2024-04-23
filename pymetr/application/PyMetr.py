@@ -1,6 +1,6 @@
 import logging
 logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.CRITICAL)
 logging.getLogger('pyvisa').setLevel(logging.CRITICAL)
 handler = logging.StreamHandler()
 formatter = logging.Formatter("%(name)s - %(message)s")
@@ -188,7 +188,6 @@ class DynamicInstrumentGUI(QMainWindow):
         self.trace_manager.traceLineThicknessChanged.connect(self.trace_plot.update_trace_line_thickness)
         self.trace_manager.traceLineStyleChanged.connect(self.trace_plot.update_trace_line_style)
         self.trace_manager.traceRemoved.connect(self.trace_plot.remove_trace)
-        self.trace_manager.traceDataUpdated.connect(self.trace_plot.on_trace_data_updated)
 
         # --- Display Panel  -------------------------------------
         self.display_panel.xGridChanged.connect(self.trace_plot.set_x_grid)
@@ -222,7 +221,7 @@ class DynamicInstrumentGUI(QMainWindow):
             selected_resource = dialog.get_selected_instrument()
             instrument, unique_id = self.instrument_manager.initialize_instrument(selected_resource)
             if instrument:
-                # Create the instrument dock and tabs if they don't exist
+                self.trace_plot.finished_update.connect(instrument['instance'].set_ready_for_data)
                 if not hasattr(self, 'instrument_dock'):
                     self.instrument_dock = QDockWidget("Instruments", self)
                     self.instrument_dock.setAllowedAreas(Qt.RightDockWidgetArea)
@@ -236,11 +235,13 @@ class DynamicInstrumentGUI(QMainWindow):
                 instrument_panel = InstrumentPanel(self.instrument_manager, self)
                 instrument_panel.setup_instrument_panel(instrument, unique_id)
                 instrument_panel.continuous_mode_changed.connect(self.on_continuous_mode_changed)
+                instrument_panel.continuous_mode_changed.connect(self.trace_plot.set_continuous_mode)
                 instrument_panel.plot_update_requested.connect(self.trace_plot.update_plot)
-                
+                instrument_panel.trace_data_ready.connect(self.trace_manager.add_trace)               
                 self.instrument_tabs.addTab(instrument_panel, unique_id)
+
                 self.quick_panel.plotModeChanged.connect(instrument_panel.set_plot_mode)
-                instrument_panel.trace_data_ready.connect(self.trace_manager.add_trace)   
+   
 
     def on_instrument_connected(self, unique_id):
         logger.debug(f"Connecting trace_data_ready signal for instrument {unique_id}")
@@ -251,11 +252,13 @@ class DynamicInstrumentGUI(QMainWindow):
 
     def on_continuous_mode_changed(self, enabled):
         if enabled:
+            self.trace_manager.traceDataChanged.disconnect(self.trace_panel.update_parameter_tree)
             # Disconnect the traceDataChanged signal when in continuous mode
-            self.trace_manager.traceDataChanged.disconnect(self.trace_plot.update_plot)
+            # self.trace_manager.traceDataChanged.disconnect(self.trace_plot.update_plot)
         else:
+            self.trace_manager.traceDataChanged.connect(self.trace_panel.update_parameter_tree)
             # Reconnect the traceDataChanged signal when not in continuous mode
-            self.trace_manager.traceDataChanged.connect(self.trace_plot.update_plot)
+            # self.trace_manager.traceDataChanged.connect(self.trace_plot.update_plot)
 
 if __name__ == "__main__":
 

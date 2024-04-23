@@ -7,6 +7,7 @@ from PySide6.QtCore import Qt
 from pymetr.core import Trace
 
 class TracePanel(QDockWidget):
+    
     def __init__(self, trace_manager, trace_plot, parent=None):
         super().__init__("", parent)
         self.setMinimumWidth(200) 
@@ -53,16 +54,13 @@ class TracePanel(QDockWidget):
             if isinstance(trace, Trace):
                 trace_label = trace.label
                 trace_attrs = trace.__dict__
-            elif isinstance(trace, dict):
-                trace_label = trace['label']
-                trace_attrs = trace
             else:
                 continue
 
             trace_param = Parameter.create(name=trace_label, type='group', children=[
                 {'name': 'Label', 'type': 'str', 'value': trace_label},
                 {'name': 'Visible', 'type': 'bool', 'value': trace_attrs.get('visible', True)},
-                {'name': 'Color', 'type': 'color', 'value': trace_attrs.get('color', 'ffffff')},
+                {'name': 'Color', 'type': 'color', 'value': trace.color},
                 {'name': 'Mode', 'type': 'list', 'limits': ['Group', 'Isolate'], 'value': trace_attrs.get('mode', 'Group')},
                 {'name': 'Extra', 'type': 'group', 'expanded': False, 'children': [
                     {'name': 'Line Thickness', 'type': 'float', 'value': trace_attrs.get('line_thickness', 1.0), 'step': 0.1, 'limits': (0.1, 10.0)},

@@ -14,11 +14,13 @@ class InstrumentFactory:
         instrument_data = self.parse_source_file(path)
         
         parameter_tree_dict = self.generate_parameter_tree_dict(instrument_data)
-        methods_dict = self.generate_methods_dict(instrument_data)
+        gui_methods_dict = self.generate_gui_methods_dict(instrument_data)
+        other_methods_dict = self.generate_other_methods_dict(instrument_data)
         sources_list = self.generate_sources_list(instrument_data)
         return {
             'parameter_tree': parameter_tree_dict,
-            'methods': methods_dict,
+            'gui_methods': gui_methods_dict,
+            'other_methods': other_methods_dict,
             'sources': sources_list
         }
 
@@ -36,17 +38,27 @@ class InstrumentFactory:
         logger.debug(f"Completed parsing. Extracted instruments: {list(visitor.instruments.keys())}")
         return visitor.instruments
 
-    def generate_methods_dict(self, instrument_data):
-        logger.info("📂 Starting to generate the methods dictionary... 📂")
-        methods_dict = {}
+    def generate_gui_methods_dict(self, instrument_data):
+        logger.info("📂 Starting to generate the GUI methods dictionary... 📂")
+        gui_methods_dict = {}
         for class_name, class_info in instrument_data.items():
             logger.info(f"🔍 Processing Instrument: {class_name} 🔍")
-            for method_name, method_info in class_info.get('methods', {}).items():
-                if method_info['is_source_method']:
-                    logger.info(f"🔧 Adding source method: {method_name} 🔧")
-                    methods_dict[method_name] = method_info  # Store the method info dictionary
-        logger.info("✅ Finished generating the methods dictionary ✅")
-        return methods_dict
+            for method_name, method_info in class_info.get('gui_methods', {}).items():
+                logger.info(f"🔧 Adding GUI method: {method_name} 🔧")
+                gui_methods_dict[method_name] = method_info  # Store the method info dictionary
+        logger.info("✅ Finished generating the GUI methods dictionary ✅")
+        return gui_methods_dict
+
+    def generate_other_methods_dict(self, instrument_data):
+        logger.info("📂 Starting to generate the other methods dictionary... 📂")
+        other_methods_dict = {}
+        for class_name, class_info in instrument_data.items():
+            logger.info(f"🔍 Processing Instrument: {class_name} 🔍")
+            for method_name, method_info in class_info.get('other_methods', {}).items():
+                logger.info(f"🔧 Adding other method: {method_name} 🔧")
+                other_methods_dict[method_name] = method_info  # Store the method info dictionary
+        logger.info("✅ Finished generating the other methods dictionary ✅")
+        return other_methods_dict
 
     def generate_properties_list(self, properties, class_name, index=None, subsystem=None):
         logger.debug(f"🚀 Starting to generate properties list for class '{class_name}' with index '{index}'.")

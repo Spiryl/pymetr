@@ -38,6 +38,7 @@ class Oscilloscope(Instrument):
     # and adds them as parameter arguments for commands which accept a list of sources.
     # This allows the function to be passed with arguments of called from a GUI button
     # based on a list of active sources.
+    @Instrument.gui_command
     @Sources.source_command(":AUTOScale {}")
     def autoscale(self, *sources):
         pass
@@ -114,9 +115,7 @@ class Oscilloscope(Instrument):
             time = self.fetch_time(source)
             data = self.fetch_data(source)
             trace_data = Trace(data, x_data=time, label=source)
-            print(f"*** Fetched trace data for source {source}: {trace_data} ***")
             traces.append(trace_data)
-        logger.debug(f"Fetched trace data: {traces}")
         return traces
     
 # --- Subsystems -----------------------------------------------------------------------------------

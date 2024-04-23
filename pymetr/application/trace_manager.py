@@ -8,7 +8,6 @@ from pymetr.core import Trace
 
 class TraceManager(QObject):
     traceDataChanged = Signal()
-    traceDataUpdated = Signal()
     traceAdded = Signal(Trace)
     traceVisibilityChanged = Signal(str, bool)
     traceColorChanged = Signal(str, str)
@@ -47,14 +46,17 @@ class TraceManager(QObject):
             logger.warning(f"Unsupported data type: {type(data)}")
 
         self.traceDataChanged.emit()
-        self.traceDataUpdated.emit()
 
     def process_trace(self, trace):
         # Print out the attributes of the trace and their values
         logger.debug(f"Processing trace: Label: {trace.label}, Color: {trace.color}, Mode: {trace.mode}, "
                     f"Visible: {trace.visible}, Line Thickness: {trace.line_thickness}, Line Style: {trace.line_style}")
 
-        if self.plot_mode == "Single":
+        if self.plot_mode == "Run":
+            if trace.label in [t.label for t in self.traces]:
+                self.update_trace_by_label(trace)
+                return
+        elif self.plot_mode == "Single":
             if trace.label:
                 trace.label = trace.label
             else:
@@ -67,10 +69,6 @@ class TraceManager(QObject):
                     trace.label = self.generate_unique_label(trace.label)
             else:
                 trace.label = self.generate_unique_label()
-        elif self.plot_mode == "Run":
-            if trace.label in [t.label for t in self.traces]:
-                self.update_trace_by_label(trace)
-                return
 
         if not trace.color:
             trace.color = self.get_next_color_from_palette()
@@ -102,36 +100,9 @@ class TraceManager(QObject):
             if existing_trace.label == trace.label:
                 self.traces[index] = trace
                 break
-        self.traceDataUpdated.emit()
-        
-    def _update_single_trace(self, trace_data):
-        for trace in self.traces:
-            if trace.label == trace_data.label:
-
-                if not np.array_equal(trace.data, trace_data.data):
-                    trace.data = trace_data.data
-                    trace.x_data = trace_data.x_data  # Update x_data
-                if trace.color != trace_data.color:
-                    trace.color = trace_data.color
-                    self.traceColorChanged.emit(trace.label, trace.color)
-                if trace.line_thickness != trace_data.line_thickness:
-                    trace.line_thickness = trace_data.line_thickness
-                    self.traceLineThicknessChanged.emit(trace.label, trace.line_thickness)
-                if trace.line_style != trace_data.line_style:
-                    trace.line_style = trace_data.line_style
-                    self.traceLineStyleChanged.emit(trace.label, trace.line_style)
-                self.traceDataChanged.emit()
-                break
-            else:
-                if not trace_data.label:
-                    trace_data.label = self.generate_unique_label()
-                self.traces.append(trace_data)
-                self.traceAdded.emit(trace_data)
 
     def set_plot_mode(self, mode):
         self.plot_mode = mode
-        if mode == 'Single':
-            self.clear_traces()
         self.traceDataChanged.emit()
 
     def set_trace_mode(self, trace_mode):
@@ -139,13 +110,6 @@ class TraceManager(QObject):
         for trace in self.traces:
             trace.mode = trace_mode
         self.traceDataChanged.emit()
-
-    def update_trace_data(self, trace_data):
-        if isinstance(trace_data, list):
-            for trace in trace_data:
-                self._update_single_trace(trace)
-        else:
-            self._update_single_trace(trace_data)
 
     def get_next_color_from_palette(self):
         color = self.color_palette[self.color_index]

@@ -23,6 +23,8 @@ class InstrumentVisitor(ast.NodeVisitor):
                 'subsystems': {},
                 'properties': [],
                 'methods': {},
+                'gui_methods': {},
+                'other_methods': {},
                 'sources': []
             }
             self.extract_instrument_info(node)
@@ -57,21 +59,25 @@ class InstrumentVisitor(ast.NodeVisitor):
         method_info = {
             'args': [arg.arg for arg in item.args.args if arg.arg != 'self'],
             'return': self.get_return_annotation(item),
-            'is_source_method': self.is_source_method(item)
+            'is_gui_method': self.is_gui_method(item)
         }
-        self.instruments[self.current_instrument]['methods'][item.name] = method_info
+        if method_info['is_gui_method']:
+            self.instruments[self.current_instrument]['gui_methods'][item.name] = method_info
+        else:
+            self.instruments[self.current_instrument]['other_methods'][item.name] = method_info
 
-    def is_source_method(self, node):
+    def is_gui_method(self, node):
         for decorator in node.decorator_list:
-            if (isinstance(decorator, ast.Call) and 
-                isinstance(decorator.func, ast.Attribute) and
-                decorator.func.attr == 'source_command'):
+            if (isinstance(decorator, ast.Attribute) and
+                isinstance(decorator.value, ast.Name) and
+                decorator.value.id == 'Instrument' and
+                decorator.attr == 'gui_command'):
                 return True
         return False
 
     def process_assignment(self, item):
-        if (isinstance(item.value, ast.Call) and 
-                isinstance(item.value.func, ast.Name) and 
+        if (isinstance(item.value, ast.Call) and
+                isinstance(item.value.func, ast.Name) and
                 item.value.func.id == 'Sources'):
             sources_list = self.get_ast_node_value(item.value.args[0])
             self.instruments[self.current_instrument]['sources'] = sources_list
@@ -241,21 +247,19 @@ if __name__ == "__main__":
             for source in instrument_info['sources']:
                 print(f"│   ├── {source}")
 
-            # Print source methods
-            print("├── Source Methods")
-            for method_name, method_info in instrument_info['methods'].items():
-                if method_info['is_source_method']:
-                    args_str = ', '.join(method_info['args'])
-                    return_str = f" -> {method_info['return']}" if method_info['return'] else ""
-                    print(f"│   ├── {method_name}({args_str}){return_str}")
+            # Print GUI methods
+            print("├── GUI Methods")
+            for method_name, method_info in instrument_info['gui_methods'].items():
+                args_str = ', '.join(method_info['args'])
+                return_str = f" -> {method_info['return']}" if method_info['return'] else ""
+                print(f"│   ├── {method_name}({args_str}){return_str}")
 
             # Print other methods
             print("├── Other Methods")
-            for method_name, method_info in instrument_info['methods'].items():
-                if not method_info['is_source_method']:
-                    args_str = ', '.join(method_info['args'])
-                    return_str = f" -> {method_info['return']}" if method_info['return'] else ""
-                    print(f"│   ├── {method_name}({args_str}){return_str}")
+            for method_name, method_info in instrument_info['other_methods'].items():
+                args_str = ', '.join(method_info['args'])
+                return_str = f" -> {method_info['return']}" if method_info['return'] else ""
+                print(f"│   ├── {method_name}({args_str}){return_str}")
 
             # Print subsystems and their properties
             subsystems = instrument_info['subsystems'].items()

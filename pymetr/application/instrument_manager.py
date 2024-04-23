@@ -116,7 +116,7 @@ class InstrumentManager(QObject):
             'instance': instr,
             'instr_data': instrument_data,
             'parameters': self.parameters,
-            'methods': instrument_data['methods'],
+            'gui_methods': instrument_data['gui_methods'],
             'sources': instrument_data['sources'],
             'path_map': self.extract_parameter_paths(instrument_data['parameter_tree']),
         }
