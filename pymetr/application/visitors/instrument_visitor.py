@@ -300,7 +300,7 @@ if __name__ == "__main__":
         return " ".join(summary_parts)
     
     # Load a test driver
-    path = 'pymetr/instruments/DSOX1204G.py'  
+    path = 'pymetr/drivers/DSOX1204G.py'  
     with open(path, 'r') as file:
         source = file.read()
 

@@ -9,8 +9,8 @@ from pyqtgraph.parametertree import Parameter
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QFileDialog 
 
-from pymetr.core import Instrument
-from pymetr.application.instrument_factory import InstrumentFactory
+from pymetr.core.instrument import Instrument
+from pymetr.application.factories.instrument_factory import InstrumentFactory
 
 
 class InstrumentManager(QObject):
@@ -82,20 +82,19 @@ class InstrumentManager(QObject):
             'serial_number': serial_number,
         }
 
-        _driver = f"pymetr/instruments/{model_number.lower()}.py"
+        _driver = f"pymetr/drivers/{model_number.lower()}.py"
         logger.debug(f"Looking for driver: {_driver}")
         if not os.path.exists(_driver):
-            logger.debug(f"No driver found for model {model_number}. Please select a driver file.")
-            _driver, _ = QFileDialog.getOpenFileName(self, "Select Instrument Model File", "", "Python Files (*.py)")
+            logger.error(f"No driver found for model {model_number}.")
+            return None
 
-        if _driver:
-            logger.debug(f"Loading driver: {_driver}")
-            module = self.load_instrument_driver(_driver)
-            logger.debug(f"Returned module: {module}")
-            if module:
-                return self.build_instrument(module, selected_resource, unique_id, _driver)
-        
-        return None
+        logger.debug(f"Loading driver: {_driver}")
+        module = self.load_instrument_driver(_driver)
+        logger.debug(f"Returned module: {module}")
+        if module:
+            instrument = self.build_instrument(module, selected_resource, unique_id, _driver)
+            return instrument, unique_id
+        return None, None
 
     def build_instrument(self, module, selected_resource, unique_id, _driver):
         instr_class = self.get_instrument_class_from_module(module)

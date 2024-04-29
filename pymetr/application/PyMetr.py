@@ -1,32 +1,36 @@
 import logging
 logger = logging.getLogger()
-logger.setLevel(logging.CRITICAL)
+logger.setLevel(logging.DEBUG)
 logging.getLogger('pyvisa').setLevel(logging.CRITICAL)
 handler = logging.StreamHandler()
 formatter = logging.Formatter("%(name)s - %(message)s")
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 
-
 import sys
-import inspect
 import os
 os.environ['PYQTGRAPH_QT_LIB'] = 'PySide6'
 
 import pyqtgraph as pg
-from PySide6.QtGui import QAction
-from PySide6.QtWidgets import QDialog, QVBoxLayout, QListWidget, QDialogButtonBox, QDockWidget
-from PySide6.QtWidgets import QWidget, QMainWindow, QTabWidget
-from PySide6.QtWidgets import QMenuBar
-from PySide6.QtCore import Qt
+pg.setConfigOptions(antialias=True)
 
-from pymetr.application.instrument_manager import InstrumentManager
-from pymetr.application.instrument_panel import InstrumentPanel
-from pymetr.application.trace_manager import TraceManager
-from pymetr.application.trace_panel import TracePanel
-from pymetr.application.display_panel import DisplayPanel, QuickPanel
+from PySide6.QtGui import QAction
+from PySide6.QtWidgets import QVBoxLayout, QHBoxLayout, QDockWidget, QSplitter
+from PySide6.QtWidgets import QWidget, QMainWindow, QTabWidget, QStackedWidget
+from PySide6.QtWidgets import QMenuBar, QPushButton
+from PySide6.QtCore import Qt, QFile, QTextStream
+
+from pymetr.application.control_panels.quick_panel import QuickPanel
 from pymetr.application.trace_plot import TracePlot
-from pymetr.core import Instrument
+from pymetr.application.control_panels.trace_control_panel import TraceControlPanel
+from pymetr.application.control_panels.marker_control_panel import MarkerControlPanel
+from pymetr.application.control_panels.cursor_control_panel import CursorControlPanel
+from pymetr.application.control_panels.measurement_control_panel import MeasurementControlPanel
+from pymetr.application.control_panels.calculation_control_panel import CalculationControlPanel
+from pymetr.application.control_panels.instrument_control_panel import InstrumentControlPanel
+from pymetr.application.managers.instrument_manager import InstrumentManager
+from pymetr.application.factories.instrument_interface import InstrumentInterface
+from pymetr.application.managers.trace_manager import TraceManager
 
 # TODO:  Build out MainMenuBar into its own class.
 class MainMenuBar(QMenuBar):
@@ -35,15 +39,11 @@ class MainMenuBar(QMenuBar):
 
         # File menu
         self.fileMenu = self.addMenu("&File")
-        self.instrumentMenu = self.addMenu("&Instruments")
         self.toolMenu = self.addMenu("&Tools")
         self.settingsMenu = self.addMenu("&Settings")
 
         # Add actions to the file menu
         self.setupFileMenuActions(parent)
-
-        # Add actions to the file menu
-        self.setupInstrumentMenuActions(parent)
 
     def setupFileMenuActions(self, parent):
         exportPlotAction = QAction("&Export Plot", self)
@@ -58,11 +58,6 @@ class MainMenuBar(QMenuBar):
         importTraceDataAction.triggered.connect(self.importTraceData)
         self.fileMenu.addAction(importTraceDataAction)
 
-    def setupInstrumentMenuActions(self, parent):
-        addInstrumentAction = QAction("&Add Instrument", self)
-        addInstrumentAction.triggered.connect(parent.add_instrument_button_clicked)
-        self.instrumentMenu.addAction(addInstrumentAction)
-
     # Placeholder methods for menu actions
     def exportPlot(self):
         # Placeholder for export plot logic
@@ -76,189 +71,221 @@ class MainMenuBar(QMenuBar):
         # Placeholder for import trace data logic
         print("Importing trace data...")
 
-class InstrumentSelectionDialog(QDialog):
-    def __init__(self, parent=None):
-        logger.debug(f"Opening instrument selection dialog")
-        super().__init__(parent)
-        self.setWindowTitle("Select an Instrument")
-        self.setGeometry(400, 400, 500, 300)
-        self.layout = QVBoxLayout(self)
-        
-        self.listWidget = QListWidget()
-        self.populate_instruments()
-        self.layout.addWidget(self.listWidget)
-        
-        self.buttonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        self.buttonBox.accepted.connect(self.accept)
-        self.buttonBox.rejected.connect(self.reject)
-        self.layout.addWidget(self.buttonBox)
-        
-    def populate_instruments(self):
-        logger.debug(f"Populating Instruments")
-        instruments_data = Instrument.list_instruments("TCPIP?*::INSTR")
-        for unique_key, resource in instruments_data[0].items():
-            # Extract the model number from the IDN response in the unique key
-            try:
-                idn_response = unique_key.split(": ")[1]
-                model_number = idn_response.split(',')[1].strip()
-                display_text = f"{model_number} - {resource}"
-                self.listWidget.addItem(display_text)
-            except IndexError:
-                # Handle the case where the IDN response is not in the expected format
-                continue    
-
-    def get_selected_instrument(self):
-        logger.debug(f"Getting selected instrument")
-        selected_item = self.listWidget.currentItem()
-        if selected_item:
-            return selected_item.text().split(' - ')[1]  # Returns the resource part of the item text
-        return None
-
-class DynamicInstrumentGUI(QMainWindow):
+class PyMetrMainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        logger.debug(f"Opening PyMetr Application")
         self.setWindowTitle("PyMetr - Instrument Control")
         self.setGeometry(100, 100, 1200, 800)
 
-        # --- Menu Bar ---------------------------------------
-        self.menuBarInstance = MainMenuBar(self)
-        self.setMenuBar(self.menuBarInstance)
+        # Create an instance of the MainMenuBar
+        self.menuBar = MainMenuBar(self)
+        self.setMenuBar(self.menuBar)
 
-        # --- Layout Setup -------------------------------------
         self.central_widget = QWidget()
-        self.layout = QVBoxLayout(self.central_widget)
         self.setCentralWidget(self.central_widget)
+        self.main_layout = QVBoxLayout(self.central_widget)
 
-        ## --- Plot Dock ---------------------------------------
-        self.plot_dock = QDockWidget("Plot Controls", self)
-        self.plot_dock.setAllowedAreas(Qt.RightDockWidgetArea)
-        self.plot_dock.setMinimumWidth(250)
-        self.addDockWidget(Qt.RightDockWidgetArea, self.plot_dock)
+        # --- Quick Panel ---
+        self.quick_panel = QuickPanel(self)
+        self.main_layout.addWidget(self.quick_panel)
 
-        self.plot_tabs = QTabWidget()
-        self.plot_dock.setWidget(self.plot_tabs)
-
-        # --- Trace Manager -------------------------------------
+        # --- Plot Displays ---
+        self.instrument_manager = InstrumentManager()
         self.trace_manager = TraceManager()
-
-        # --- Trace Plot -------------------------------------
         self.trace_plot = TracePlot(self.trace_manager, self)
-        self.layout.addWidget(self.trace_plot)
 
-        # --- Trace Panel --------------------------------------
-        self.trace_panel = TracePanel(self.trace_manager, self.trace_plot, self)
-        self.plot_tabs.addTab(self.trace_panel, "Traces")
+        # --- Control Panels ---
+        self.control_panel_layout = QVBoxLayout()
+        self.control_panel_stack = QStackedWidget()
 
-        # --- Display Panel ---------------------------------
-        self.display_panel = DisplayPanel(self)
-        self.plot_tabs.addTab(self.display_panel, "Display")
-        
-        ## --- Instrument Dock --------------------------------- 
+        self.trace_control_panel = TraceControlPanel(self.trace_manager)
+        self.marker_control_panel = MarkerControlPanel()
+        self.cursor_control_panel = CursorControlPanel()
+        self.measurement_control_panel = MeasurementControlPanel()
+        self.calculation_control_panel = CalculationControlPanel()
+        self.instrument_control_panel = InstrumentControlPanel(self.instrument_manager)
+
+        self.control_panel_stack.addWidget(self.trace_control_panel)
+        self.control_panel_stack.addWidget(self.marker_control_panel)
+        self.control_panel_stack.addWidget(self.cursor_control_panel)
+        self.control_panel_stack.addWidget(self.measurement_control_panel)
+        self.control_panel_stack.addWidget(self.calculation_control_panel)
+        self.control_panel_stack.addWidget(self.instrument_control_panel)
+
+        self.control_panel_layout.addWidget(self.control_panel_stack)
+        self.control_panel_widget = QWidget()
+        self.control_panel_widget.setLayout(self.control_panel_layout)
+        self.control_panel_height = 301 # TODO: Move to application state class
+
+        # --- Main Splitter ---
+        self.main_splitter = QSplitter(Qt.Vertical)
+        self.main_splitter.addWidget(self.trace_plot)
+        self.main_splitter.addWidget(self.control_panel_widget)
+        self.main_layout.addWidget(self.main_splitter)
+        self.main_splitter.splitterMoved.connect(self.update_control_panel_height)
+
+        handle_width = 6 
+        self.main_splitter.setHandleWidth(handle_width)
+
+        # --- Control Panel Toggles ---
+        self.toggle_buttons_layout = QHBoxLayout()
+        self.toggle_buttons = {}
+        self.add_toggle_button("Instruments", self.instrument_control_panel)
+        self.toggle_buttons[self.instrument_control_panel].setChecked(True)  # Set the "Instruments" button as initially checked
+        self.add_toggle_button("Traces", self.trace_control_panel)
+        self.add_toggle_button("Markers", self.marker_control_panel)
+        self.add_toggle_button("Cursors", self.cursor_control_panel)
+        self.add_toggle_button("Measurements", self.measurement_control_panel)
+        self.add_toggle_button("Calculations", self.calculation_control_panel)
+        self.main_layout.addLayout(self.toggle_buttons_layout)
+
+        # --- Instrument Interface Dock ---
         self.instrument_dock = QDockWidget("Instrument Controls", self)
         self.instrument_dock.setAllowedAreas(Qt.RightDockWidgetArea)
-        self.instrument_dock.setMinimumWidth(250)
+        self.instrument_tab_widget = QTabWidget()
+        self.instrument_dock.setWidget(self.instrument_tab_widget)
         self.addDockWidget(Qt.RightDockWidgetArea, self.instrument_dock)
 
-        self.instrument_tabs = QTabWidget()
-        self.instrument_dock.setWidget(self.instrument_tabs)
-
-        # Tab the instrument dock beneath the plot dock
-        self.tabifyDockWidget(self.plot_dock, self.instrument_dock)
-
-        # --- Instrument Panel ---------------------------------
-        self.instrument_manager = InstrumentManager()
-        
-        # --- Quick Panel  -------------------------------------
-        self.quick_panel = QuickPanel(self)
-        self.layout.addWidget(self.quick_panel)
-
+        self.control_panel_stack.setCurrentWidget(self.instrument_control_panel)
         self.connect_signals()
+
+        self.hide_instrument_dock()
+
+    def update_control_panel_height(self, pos, index):
+        if index == 1:
+            self.control_panel_height = self.main_splitter.sizes()[1]
+
+    def add_toggle_button(self, label, panel):
+        button = QPushButton(label)
+        button.setCheckable(True)
+        button.toggled.connect(lambda checked, panel=panel: self.toggle_panel(panel, checked))
+        self.toggle_buttons_layout.addWidget(button)
+        self.toggle_buttons[panel] = button
+
+    def toggle_panel(self, panel, checked):
+        print(f"Toggle panel: {panel}, checked={checked}")
+        if checked:
+            self.control_panel_stack.setCurrentWidget(panel)
+            self.control_panel_widget.show()
+            panel_height = self.control_panel_height
+            print(f"Panel height: {panel_height}")
+
+            # Adjust the splitter sizes to show the control panel
+            self.main_splitter.setSizes([self.height() - panel_height, panel_height])
+
+            # Uncheck other toggle buttons
+            for other_panel, button in self.toggle_buttons.items():
+                if other_panel != panel:
+                    button.setChecked(False)
+        else:
+            # Check if any other toggle button is checked
+            any_button_checked = any(button.isChecked() for button in self.toggle_buttons.values())
+
+            if not any_button_checked:
+                self.control_panel_stack.setCurrentIndex(-1)
+                self.main_splitter.setSizes([self.height(), 0])
+                print("Control panel hidden")
 
     def connect_signals(self):
 
         # --- Trace Manager  -------------------------------------
-        # self.trace_manager.traceDataChanged.connect(self.trace_plot.update_plot)
-        self.trace_manager.traceDataChanged.connect(self.trace_panel.update_parameter_tree)
         self.trace_manager.traceDataChanged.connect(self.trace_plot.update_plot)
-        self.trace_manager.traceAdded.connect(self.trace_plot.update_roi_plot)
+
         self.trace_manager.traceVisibilityChanged.connect(self.trace_plot.update_trace_visibility)
-        self.trace_manager.traceColorChanged.connect(self.trace_plot.update_trace_color)
         self.trace_manager.traceLabelChanged.connect(self.trace_plot.update_trace_label)
+        self.trace_manager.traceColorChanged.connect(self.trace_plot.update_trace_color)
         self.trace_manager.traceLineThicknessChanged.connect(self.trace_plot.update_trace_line_thickness)
         self.trace_manager.traceLineStyleChanged.connect(self.trace_plot.update_trace_line_style)
         self.trace_manager.traceRemoved.connect(self.trace_plot.remove_trace)
+        self.trace_manager.traceRemoved.connect(self.trace_control_panel.remove_trace)
+        self.trace_manager.tracesCleared.connect(self.trace_control_panel.clear_traces)
+        self.trace_manager.tracesCleared.connect(self.trace_plot.clear_traces)
 
-        # --- Display Panel  -------------------------------------
-        self.display_panel.xGridChanged.connect(self.trace_plot.set_x_grid)
-        self.display_panel.yGridChanged.connect(self.trace_plot.set_y_grid)
-        self.display_panel.titleChanged.connect(self.trace_plot.set_title)
-        self.display_panel.titleVisibilityChanged.connect(self.trace_plot.set_title_visible)
-        self.display_panel.xLabelChanged.connect(self.trace_plot.set_x_label)
-        self.display_panel.xLabelVisibilityChanged.connect(self.trace_plot.set_x_label_visible)
-        self.display_panel.yLabelChanged.connect(self.trace_plot.set_y_label)
-        self.display_panel.yLabelVisibilityChanged.connect(self.trace_plot.set_y_label_visible)
-
-        # --- Display Panel -------------------------------------
-        self.quick_panel.addInstrumentClicked.connect(self.add_instrument_button_clicked)
         self.quick_panel.plotModeChanged.connect(self.trace_manager.set_plot_mode)
         self.quick_panel.roiPlotToggled.connect(self.trace_plot.on_roi_plot_enabled)
         self.quick_panel.roiPlotToggled.connect(self.trace_manager.emit_trace_data)
         self.quick_panel.traceModeChanged.connect(self.trace_manager.set_trace_mode)
         self.quick_panel.groupAllClicked.connect(self.trace_manager.group_all_traces)
         self.quick_panel.isolateAllClicked.connect(self.trace_manager.isolate_all_traces)
+        self.quick_panel.groupAllClicked.connect(self.trace_control_panel.group_all_traces)
+        self.quick_panel.isolateAllClicked.connect(self.trace_control_panel.isolate_all_traces)
         self.quick_panel.testTraceClicked.connect(self.trace_manager.add_random_trace)
         self.quick_panel.clearTracesClicked.connect(self.trace_manager.clear_traces)
         self.quick_panel.clearTracesClicked.connect(self.trace_plot.clear_traces)
         self.quick_panel.screenshotClicked.connect(self.trace_plot.capture_screenshot)
 
-    # TODO: Move these methods to the controllers and keep 'main' for aggregation and signals. 
-    def add_instrument_button_clicked(self):
-        logger.debug(f"Add instrument button clicked")
-        logger.debug(f"Caller: {inspect.stack()[1][3]}")
-        dialog = InstrumentSelectionDialog(self)
-        if dialog.exec() == QDialog.Accepted:
-            selected_resource = dialog.get_selected_instrument()
-            instrument, unique_id = self.instrument_manager.initialize_instrument(selected_resource)
-            if instrument:
-                self.trace_plot.finished_update.connect(instrument['instance'].set_ready_for_data)
-                if not hasattr(self, 'instrument_dock'):
-                    self.instrument_dock = QDockWidget("Instruments", self)
-                    self.instrument_dock.setAllowedAreas(Qt.RightDockWidgetArea)
-                    self.instrument_dock.setMinimumWidth(250)
-                    self.instrument_tabs = QTabWidget()
-                    self.instrument_dock.setWidget(self.instrument_tabs)
-                    self.addDockWidget(Qt.RightDockWidgetArea, self.instrument_dock)
-                    self.tabifyDockWidget(self.tabbed_dock, self.instrument_dock)
-
-                # Create a new instrument panel for the connected instrument
-                instrument_panel = InstrumentPanel(self.instrument_manager, self)
-                instrument_panel.setup_instrument_panel(instrument, unique_id)
-                instrument_panel.continuous_mode_changed.connect(self.on_continuous_mode_changed)
-                instrument_panel.continuous_mode_changed.connect(self.trace_plot.set_continuous_mode)
-                instrument_panel.plot_update_requested.connect(self.trace_plot.update_plot)
-                instrument_panel.trace_data_ready.connect(self.trace_manager.add_trace)               
-                self.instrument_tabs.addTab(instrument_panel, unique_id)
-
-                self.quick_panel.plotModeChanged.connect(instrument_panel.set_plot_mode)
-   
+        self.instrument_control_panel.instrument_connected.connect(self.on_instrument_connected)
+        self.instrument_control_panel.instrument_disconnected.connect(self.on_instrument_disconnected)
+        self.instrument_control_panel.no_instruments_connected.connect(self.hide_instrument_dock)
 
     def on_instrument_connected(self, unique_id):
-        logger.debug(f"Connecting trace_data_ready signal for instrument {unique_id}")
-        logger.debug(f"Instrument {unique_id} connected.")
+        logger.debug("Instrument connected")
+        instrument = self.instrument_manager.instruments[unique_id]
+
+        # Create a new dock widget for the instrument
+        instrument_dock = QDockWidget(unique_id, self)
+        instrument_dock.setAllowedAreas(Qt.RightDockWidgetArea)
+        instrument_dock.setMinimumWidth(250)
+
+        # Create a new instrument panel for the connected instrument
+        instrument_panel = InstrumentInterface(self.instrument_manager)
+        instrument_panel.setup_interface(instrument, unique_id)
+        instrument_panel.continuous_mode_changed.connect(self.trace_plot.set_continuous_mode)
+        instrument_panel.plot_update_requested.connect(self.trace_plot.update_plot)
+        instrument_panel.trace_data_ready.connect(self.trace_manager.add_trace)
+        instrument_dock.setWidget(instrument_panel)
+
+        self.addDockWidget(Qt.RightDockWidgetArea, instrument_dock)
+
+        # Tabify the new dock widget with the previous dock widget (if any)
+        if hasattr(self, 'last_instrument_dock'):
+            self.tabifyDockWidget(self.last_instrument_dock, instrument_dock)
+
+        # Set the new dock widget as the last instrument dock
+        self.last_instrument_dock = instrument_dock
+        self.quick_panel.plotModeChanged.connect(instrument_panel.set_plot_mode)
+
+        # Critical re reset the ready for data.
+        self.trace_plot.finished_update.connect(instrument['instance'].set_ready_for_data)
 
     def on_instrument_disconnected(self, unique_id):
         logger.debug(f"Instrument {unique_id} disconnected.")
+        self.instrument_control_panel.remove_instrument_interface(unique_id)
+        self.check_instrument_dock(unique_id)
 
-    def on_continuous_mode_changed(self, enabled):
-        if enabled:
-            self.trace_manager.traceDataChanged.disconnect(self.trace_panel.update_parameter_tree)
-            # Disconnect the traceDataChanged signal when in continuous mode
-            # self.trace_manager.traceDataChanged.disconnect(self.trace_plot.update_plot)
-        else:
-            self.trace_manager.traceDataChanged.connect(self.trace_panel.update_parameter_tree)
-            # Reconnect the traceDataChanged signal when not in continuous mode
-            # self.trace_manager.traceDataChanged.connect(self.trace_plot.update_plot)
+    def show_instrument_dock(self, unique_id):
+        if not self.instrument_dock:
+            self.instrument_dock = QDockWidget("Instrument Controls", self)
+            self.instrument_dock.setAllowedAreas(Qt.RightDockWidgetArea)
+            self.instrument_tab_widget = QTabWidget()
+            self.instrument_dock.setWidget(self.instrument_tab_widget)
+            self.addDockWidget(Qt.RightDockWidgetArea, self.instrument_dock)
+
+        instrument_interface = self.instrument_control_panel.add_instrument_interface(unique_id)
+        self.instrument_tab_widget.addTab(instrument_interface, unique_id)
+
+    def hide_instrument_dock(self):
+        if self.instrument_dock:
+            self.instrument_dock.hide()
+
+    def check_instrument_dock(self, unique_id):
+        if self.instrument_tab_widget:
+            for i in range(self.instrument_tab_widget.count()):
+                if self.instrument_tab_widget.tabText(i) == unique_id:
+                    self.instrument_tab_widget.removeTab(i)
+                    break
+            if not self.instrument_tab_widget.count():
+                self.hide_instrument_dock()
+
+    # def on_continuous_mode_changed(self, enabled):
+    #     if enabled:
+    #         self.trace_manager.traceDataChanged.disconnect(self.trace_panel.update_parameter_tree)
+    #         # Disconnect the traceDataChanged signal when in continuous mode
+    #         # self.trace_manager.traceDataChanged.disconnect(self.trace_plot.update_plot)
+    #     else:
+    #         self.trace_manager.traceDataChanged.connect(self.trace_panel.update_parameter_tree)
+    #         # Reconnect the traceDataChanged signal when not in continuous mode
+    #         # self.trace_manager.traceDataChanged.connect(self.trace_plot.update_plot)
 
 if __name__ == "__main__":
 
@@ -266,12 +293,12 @@ if __name__ == "__main__":
     app = pg.mkQApp("Dynamic Instrument Control Application")
     app.setStyle("Fusion")
 
-    # # Load and apply the stylesheet file
-    # styleSheetFile = QFile("pymetr/application/styles.qss")  # Update the path to where your QSS file is
-    # if styleSheetFile.open(QFile.ReadOnly | QFile.Text):
-    #     textStream = QTextStream(styleSheetFile)
-    #     app.setStyleSheet(textStream.readAll())
+    # Load and apply the stylesheet file
+    styleSheetFile = QFile("pymetr/application/styles.qss")  # Update the path to where your QSS file is
+    if styleSheetFile.open(QFile.ReadOnly | QFile.Text):
+        textStream = QTextStream(styleSheetFile)
+        app.setStyleSheet(textStream.readAll())
 
-    mainWindow = DynamicInstrumentGUI()
+    mainWindow = PyMetrMainWindow()
     mainWindow.show()
     sys.exit(app.exec())

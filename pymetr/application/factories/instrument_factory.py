@@ -3,7 +3,7 @@ import logging
 logger = logging.getLogger(__name__)
 import json
 import ast
-from pymetr.application.instrument_visitor import InstrumentVisitor
+from pymetr.application.visitors.instrument_visitor import InstrumentVisitor
 
 class InstrumentFactory:
     def __init__(self):
@@ -91,22 +91,24 @@ class InstrumentFactory:
 
     def construct_param_dict(self, prop, class_name, index=None, subsystem=None):
         logger.debug(f"🚀 Starting construct_param_dict for '{prop['name']}' in '{class_name}' 🚀")
-        
+        logger.debug(f"🔍 Peeking at property: {prop}🔍")
         property_path = f"{class_name.lower()}"
         if subsystem and subsystem.lower() != class_name.lower():
             property_path += f".{subsystem.lower()}"
         if index is not None:
-            logger.debug(f"📊 Index provided. Appending to property path: [{index}] 📊")
-            property_path += f"[{index}]"
+            property_path += f"[{index}]"  # Fixed: appending the index to the property path
+            logger.debug(f"📊 Index provided. Appended to property path: [{index}] 📊")
         property_path += f".{prop['name']}"
         logger.debug(f"✅ Property path constructed: {property_path} ✅")
 
+        # Default settings including suffix and siPrefix initialized to None or False
         param_dict = {
             'name': prop['name'],
             'type': prop['type'].lower(),
             'property_path': property_path,
             'value': None,
-            'readonly': prop.get('access', 'read-write') == 'read'  # Set readonly based on access
+            'default': None,
+            'readonly': prop.get('access', 'read-write') == 'read',
         }
 
         if prop['type'] == 'SelectProperty':
@@ -117,10 +119,9 @@ class InstrumentFactory:
             })
         elif prop['type'] == 'ValueProperty':
             param_dict.update({
-                'type': prop.get('type', 'float'),
-                'limits': prop.get('range', (None, None)),
-                'value': 0.0,
-                'units': prop.get('units', '')
+                'type': prop['type'],
+                'limits': prop['range'],
+                'value': 0.0
             })
         elif prop['type'] == 'SwitchProperty':
             param_dict.update({
@@ -135,6 +136,14 @@ class InstrumentFactory:
         elif prop['type'] == 'DataProperty':
             # Skip DataProperty for now
             return None
+        
+        # Explicit check and log for units
+        if 'units' in prop:
+            param_dict['suffix'] = prop['units']
+            param_dict['siPrefix'] = bool(prop['units'])
+            logger.debug(f"📏 Setting units for '{prop['name']}' to '{prop['units']}' 📏")
+        else:
+            logger.debug(f"🚫 No units found for '{prop['name']}' during construction 🚫")
 
         logger.debug(f"✨ Constructed parameter dict for '{prop['name']}': {param_dict} ✨")
         return param_dict
@@ -173,7 +182,8 @@ class InstrumentFactory:
                 source_param = {
                     'name': source,
                     'type': 'bool',
-                    'value': False  # Set the initial value to False (unchecked)
+                    'value': False,  # Set the initial value to False (unchecked)
+                    'default': None
                 }
                 sources_group['children'].append(source_param)
 

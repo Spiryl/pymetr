@@ -4,7 +4,7 @@
 __all__ = ['dsox1204g']
 
 try:
-    from pymetr.instruments import dsox1204g
+    from pymetr.drivers import dsox1204g
     
 except ImportError as e:
     print(f"Failed to import within pymetr: {e}")

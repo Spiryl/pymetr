@@ -1,12 +1,12 @@
 # --- trace_plot.py ---
 import logging
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 import numpy as np
 import pyqtgraph as pg
 from PySide6.QtWidgets import QWidget, QVBoxLayout
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QPainter, QPixmap, QGuiApplication
-from pymetr.core import Trace
+from pymetr.core.trace import Trace
 
 class TracePlot(QWidget):
 
@@ -16,7 +16,13 @@ class TracePlot(QWidget):
         super().__init__(parent)
         self.plot_layout = pg.GraphicsLayoutWidget()
         self.plot_item = self.plot_layout.addPlot(row=0, col=0)
+        self.plot_layout.setBackground('#1E1E1E')  # Set the desired background color
         self.plot_item.showGrid(x=True, y=True)
+
+        self.plot_item.getAxis('left').setGrid(100)  # Set the width of the y-axis grid lines
+        self.plot_item.getAxis('bottom').setGrid(100)  # Set the width of the x-axis grid lines
+        self.plot_item.getAxis('left').setPen(pg.mkPen(color=(69, 69, 69, 100)))  # Set the color and transparency of y-axis grid lines
+        self.plot_item.getAxis('bottom').setPen(pg.mkPen(color=(69, 69, 69, 100)))  # Set the color and transparency of x-axis grid lines
 
         self.plot_item.setTitle("Plot Title")
         self.plot_item.setLabel("bottom", "X Axis")
@@ -43,6 +49,14 @@ class TracePlot(QWidget):
         self.plot_item.scene().sigMouseClicked.connect(self.handleMouseClicked)
         self.plot_item.vb.sigResized.connect(self.update_view_boxes)
 
+        self.trace_manager.traceVisibilityChanged.connect(self.update_trace_visibility)
+        self.trace_manager.traceLabelChanged.connect(self.update_trace_label)
+        self.trace_manager.traceColorChanged.connect(self.update_trace_color)
+        self.trace_manager.traceModeChanged.connect(self.update_trace_mode)
+        self.trace_manager.traceLineThicknessChanged.connect(self.update_trace_line_thickness)
+        self.trace_manager.traceLineStyleChanged.connect(self.update_trace_line_style)
+        self.trace_manager.traceRemoved.connect(self.remove_trace)
+
     def set_continuous_mode(self, mode):
         logger.debug(f"trace_plot: setting continuous mode: {mode}")
         self.continuous_mode = mode
@@ -57,7 +71,7 @@ class TracePlot(QWidget):
 
         if self.continuous_mode:
             logger.debug("Updating plot in continuous mode")
-            
+
             # Clear traces that are no longer present in trace_data
             traces_to_remove = [trace_label for trace_label in self.trace_curves if trace_label not in [trace.label for trace in trace_data]]
             logger.debug(f"Traces to remove: {traces_to_remove}")
@@ -292,7 +306,7 @@ class TracePlot(QWidget):
         self.traces.clear()
         self.trace_curves.clear()
         self.legend.clear()
-
+        self.update_roi_plot()
         self.clear_additional_axes()
 
     # --- Isolated Trace Methods ----------------
@@ -440,37 +454,62 @@ class TracePlot(QWidget):
         self.plot_item.showGrid(y=visible)
 
     # --- Trace Update Methods ---------------
-    def update_trace_visibility(self, trace_id, visible):
-        # Update the visibility of a trace
-        if trace_id in self.trace_curves:
-            self.trace_curves[trace_id].setVisible(visible)
+    def update_trace_visibility(self, trace_label, visible):
+        logger.debug(f"TP: Updating visibility for trace '{trace_label}' to {visible}")
+        if trace_label in self.trace_curves:
+            self.trace_curves[trace_label].setVisible(visible)
 
-    def update_trace_color(self, trace_id, color):
-        # Update the color of a trace
-        if trace_id in self.trace_curves:
-            pen = self.trace_curves[trace_id].opts['pen']
+    def update_trace_label(self, old_label, new_label):
+        if old_label in self.trace_curves:
+            curve = self.trace_curves[old_label]
+            curve.setName(new_label)
+            self.legend.removeItem(old_label)
+            self.legend.addItem(curve, new_label)
+            self.trace_curves[new_label] = curve
+            del self.trace_curves[old_label]
+
+            # Update the QLineEdit in the TraceListItem
+            for i in range(self.parent().trace_control_panel.trace_list.count()):
+                list_item = self.parent().trace_control_panel.trace_list.item(i)
+                item_widget = self.parent().trace_control_panel.trace_list.itemWidget(list_item)
+                if item_widget.trace.label == old_label:
+                    item_widget.label.setText(new_label)
+                    break
+
+    def update_trace_color(self, trace_label, color):
+        logger.debug(f"TP: Updating color for trace '{trace_label}' to {color}")
+        if trace_label in self.trace_curves:
+            pen = self.trace_curves[trace_label].opts['pen']
             pen.setColor(color)
-            self.trace_curves[trace_id].setPen(pen)
+            self.trace_curves[trace_label].setPen(pen)
 
-    def update_trace_label(self, trace_id, label):
-        # Update the label of a trace
-        if trace_id in self.trace_curves:
-            self.trace_curves[trace_id].setName(label)
-            self.legend.renameItem(trace_id, label)
+    def update_trace_mode(self, trace_label, mode):
+        self.update_plot() # This is a hack right now.
 
-    def update_trace_line_thickness(self, trace_id, thickness):
-        # Update the line thickness of a trace
-        if trace_id in self.trace_curves:
-            pen = self.trace_curves[trace_id].opts['pen']
+    def update_trace_line_thickness(self, trace_label, thickness):
+        logger.debug(f"TP: Updating thickness for trace '{trace_label}' to {thickness}")
+        if trace_label in self.trace_curves:
+            pen = self.trace_curves[trace_label].opts['pen']
             pen.setWidth(thickness)
-            self.trace_curves[trace_id].setPen(pen)
+            self.trace_curves[trace_label].setPen(pen)
 
-    def update_trace_line_style(self, trace_id, style):
-        # Update the line style of a trace
-        if trace_id in self.trace_curves:
-            pen = self.trace_curves[trace_id].opts['pen']
+    def update_trace_line_style(self, trace_label, style):
+        logger.debug(f"TP: Updating line style for trace '{trace_label}' to {style}")
+        if trace_label in self.trace_curves:
+            pen = self.trace_curves[trace_label].opts['pen']
             pen.setStyle(self.get_line_style(style))
-            self.trace_curves[trace_id].setPen(pen)
+            self.trace_curves[trace_label].setPen(pen)
+
+    def remove_trace(self, trace_label):
+        logger.debug(f"TP: Removing trace '{trace_label}'")
+        if trace_label in self.trace_curves:
+            curve = self.trace_curves[trace_label]
+            if curve.getViewBox():
+                curve.getViewBox().removeItem(curve)
+            else:
+                self.plot_item.removeItem(curve)
+            self.legend.removeItem(trace_label)
+            del self.trace_curves[trace_label]
 
     def clear_traces(self):
         # Clear all traces from the plot, legend, and additional axes

@@ -1,20 +1,21 @@
 # --- trace_manager.py ---
 import logging
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 import numpy as np
 from PySide6.QtCore import QObject, Signal
-from PySide6.QtWidgets import QApplication
-from pymetr.core import Trace
+from pymetr.core.trace import Trace
 
 class TraceManager(QObject):
     traceDataChanged = Signal()
     traceAdded = Signal(Trace)
+    traceRemoved = Signal(str)
     traceVisibilityChanged = Signal(str, bool)
-    traceColorChanged = Signal(str, str)
     traceLabelChanged = Signal(str, str)
+    traceColorChanged = Signal(str, str)
+    traceModeChanged = Signal(str, str)
     traceLineThicknessChanged = Signal(str, float)
     traceLineStyleChanged = Signal(str, str)
-    traceRemoved = Signal(str)
+    tracesCleared = Signal()
 
     def __init__(self):
         super().__init__()
@@ -120,12 +121,7 @@ class TraceManager(QObject):
         self.traces.clear()
         self.color_index = 0
         self.trace_counter = 1
-        self.emit_trace_data()
-
-    def remove_trace(self, trace):
-        if trace in self.traces:
-            self.traces.remove(trace)
-            self.emit_trace_data()
+        self.tracesCleared.emit()
 
     def on_plot_mode_changed(self, mode):
         self.plot_mode = mode
@@ -150,6 +146,59 @@ class TraceManager(QObject):
         trace = TraceGenerator.generate_random_trace(self.trace_mode)
         self.add_trace(trace)
 
+    def set_trace_visibility(self, trace_label, visible):
+        for trace in self.traces:
+            if trace.label == trace_label:
+                logger.debug(f"TM: Setting visibility for trace '{trace_label}' to {visible}")
+                trace.visible = visible
+                self.traceVisibilityChanged.emit(trace_label, visible)
+                break
+
+    def set_trace_label(self, old_label, new_label):
+        for trace in self.traces:
+            if trace.label == old_label:
+                logger.debug(f"TM: Updating label for trace '{old_label}' to '{new_label}'")
+                trace.label = new_label
+                self.traceLabelChanged.emit(old_label, new_label)
+                break
+
+    def set_trace_color(self, trace_label, color):
+        for trace in self.traces:
+            if trace.label == trace_label:
+                logger.debug(f"TM: Setting color for trace '{trace_label}' to {color}")
+                trace.color = color
+                self.traceColorChanged.emit(trace_label, color)
+                break
+
+    def set_trace_mode(self, trace_label, mode):
+        for trace in self.traces:
+            if trace.label == trace_label:
+                logger.debug(f"TM: Setting mode for trace '{trace_label}' to {mode}")
+                trace.mode = mode
+                self.traceModeChanged.emit(trace_label, mode)
+                break
+
+    def set_trace_line_thickness(self, trace_label, thickness):
+        for trace in self.traces:
+            if trace.label == trace_label:
+                logger.debug(f"TM: Setting thickness for trace '{trace_label}' to {thickness}")
+                trace.line_thickness = thickness
+                self.traceLineThicknessChanged.emit(trace_label, thickness)
+                break
+
+    def set_trace_line_style(self, trace_label, style):
+        for trace in self.traces:
+            if trace.label == trace_label:
+                logger.debug(f"TM: Setting line style for trace '{trace_label}' to {style}")
+                trace.line_style = style
+                self.traceLineStyleChanged.emit(trace_label, style)
+                break
+
+    def remove_trace(self, trace_label):
+        for trace in self.traces:
+            if trace.label == trace_label:
+                self.traces.remove(trace)
+                self.traceRemoved.emit(trace_label)
 
 class TraceGenerator:
 

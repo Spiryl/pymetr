@@ -1,4 +1,4 @@
-from pymetr.instruments.dsox1204g import Oscilloscope
+from pymetr.drivers.dsox1204g import Oscilloscope
 import pyqtgraph as pg
 import logging
 import sys

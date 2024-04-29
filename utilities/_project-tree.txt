@@ -9,7 +9,6 @@ pymetr/
 │   ├── Makefile
 │   ├── README.md
 │   ├── setup.py
-│   ├── test_controls.py
 ├── dist/
 │   │   ├── PyMetr-0.1.0-py3-none-any.whl
 │   │   ├── PyMetr-0.1.0.tar.gz
@@ -28,30 +27,60 @@ pymetr/
 │   │   ├── quickstart.rst
 │   │   ├── requirements.txt
 │   │   ├── sphinx.rst
+│   │   ├── structure.rst
 │   │   ├── subsystem_example.rst
 │   │   ├── subsystem_theory.rst
 │   │   ├── unit-test.rst
 │   │   ├── _rst_master.txt
+│   ├── diagrams/
+│   │   ├── out/
+│   │   │   ├── signals/
+│   │   │   ├── test/
+│   │   ├── src/
 │   ├── _templates/
 ├── examples/
 │   │   ├── DSOX1204G_script.py
 │   │   ├── instrument_cli.py
 │   │   ├── subsystem_script.py
 ├── pymetr/
-│   │   ├── board.py
-│   │   ├── factories.py
-│   │   ├── instrument.py
-│   │   ├── properties.py
-│   │   ├── PyMetr_GUI.py
-│   │   ├── styles.qss
-│   │   ├── test.py
-│   │   ├── visitors.py
 │   │   ├── __init__.py
 │   ├── application/
-│   │   │   ├── data_fetcher_thread.py
-│   │   │   ├── instrument_dock.py
-│   ├── instruments/
-│   │   │   ├── DSOX1204G.py
+│   │   │   ├── PyMetr.py
+│   │   │   ├── quick_panel.py
+│   │   │   ├── styles.qss
+│   │   │   ├── trace_plot.py
+│   │   ├── control_panels/
+│   │   │   │   ├── calculation_control_panel.py
+│   │   │   │   ├── cursor_control_panel.py
+│   │   │   │   ├── display_panel.py
+│   │   │   │   ├── instrument_control_panel.py
+│   │   │   │   ├── instrument_panel.py
+│   │   │   │   ├── marker_control_panel.py
+│   │   │   │   ├── measurement_control_panel.py
+│   │   │   │   ├── trace_control_panel.py
+│   │   │   │   ├── trace_panel.py
+│   │   ├── docks/
+│   │   │   │   ├── control_dock.py
+│   │   │   │   ├── instrument_control_dock.py
+│   │   ├── factories/
+│   │   │   │   ├── instrument_factory.py
+│   │   ├── managers/
+│   │   │   │   ├── instrument_manager.py
+│   │   │   │   ├── trace_manager.py
+│   │   ├── visitors/
+│   │   │   │   ├── instrument_visitor.py
+│   │   ├── workers/
+│   │   │   │   ├── trace_worker.py
+│   ├── core/
+│   │   │   ├── board.py
+│   │   │   ├── instrument.py
+│   │   │   ├── marker.py
+│   │   │   ├── properties.py
+│   │   │   ├── sources.py
+│   │   │   ├── subsystem.py
+│   │   │   ├── trace.py
+│   ├── drivers/
+│   │   │   ├── dsox1204g.py
 │   │   │   ├── __init__.py
 ├── PyMetr.egg-info/
 │   │   ├── dependency_links.txt
@@ -62,7 +91,6 @@ pymetr/
 │   │   ├── test_instrument.py
 ├── utilities/
 │   │   ├── decorators.py
-│   │   ├── gui_builder.py
 │   │   ├── utils.py
 │   │   ├── _init_dump.py
 │   │   ├── _project-tree.txt
@@ -70,20 +98,3 @@ pymetr/
 │   │   ├── _rst_dump.py
 │   │   ├── __init__.py
 ├── xscratch/
-│   │   ├── control_factory.py
-│   │   ├── dark_style.py
-│   │   ├── fack.py
-│   │   ├── instrument_gui.py
-│   │   ├── oscilloscope.py
-│   │   ├── oscilloscope_gui.py
-│   │   ├── oscilloscope_old.py
-│   │   ├── oscilloscope_script.py
-│   │   ├── oscilloscope_subsystems.py
-│   │   ├── oscope_gui.py
-│   │   ├── subsystem_bak.py
-│   │   ├── test.py
-│   │   ├── test_gui.py
-│   ├── oscilloscope/
-│   │   │   ├── oscilloscope_gui.py
-│   │   │   ├── oscilloscope_notebook.ipynb
-│   │   │   ├── subsystems.py

@@ -1,15 +1,14 @@
-#  --- instrument_manager.py ------
+#  --- instrument_interface.py ------
 import logging
 logger = logging.getLogger()
-from datetime import datetime
 from pyqtgraph.parametertree import Parameter, ParameterTree
 from PySide6.QtCore import Signal, Qt, Slot, QTimer
 from PySide6.QtWidgets import QVBoxLayout, QDockWidget, QPushButton, QWidget, QApplication
 
-from pymetr.core import Instrument
-from pymetr.application.instrument_manager import InstrumentManager
+from pymetr.core.instrument import Instrument
+from pymetr.application.managers.instrument_manager import InstrumentManager
 
-class InstrumentPanel(QDockWidget):
+class InstrumentInterface(QDockWidget):
     instrument_connected = Signal(str)
     instrument_disconnected = Signal(str)
     trace_data_ready = Signal(object)
@@ -40,12 +39,14 @@ class InstrumentPanel(QDockWidget):
         """
         logger.debug(f"Setting up parameters")
         self.parameters = parameters
-        self.parameterTree = ParameterTree()
+        self.parameterTree = ParameterTree(showHeader=False)
         self.layout.addWidget(self.parameterTree)
-        self.parameterTree.setAlternatingRowColors(True)
-        self.parameterTree.setParameters(parameters, showTop=True)
+        self.parameterTree.setAlternatingRowColors(False)
+        self.parameterTree.setParameters(parameters, showTop=False)
         self.parameterTree.setDragEnabled(True)  # Enable drag functionality
         self.parameterTree.setAcceptDrops(True)  # Enable drop functionality
+        self.parameterTree.setHeaderHidden(True)
+
 
     def add_action_button(self, button_text, handler_function):
         """
@@ -64,7 +65,10 @@ class InstrumentPanel(QDockWidget):
         instr_data = instrument['instr_data']
         self.parameters_dict = instr_data['parameter_tree']
         self.path_map = instrument['path_map']
-        self.parameters = Parameter.create(name=unique_id, type='group', children=self.parameters_dict)
+        
+        # This line hides the root node (parent) in the parameter tree view.
+        self.parameters = Parameter.create(name=unique_id, type='group', children=self.parameters_dict, showTop=False)
+        
         self.setup_parameters(self.parameters)
         self.parameters.sigTreeStateChanged.connect(self.create_parameter_change_handler(unique_id))
 
@@ -74,12 +78,21 @@ class InstrumentPanel(QDockWidget):
             if 'range' in param_dict:
                 param_dict['limits'] = param_dict['range']
             if 'units' in param_dict:
-                param_dict['units'] = param_dict['units']
+                param_dict['suffix'] = param_dict['units']
+                # Let's add a debug line here to check if 'units' exist and what they are
+                logger.debug(f"Updating parameter '{param_dict['name']}' with units: {param_dict['units']}")
+            else:
+                # If no 'units' are found, log that too.
+                logger.debug(f"No units found for parameter '{param_dict['name']}'")
+            
+            # Debugging for children parameters
             for child_dict in param_dict.get('children', []):
                 update_param_attributes(child_dict)
 
         for param_dict in self.parameters_dict:
             update_param_attributes(param_dict)
+            # If you want to debug the entire param_dict for each parameter
+            logger.debug(f"Final parameter dictionary for '{param_dict['name']}': {param_dict}")
 
     def setup_method_buttons(self, gui_methods_dict, instr):
         for method_name, method_info in gui_methods_dict.items():
@@ -163,7 +176,7 @@ class InstrumentPanel(QDockWidget):
         else:
             logger.error(f"Source parameter '{source_name}' not found in parameter tree")
 
-    def setup_instrument_panel(self, instrument, unique_id):
+    def setup_interface(self, instrument, unique_id):
         logger.debug(f"Setting up instrument panel for {unique_id}")
         self.unique_id = unique_id
         self.setup_method_buttons(instrument['gui_methods'], instrument['instance'])
@@ -171,15 +184,34 @@ class InstrumentPanel(QDockWidget):
         self.setup_sources_group(instrument['sources'])
 
         self.acquire_button = QPushButton("Acquire Data")
-        self.acquire_button.setStyleSheet(f"background-color: {self.color_palette[0]}; color: #333333; font-weight: bold;")  # Set initial color (blue)
+        self.acquire_button.setStyleSheet("""
+            QPushButton {
+                background-color: #2A2A2A;
+                color: #ccc;
+                border: 1px solid #5E57FF;
+            }
+            QPushButton:hover {
+                background-color: #3E3E3E;
+            }
+        """)
+        
         self.acquire_button.clicked.connect(instrument['instance'].fetch_trace)  # Initially connect to fetch_trace
         logger.debug("Acquire button initially connected to fetch_trace")
         self.layout.addWidget(self.acquire_button)
 
-        syncInstrumentButton = QPushButton(f"Sync Settings")
-        syncInstrumentButton.setStyleSheet(f"background-color: {self.color_palette[3]}; color: #333333; font-weight: bold;")  # Set initial color (yellow)
-        syncInstrumentButton.clicked.connect(lambda: self.instrument_manager.synchronize_instrument(unique_id))
-        self.layout.addWidget(syncInstrumentButton)
+        self.syncInstrumentButton = QPushButton(f"Sync Settings")
+        self.syncInstrumentButton.setStyleSheet("""
+            QPushButton {
+                background-color: #2A2A2A;
+                color: #ccc;
+                border: 1px solid #FF9535;
+            }
+            QPushButton:hover {
+                background-color: #3E3E3E;
+            }
+        """)
+        self.syncInstrumentButton.clicked.connect(lambda: self.instrument_manager.synchronize_instrument(unique_id))
+        self.layout.addWidget(self.syncInstrumentButton)
 
         instrument['instance'].trace_data_ready.connect(self.on_trace_data_ready)
 
@@ -221,15 +253,29 @@ class InstrumentPanel(QDockWidget):
             self.acquire_button.setCheckable(True)
             self.acquire_button.setText("Stop" if self.continuous_mode else "Run")
 
-            # Set the acquire button color and text color based on the text
+            # Set the acquire button style based on the mode
             if self.continuous_mode:
-                self.acquire_button.setStyleSheet(
-                    f"background-color: {self.color_palette[2]}; color: #333333; font-weight: bold;"  # Red color, white text
-                )
+                self.acquire_button.setStyleSheet("""
+                    QPushButton {
+                        background-color: #2A2A2A;
+                        color: #ccc;
+                        border: 1px solid #F23CA6;
+                    }
+                    QPushButton:hover {
+                        background-color: #3E3E3E;
+                    }
+                """)
             else:
-                self.acquire_button.setStyleSheet(
-                    f"background-color: {self.color_palette[1]}; color: #333333; font-weight: bold;"  # Green color, dark gray text
-                )
+                self.acquire_button.setStyleSheet("""
+                    QPushButton {
+                        background-color: #2A2A2A;
+                        color: #ccc;
+                        border: 1px solid #4BFF36;
+                    }
+                    QPushButton:hover {
+                        background-color: #3E3E3E;
+                    }
+                """)
 
             self.acquire_button.clicked.disconnect()  # Disconnect the previous signal
             logger.debug("Disconnected previous signal from acquire button")
@@ -240,7 +286,9 @@ class InstrumentPanel(QDockWidget):
             self.acquire_button.setCheckable(False)
             self.acquire_button.setText("Acquire Data")
             self.acquire_button.setStyleSheet(
-                f"background-color: {self.color_palette[0]}; color: #333333;"  # Blue color, white text
+                "background-color: #2A2A2A;"
+                "color: #ccc;"
+                "border: 1px solid #5E57FF;"
             )
             self.acquire_button.clicked.disconnect()  # Disconnect the previous signal
             logger.debug("Disconnected previous signal from acquire button")
@@ -257,7 +305,7 @@ class InstrumentPanel(QDockWidget):
 
 if __name__ == "__main__":
     from PySide6.QtWidgets import QApplication, QMainWindow
-    from PyMetr import Instrument
+    from pymetr.core.instrument import Instrument
     import sys
 
     class MainWindow(QMainWindow):
@@ -275,8 +323,8 @@ if __name__ == "__main__":
             resource = Instrument.select_instrument("TCPIP?*::INSTR")
             instrument, unique_id = self.instrument_manager.initialize_instrument(resource)
             if instrument:
-                self.instrument_panel = InstrumentPanel(self.instrument_manager)
-                self.instrument_panel.setup_instrument_panel(instrument, unique_id)
+                self.instrument_panel = InstrumentInterface(self.instrument_manager)
+                self.instrument_panel.setup_interface(instrument, unique_id)
                 self.addDockWidget(Qt.RightDockWidgetArea, self.instrument_panel)
 
     sys.argv += ['-platform', 'windows:darkmode=2']

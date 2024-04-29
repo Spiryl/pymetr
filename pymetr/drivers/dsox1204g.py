@@ -1,8 +1,11 @@
 import logging
 logger = logging.getLogger(__name__)
 import numpy as np
-from pymetr.core import Instrument, Subsystem, Sources, Trace
-from pymetr.properties import SwitchProperty, SelectProperty, ValueProperty, DataProperty, DataBlockProperty
+from pymetr.core.instrument import Instrument
+from pymetr.core.subsystem import Subsystem
+from pymetr.core.sources import Sources
+from pymetr.core.trace import Trace
+from pymetr.core.properties import SwitchProperty, SelectProperty, ValueProperty, DataProperty, DataBlockProperty
 
 class Oscilloscope(Instrument):
     def __init__(self, resource_string):
@@ -129,14 +132,14 @@ class Acquire(Subsystem):#
 class Channel(Subsystem):
     coupling = SelectProperty(":COUPling", ['AC', 'DC'], "Coupling mode of the channel")
     display = SwitchProperty(":DISPlay", "Display state of the channel")
-    scale = ValueProperty(":SCALe", type="float", range=[1e-3, 1e3], units="V", doc_str="Vertical scale of the channel")
+    scale = ValueProperty(":SCALe", type="float", range=[1e-3, 1e3], units="V/Div", doc_str="Vertical scale of the channel")
     offset = ValueProperty(":OFFset", type="float", range=[-1e2, 1e2], units="V", doc_str="Vertical offset of the channel")
     probe = ValueProperty(":PROBe", type="float", doc_str="Probe attenuation factor")
 
 class Timebase(Subsystem):
     mode = SelectProperty(":MODE", ['MAIN', 'WIND', 'XY', 'ROLL'], "Timebase mode")
     reference = SelectProperty(":REFerence", ['LEFT', 'CENTer', 'RIGHT'], "Timebase reference position")
-    scale = ValueProperty(":SCALe", type="float", range=[1e-9, 1e0], units="s", doc_str="Timebase scale")
+    scale = ValueProperty(":SCALe", type="float", range=[1e-9, 1e0], units="s/Div", doc_str="Timebase scale")
     position = ValueProperty(":POSition", type="float", range=[-5e0, 5e0], units="s", doc_str="Timebase position")
     range = ValueProperty(":RANGe", type="float", range=[2e-9, 50e0], units="s", doc_str="Timebase range")
 

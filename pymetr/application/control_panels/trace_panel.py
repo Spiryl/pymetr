@@ -4,7 +4,7 @@ from pyqtgraph.parametertree import Parameter, ParameterTree
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QDockWidget
 from PySide6.QtCore import Qt
 
-from pymetr.core import Trace
+from pymetr.core.trace import Trace
 
 class TracePanel(QDockWidget):
     
