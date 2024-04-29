@@ -239,7 +239,7 @@ if __name__ == "__main__":
     factory = InstrumentFactory()
 
     # Load a test driver
-    path = 'pymetr/instruments/dsox1204g.py'  
+    path = 'pymetr/drivers/dsox1204g.py'  
     with open(path, 'r') as file:
         source = file.read()
 

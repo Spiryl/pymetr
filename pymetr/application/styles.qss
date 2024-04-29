@@ -63,7 +63,7 @@ QGroupBox::title {
 
 QMenuBar {
     background-color: #1E1E1E;
-    color: #888888; /* Adjust the color as needed */
+    color: #dddddd; /* Adjust the color as needed */
 }
 
 QMenuBar::item {
@@ -149,7 +149,7 @@ QListWidget::item {
 }
 
 QListWidget::item:hover {
-    background-color: #2A2A2A;
+    background-color: #111111;
     border: 1px solid #5E57FF;
 }
 

@@ -167,10 +167,17 @@ class InstrumentInterface(QDockWidget):
         return current_params
     
     def handle_source_update(self, unique_id, source_name, is_selected):
-        # TODO: Fix Oscilloscope here. 
-        source_param_path = f"Oscilloscope.Sources.{source_name}"
+        logger.debug(f"Handling source update for {source_name} with state {is_selected}")
+        
+        instrument_name = list(self.parameters.children())[0].opts['name']
+        logger.debug(f"Instrument name retrieved from parameter tree: {instrument_name}")
+        
+        source_param_path = f"{instrument_name}.Sources.{source_name}"
+        logger.debug(f"Constructed source parameter path: {source_param_path}")
+        
         param = self.find_parameter_by_path(source_param_path)
         if param:
+            logger.debug(f"Found parameter for {source_name}")
             param.setValue(is_selected)
             logger.debug(f"Updated source '{source_name}' to state: {is_selected}")
         else:

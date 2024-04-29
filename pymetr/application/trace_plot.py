@@ -21,8 +21,8 @@ class TracePlot(QWidget):
 
         self.plot_item.getAxis('left').setGrid(100)  # Set the width of the y-axis grid lines
         self.plot_item.getAxis('bottom').setGrid(100)  # Set the width of the x-axis grid lines
-        self.plot_item.getAxis('left').setPen(pg.mkPen(color=(69, 69, 69, 100)))  # Set the color and transparency of y-axis grid lines
-        self.plot_item.getAxis('bottom').setPen(pg.mkPen(color=(69, 69, 69, 100)))  # Set the color and transparency of x-axis grid lines
+        self.plot_item.getAxis('left').setPen(pg.mkPen(color=(120, 120, 120, 120)))  # Set the color and transparency of y-axis grid lines
+        self.plot_item.getAxis('bottom').setPen(pg.mkPen(color=(120, 120, 120, 120)))  # Set the color and transparency of x-axis grid lines
 
         self.plot_item.setTitle("Plot Title")
         self.plot_item.setLabel("bottom", "X Axis")
@@ -30,6 +30,11 @@ class TracePlot(QWidget):
 
         self.legend = pg.LegendItem(offset=(70, 30))
         self.legend.setParentItem(self.plot_item)
+    
+        legend_color = (64, 64, 64, 64)  # Middle gray with half transparency (RGBA)
+        # self.legend.setLabelTextColor(legend_color)
+        self.legend.setBrush(pg.mkBrush(legend_color))
+        # self.legend.setPen(pg.mkPen(legend_color))
 
         self.additional_axes = []
         self.additional_view_boxes = []
