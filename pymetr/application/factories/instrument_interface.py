@@ -81,9 +81,6 @@ class InstrumentInterface(QDockWidget):
                 param_dict['suffix'] = param_dict['units']
                 # Let's add a debug line here to check if 'units' exist and what they are
                 logger.debug(f"Updating parameter '{param_dict['name']}' with units: {param_dict['units']}")
-            else:
-                # If no 'units' are found, log that too.
-                logger.debug(f"No units found for parameter '{param_dict['name']}'")
             
             # Debugging for children parameters
             for child_dict in param_dict.get('children', []):

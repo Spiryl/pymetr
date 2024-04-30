@@ -21,8 +21,6 @@ pymetr/
 │   │   ├── index.rst
 │   │   ├── instruments.rst
 │   │   ├── instrument_gui.rst
-│   │   ├── logging.rst
-│   │   ├── oscilloscope.rst
 │   │   ├── packaging.rst
 │   │   ├── quickstart.rst
 │   │   ├── requirements.txt
@@ -46,7 +44,6 @@ pymetr/
 │   │   ├── __init__.py
 │   ├── application/
 │   │   │   ├── PyMetr.py
-│   │   │   ├── quick_panel.py
 │   │   │   ├── styles.qss
 │   │   │   ├── trace_plot.py
 │   │   ├── control_panels/
@@ -54,23 +51,21 @@ pymetr/
 │   │   │   │   ├── cursor_control_panel.py
 │   │   │   │   ├── display_panel.py
 │   │   │   │   ├── instrument_control_panel.py
-│   │   │   │   ├── instrument_panel.py
 │   │   │   │   ├── marker_control_panel.py
 │   │   │   │   ├── measurement_control_panel.py
+│   │   │   │   ├── quick_panel.py
 │   │   │   │   ├── trace_control_panel.py
 │   │   │   │   ├── trace_panel.py
 │   │   ├── docks/
 │   │   │   │   ├── control_dock.py
-│   │   │   │   ├── instrument_control_dock.py
 │   │   ├── factories/
 │   │   │   │   ├── instrument_factory.py
+│   │   │   │   ├── instrument_interface.py
 │   │   ├── managers/
 │   │   │   │   ├── instrument_manager.py
 │   │   │   │   ├── trace_manager.py
 │   │   ├── visitors/
 │   │   │   │   ├── instrument_visitor.py
-│   │   ├── workers/
-│   │   │   │   ├── trace_worker.py
 │   ├── core/
 │   │   │   ├── board.py
 │   │   │   ├── instrument.py

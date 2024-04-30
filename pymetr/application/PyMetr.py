@@ -1,6 +1,6 @@
 import logging
 logger = logging.getLogger()
-logger.setLevel(logging.CRITICAL)
+logger.setLevel(logging.DEBUG)
 logging.getLogger('pyvisa').setLevel(logging.CRITICAL)
 handler = logging.StreamHandler()
 formatter = logging.Formatter("%(name)s - %(message)s")
@@ -14,15 +14,16 @@ os.environ['PYQTGRAPH_QT_LIB'] = 'PySide6'
 import pyqtgraph as pg
 pg.setConfigOptions(antialias=True)
 
-from PySide6.QtGui import QAction
+from PySide6.QtGui import QAction, QIcon
 from PySide6.QtWidgets import QVBoxLayout, QHBoxLayout, QDockWidget, QSplitter
 from PySide6.QtWidgets import QWidget, QMainWindow, QTabWidget, QStackedWidget
 from PySide6.QtWidgets import QMenuBar, QPushButton
-from PySide6.QtCore import Qt, QFile, QTextStream
+from PySide6.QtCore import Qt, QFile, QTextStream, QSize
 
 from pymetr.application.control_panels.quick_panel import QuickPanel
 from pymetr.application.trace_plot import TracePlot
 from pymetr.application.control_panels.trace_control_panel import TraceControlPanel
+from pymetr.application.control_panels.display_panel import DisplayPanel
 from pymetr.application.control_panels.marker_control_panel import MarkerControlPanel
 from pymetr.application.control_panels.cursor_control_panel import CursorControlPanel
 from pymetr.application.control_panels.measurement_control_panel import MeasurementControlPanel
@@ -104,6 +105,7 @@ class PyMetrMainWindow(QMainWindow):
         self.measurement_control_panel = MeasurementControlPanel()
         self.calculation_control_panel = CalculationControlPanel()
         self.instrument_control_panel = InstrumentControlPanel(self.instrument_manager)
+        self.display_panel = DisplayPanel(self.trace_plot)
 
         self.control_panel_stack.addWidget(self.trace_control_panel)
         self.control_panel_stack.addWidget(self.marker_control_panel)
@@ -111,6 +113,7 @@ class PyMetrMainWindow(QMainWindow):
         self.control_panel_stack.addWidget(self.measurement_control_panel)
         self.control_panel_stack.addWidget(self.calculation_control_panel)
         self.control_panel_stack.addWidget(self.instrument_control_panel)
+        self.control_panel_stack.addWidget(self.display_panel)
 
         self.control_panel_layout.addWidget(self.control_panel_stack)
         self.control_panel_widget = QWidget()
@@ -127,17 +130,48 @@ class PyMetrMainWindow(QMainWindow):
         handle_width = 6 
         self.main_splitter.setHandleWidth(handle_width)
 
-        # --- Control Panel Toggles ---
-        self.toggle_buttons_layout = QHBoxLayout()
+        # Button bar dock widget setup
+        self.button_bar_dock = QDockWidget("Control Toggles", self)
+        self.button_bar_dock.setObjectName("toggleDock")  # Set a unique object name
+        self.button_bar_dock.setAllowedAreas(Qt.LeftDockWidgetArea)
+        self.button_bar_dock.setFeatures(QDockWidget.DockWidgetFeature.NoDockWidgetFeatures)  # Make the dock static
+        self.button_bar_dock.setTitleBarWidget(QWidget())  # Remove the title bar
+        self.button_bar_dock.setFixedWidth(70)  # Set the fixed width of the dock
+
+        self.button_bar_widget = QWidget()
+        self.button_bar_layout = QVBoxLayout(self.button_bar_widget)
+        self.setup_control_toggle_buttons()  # Setup toggle buttons within the button bar
+        self.button_bar_dock.setWidget(self.button_bar_widget)
+        self.addDockWidget(Qt.LeftDockWidgetArea, self.button_bar_dock)
+
+        # --- Instrument Interface Dock ---
+        self.instrument_dock = QDockWidget("Instrument Controls", self)
+        self.instrument_dock.setAllowedAreas(Qt.RightDockWidgetArea)
+        self.instrument_tab_widget = QTabWidget()
+        self.instrument_dock.setWidget(self.instrument_tab_widget)
+        self.addDockWidget(Qt.RightDockWidgetArea, self.instrument_dock)
+
+        self.control_panel_stack.setCurrentWidget(self.instrument_control_panel)
+        self.connect_signals()
+
+        self.hide_instrument_dock()
+
+    def setup_control_toggle_buttons(self):
+        self.toggle_buttons_layout = self.button_bar_layout
+        # self.button_bar_layout.addStretch(1)
         self.toggle_buttons = {}
-        self.add_toggle_button("Instruments", self.instrument_control_panel)
+        self.button_bar_layout.addStretch(1)
+        self.add_toggle_button("Instruments", self.instrument_control_panel, "pymetr/application/icons/instruments.png")
         self.toggle_buttons[self.instrument_control_panel].setChecked(True)  # Set the "Instruments" button as initially checked
-        self.add_toggle_button("Traces", self.trace_control_panel)
-        self.add_toggle_button("Markers", self.marker_control_panel)
-        self.add_toggle_button("Cursors", self.cursor_control_panel)
-        self.add_toggle_button("Measurements", self.measurement_control_panel)
-        self.add_toggle_button("Calculations", self.calculation_control_panel)
-        self.main_layout.addLayout(self.toggle_buttons_layout)
+        self.add_toggle_button("Traces", self.trace_control_panel, "pymetr/application/icons/traces.png")
+        self.add_toggle_button("Markers", self.marker_control_panel, "pymetr/application/icons/markers.png")
+        self.add_toggle_button("Cursors", self.cursor_control_panel, "pymetr/application/icons/cursors.png")
+        self.add_toggle_button("Measurements", self.measurement_control_panel, "pymetr/application/icons/measurements.png")
+        self.add_toggle_button("Calculations", self.calculation_control_panel, "pymetr/application/icons/calculations.png")
+        self.add_toggle_button("Plot Display", self.display_panel, "pymetr/application/icons/plot.png")
+        self.add_toggle_button("Console", self.calculation_control_panel, "pymetr/application/icons/console.png")
+        self.button_bar_layout.addStretch(1)
+        
 
         # --- Instrument Interface Dock ---
         self.instrument_dock = QDockWidget("Instrument Controls", self)
@@ -155,9 +189,12 @@ class PyMetrMainWindow(QMainWindow):
         if index == 1:
             self.control_panel_height = self.main_splitter.sizes()[1]
 
-    def add_toggle_button(self, label, panel):
-        button = QPushButton(label)
+    def add_toggle_button(self, label, panel, icon_path):
+        button = QPushButton()
         button.setCheckable(True)
+        button.setIcon(QIcon(icon_path))
+        button.setIconSize(QSize(45, 45))  # Adjust the icon size as needed
+        button.setProperty("class", "toggle_button")  # Set a custom style class
         button.toggled.connect(lambda checked, panel=panel: self.toggle_panel(panel, checked))
         self.toggle_buttons_layout.addWidget(button)
         self.toggle_buttons[panel] = button
@@ -198,21 +235,15 @@ class PyMetrMainWindow(QMainWindow):
         self.trace_manager.traceLineStyleChanged.connect(self.trace_plot.update_trace_line_style)
         self.trace_manager.traceRemoved.connect(self.trace_plot.remove_trace)
         self.trace_manager.traceRemoved.connect(self.trace_control_panel.remove_trace)
-        self.trace_manager.tracesCleared.connect(self.trace_control_panel.clear_traces)
+        # self.trace_manager.tracesCleared.connect(self.trace_control_panel.clear_traces)
         self.trace_manager.tracesCleared.connect(self.trace_plot.clear_traces)
 
         self.quick_panel.plotModeChanged.connect(self.trace_manager.set_plot_mode)
         self.quick_panel.roiPlotToggled.connect(self.trace_plot.on_roi_plot_enabled)
         self.quick_panel.roiPlotToggled.connect(self.trace_manager.emit_trace_data)
-        self.quick_panel.traceModeChanged.connect(self.trace_manager.set_trace_mode)
-        self.quick_panel.groupAllClicked.connect(self.trace_manager.group_all_traces)
-        self.quick_panel.isolateAllClicked.connect(self.trace_manager.isolate_all_traces)
-        self.quick_panel.groupAllClicked.connect(self.trace_control_panel.group_all_traces)
-        self.quick_panel.isolateAllClicked.connect(self.trace_control_panel.isolate_all_traces)
         self.quick_panel.testTraceClicked.connect(self.trace_manager.add_random_trace)
-        self.quick_panel.clearTracesClicked.connect(self.trace_manager.clear_traces)
-        self.quick_panel.clearTracesClicked.connect(self.trace_plot.clear_traces)
         self.quick_panel.screenshotClicked.connect(self.trace_plot.capture_screenshot)
+
 
         self.instrument_control_panel.instrument_connected.connect(self.on_instrument_connected)
         self.instrument_control_panel.instrument_disconnected.connect(self.on_instrument_disconnected)

@@ -2,24 +2,91 @@
 import logging
 logger = logging.getLogger(__name__)
 
-from PySide6.QtWidgets import QWidget, QPushButton, QVBoxLayout, QListWidget, QListWidgetItem
-from PySide6.QtWidgets import QCheckBox, QHBoxLayout, QLineEdit, QComboBox, QColorDialog,  QDoubleSpinBox
+from PySide6.QtWidgets import QWidget, QPushButton, QVBoxLayout, QListWidget, QListWidgetItem, QGroupBox
+from PySide6.QtWidgets import QCheckBox, QHBoxLayout, QLineEdit, QComboBox, QColorDialog,  QDoubleSpinBox, QLabel
 from PySide6.QtGui import QColor
 from PySide6.QtCore import Signal
 
 class TraceControlPanel(QWidget):
+    groupTraces = Signal()
+    isolateTraces = Signal()
+    clearTraces = Signal()
+
     def __init__(self, trace_manager, parent=None):
         super().__init__(parent)
         self.trace_manager = trace_manager
 
         layout = QVBoxLayout()
+
+
+        # Add a label for the columns
+        # Create a group box for the trace list
+        self.trace_list_group_box = QGroupBox("Traces")
+        trace_list_layout = QVBoxLayout()
+
+        # Add a label for the columns
+        column_label_layout = QHBoxLayout()
+        visible_label = QLabel("Visible")
+        visible_label.setMinimumWidth(20)
+        column_label_layout.addWidget(visible_label)
+
+        label_label = QLabel("Label")
+        label_label.setMinimumWidth(120)
+        column_label_layout.addWidget(label_label)
+        column_label_layout.addStretch(1)  # This will make the "Label" column expand
+
+        color_label = QLabel("Color")
+        color_label.setMinimumWidth(80)
+        column_label_layout.addWidget(color_label)
+
+        mode_label = QLabel("Mode")
+        mode_label.setMinimumWidth(80)
+        column_label_layout.addWidget(mode_label)
+
+        thickness_label = QLabel("Thickness")
+        thickness_label.setMinimumWidth(80)
+        column_label_layout.addWidget(thickness_label)
+
+        style_label = QLabel("Style")
+        style_label.setMinimumWidth(100)
+        column_label_layout.addWidget(style_label)
+
+        delete_label = QLabel("Delete")
+        delete_label.setMinimumWidth(100)
+        column_label_layout.addWidget(delete_label)
+
+        trace_list_layout.addLayout(column_label_layout)
+
         self.trace_list = QListWidget()
-        layout.addWidget(self.trace_list)
+        trace_list_layout.addWidget(self.trace_list)
+        self.trace_list_group_box.setLayout(trace_list_layout)
+        layout.addWidget(self.trace_list_group_box)
+
+        # Add widgets moved from the quick panel
+        button_layout = QHBoxLayout()
+
+        self.trace_mode_combo = QComboBox()
+        self.trace_mode_combo.addItems(["Group", "Isolate"])
+        self.trace_mode_combo.currentTextChanged.connect(self.trace_manager.set_trace_mode)
+        button_layout.addWidget(self.trace_mode_combo)
+
+        self.group_all_button = QPushButton("Group All")
+        self.group_all_button.clicked.connect(self.group_all_traces)
+        button_layout.addWidget(self.group_all_button)
+
+        self.isolate_all_button = QPushButton("Isolate All")
+        self.isolate_all_button.clicked.connect(self.isolate_all_traces)
+        button_layout.addWidget(self.isolate_all_button)
+
+        self.clear_traces_button = QPushButton("Clear Traces")
+        self.clear_traces_button.clicked.connect(self.clear_traces)
+        button_layout.addWidget(self.clear_traces_button)
+
+        layout.addLayout(button_layout)
 
         self.setLayout(layout)
 
         self.trace_manager.traceAdded.connect(self.add_trace)
-        self.trace_manager.traceRemoved.connect(self.remove_trace)
 
     def add_trace(self, trace):
         print(f"Trace added called with {trace}")
@@ -29,14 +96,14 @@ class TraceControlPanel(QWidget):
         self.trace_list.addItem(list_item)
         self.trace_list.setItemWidget(list_item, item)
 
-        # Connect the signals from TraceListItem to the corresponding slots in TraceManager
-        item.visibilityChanged.connect(self.trace_manager.set_trace_visibility)
-        item.labelChanged.connect(self.trace_manager.set_trace_label)
-        item.colorChanged.connect(self.trace_manager.set_trace_color)
-        item.modeChanged.connect(self.trace_manager.set_trace_mode)
-        item.lineThicknessChanged.connect(self.trace_manager.set_trace_line_thickness)
-        item.lineStyleChanged.connect(self.trace_manager.set_trace_line_style)
-        item.traceRemoved.connect(self.trace_manager.remove_trace)
+        # # Connect the signals from TraceListItem to the corresponding slots in TraceManager
+        # item.visibilityChanged.connect(self.trace_manager.set_trace_visibility)
+        # item.labelChanged.connect(self.trace_manager.set_trace_label)
+        # item.colorChanged.connect(self.trace_manager.set_trace_color)
+        # item.modeChanged.connect(self.trace_manager.set_trace_mode)
+        # item.lineThicknessChanged.connect(self.trace_manager.set_trace_line_thickness)
+        # item.lineStyleChanged.connect(self.trace_manager.set_trace_line_style)
+        # item.traceRemoved.connect(self.trace_manager.remove_trace)
 
     def remove_trace(self, trace_id):
         for i in range(self.trace_list.count()):
@@ -48,18 +115,24 @@ class TraceControlPanel(QWidget):
 
     def clear_traces(self):
         self.trace_list.clear()
+        self.clearTraces.emit()
+        self.trace_manager.clear_traces()
 
     def group_all_traces(self):
         for i in range(self.trace_list.count()):
             list_item = self.trace_list.item(i)
             item_widget = self.trace_list.itemWidget(list_item)
             item_widget.mode_combo.setCurrentText("Group")
+        self.groupTraces.emit()
+        self.trace_manager.group_all_traces()
 
     def isolate_all_traces(self):
         for i in range(self.trace_list.count()):
             list_item = self.trace_list.item(i)
             item_widget = self.trace_list.itemWidget(list_item)
             item_widget.mode_combo.setCurrentText("Isolate")
+        self.isolateTraces.emit()
+        self.trace_manager.isolate_all_traces()
 
 class TraceListItem(QWidget):
     visibilityChanged = Signal(str, bool)
@@ -151,4 +224,4 @@ class TraceListItem(QWidget):
 
     def delete_trace(self):
         logger.debug(f"Deleting trace '{self.trace.label}'")
-        self.traceRemoved.emit(self.trace.label)
+        self.trace_manager.remove_trace(self.trace.label)

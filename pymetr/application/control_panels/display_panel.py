@@ -1,7 +1,6 @@
 # --- display_panel.py ---
-from PySide6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QComboBox, QFrame
+from PySide6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QGroupBox, QCheckBox, QLineEdit, QComboBox, QLabel
 from PySide6.QtCore import Signal
-from pyqtgraph.parametertree import ParameterTree, Parameter
 
 class DisplayPanel(QWidget):
     gridToggled = Signal(bool)
@@ -19,70 +18,76 @@ class DisplayPanel(QWidget):
     def __init__(self, trace_plot, parent=None):
         super().__init__(parent)
         self.trace_plot = trace_plot
-        self.layout = QVBoxLayout(self)
+        self.layout = QHBoxLayout(self)
 
-        self.params = [
-            {'name': 'Plot Settings', 'type': 'group', 'children': [
-                {'name': 'Grid', 'type': 'bool', 'value': False},
-                {'name': 'X Log Scale', 'type': 'bool', 'value': False},
-                {'name': 'Y Log Scale', 'type': 'bool', 'value': False},
-                {'name': 'X Grid', 'type': 'bool', 'value': True},
-                {'name': 'Y Grid', 'type': 'bool', 'value': True},
-            ]},
-            {'name': 'Labels', 'type': 'group', 'children': [
-                {'name': 'Title', 'type': 'str', 'value': 'Plot Title'},
-                {'name': 'Show Title', 'type': 'bool', 'value': True},
-                {'name': 'X Label', 'type': 'str', 'value': 'X'},
-                {'name': 'Show X Label', 'type': 'bool', 'value': True},
-                {'name': 'Y Label', 'type': 'str', 'value': 'Y'},
-                {'name': 'Show Y Label', 'type': 'bool', 'value': True},
-            ]},
-            {'name': 'Trace Settings', 'type': 'group', 'children': [
-                {'name': 'Anti-aliasing', 'type': 'bool', 'value': True},
-                {'name': 'Default Line Thickness', 'type': 'float', 'value': 1.0},
-                {'name': 'Default Line Style', 'type': 'list', 'limits': ['Solid', 'Dash', 'Dot', 'Dash-Dot'], 'value': 'Solid'},
-            ]},
-        ]
+        # Plot Settings Group Box
+        self.plot_settings_group_box = QGroupBox("Plot Settings")
+        plot_settings_layout = QVBoxLayout()
 
-        self.parameter_tree = ParameterTree()
-        self.parameter = Parameter.create(name='params', type='group', children=self.params)
-        self.parameter_tree.setParameters(self.parameter, showTop=False)
-        self.layout.addWidget(self.parameter_tree)
+        self.grid_checkbox = QCheckBox("Grid")
+        self.grid_checkbox.stateChanged.connect(lambda state: self.gridToggled.emit(state == 2))
+        plot_settings_layout.addWidget(self.grid_checkbox)
 
-        self.connect_signals()
+        self.x_log_scale_checkbox = QCheckBox("X Log Scale")
+        self.x_log_scale_checkbox.stateChanged.connect(lambda state: self.xLogScaleToggled.emit(state == 2))
+        plot_settings_layout.addWidget(self.x_log_scale_checkbox)
 
-    def connect_signals(self):
-        self.parameter.param('Plot Settings', 'Grid').sigValueChanged.connect(
-            lambda param, value: self.gridToggled.emit(value)
-        )
-        self.parameter.param('Plot Settings', 'X Log Scale').sigValueChanged.connect(
-            lambda param, value: self.xLogScaleToggled.emit(value)
-        )
-        self.parameter.param('Plot Settings', 'Y Log Scale').sigValueChanged.connect(
-            lambda param, value: self.yLogScaleToggled.emit(value)
-        )
-        self.parameter.param('Plot Settings', 'X Grid').sigValueChanged.connect(
-            lambda param, value: self.xGridChanged.emit(value)
-        )
-        self.parameter.param('Plot Settings', 'Y Grid').sigValueChanged.connect(
-            lambda param, value: self.yGridChanged.emit(value)
-        )
-        self.parameter.param('Labels', 'Title').sigValueChanged.connect(
-            lambda param, value: self.titleChanged.emit(value)
-        )
-        self.parameter.param('Labels', 'Show Title').sigValueChanged.connect(
-            lambda param, value: self.titleVisibilityChanged.emit(value)
-        )
-        self.parameter.param('Labels', 'X Label').sigValueChanged.connect(
-            lambda param, value: self.xLabelChanged.emit(value)
-        )
-        self.parameter.param('Labels', 'Show X Label').sigValueChanged.connect(
-            lambda param, value: self.xLabelVisibilityChanged.emit(value)
-        )
-        self.parameter.param('Labels', 'Y Label').sigValueChanged.connect(
-            lambda param, value: self.yLabelChanged.emit(value)
-        )
-        self.parameter.param('Labels', 'Show Y Label').sigValueChanged.connect(
-            lambda param, value: self.yLabelVisibilityChanged.emit(value)
-        )
+        self.y_log_scale_checkbox = QCheckBox("Y Log Scale")
+        self.y_log_scale_checkbox.stateChanged.connect(lambda state: self.yLogScaleToggled.emit(state == 2))
+        plot_settings_layout.addWidget(self.y_log_scale_checkbox)
 
+        self.x_grid_checkbox = QCheckBox("X Grid")
+        self.x_grid_checkbox.setChecked(True)
+        self.x_grid_checkbox.stateChanged.connect(lambda state: self.xGridChanged.emit(state == 2))
+        plot_settings_layout.addWidget(self.x_grid_checkbox)
+
+        self.y_grid_checkbox = QCheckBox("Y Grid")
+        self.y_grid_checkbox.setChecked(True)
+        self.y_grid_checkbox.stateChanged.connect(lambda state: self.yGridChanged.emit(state == 2))
+        plot_settings_layout.addWidget(self.y_grid_checkbox)
+
+        self.plot_settings_group_box.setLayout(plot_settings_layout)
+        self.layout.addWidget(self.plot_settings_group_box)
+
+        # Labels Group Box
+        self.labels_group_box = QGroupBox("Labels")
+        labels_layout = QVBoxLayout()
+
+        title_layout = QHBoxLayout()
+        self.title_label = QLabel("Title:")
+        self.title_text_edit = QLineEdit("Plot Title")
+        self.title_text_edit.textChanged.connect(self.titleChanged.emit)
+        self.title_visibility_checkbox = QCheckBox("Show Title")
+        self.title_visibility_checkbox.setChecked(False)
+        self.title_visibility_checkbox.stateChanged.connect(lambda state: self.titleVisibilityChanged.emit(state == 2))
+        title_layout.addWidget(self.title_label)
+        title_layout.addWidget(self.title_text_edit)
+        title_layout.addWidget(self.title_visibility_checkbox)
+        labels_layout.addLayout(title_layout)
+
+        x_label_layout = QHBoxLayout()
+        self.x_label_label = QLabel("X Label:")
+        self.x_label_text_edit = QLineEdit("X")
+        self.x_label_text_edit.textChanged.connect(self.xLabelChanged.emit)
+        self.x_label_visibility_checkbox = QCheckBox("Show X Label")
+        self.x_label_visibility_checkbox.setChecked(False)
+        self.x_label_visibility_checkbox.stateChanged.connect(lambda state: self.xLabelVisibilityChanged.emit(state == 2))
+        x_label_layout.addWidget(self.x_label_label)
+        x_label_layout.addWidget(self.x_label_text_edit)
+        x_label_layout.addWidget(self.x_label_visibility_checkbox)
+        labels_layout.addLayout(x_label_layout)
+
+        y_label_layout = QHBoxLayout()
+        self.y_label_label = QLabel("Y Label:")
+        self.y_label_text_edit = QLineEdit("Y")
+        self.y_label_text_edit.textChanged.connect(self.yLabelChanged.emit)
+        self.y_label_visibility_checkbox = QCheckBox("Show Y Label")
+        self.y_label_visibility_checkbox.setChecked(False)
+        self.y_label_visibility_checkbox.stateChanged.connect(lambda state: self.yLabelVisibilityChanged.emit(state == 2))
+        y_label_layout.addWidget(self.y_label_label)
+        y_label_layout.addWidget(self.y_label_text_edit)
+        y_label_layout.addWidget(self.y_label_visibility_checkbox)
+        labels_layout.addLayout(y_label_layout)
+
+        self.labels_group_box.setLayout(labels_layout)
+        self.layout.addWidget(self.labels_group_box)

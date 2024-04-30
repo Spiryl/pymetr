@@ -9,7 +9,6 @@ from PySide6.QtGui import QPainter, QPixmap, QGuiApplication
 from pymetr.core.trace import Trace
 
 class TracePlot(QWidget):
-
     finished_update = Signal(bool)
 
     def __init__(self, trace_manager, parent=None):
@@ -17,20 +16,24 @@ class TracePlot(QWidget):
         self.plot_layout = pg.GraphicsLayoutWidget()
         self.plot_item = self.plot_layout.addPlot(row=0, col=0)
         self.plot_layout.setBackground('#1E1E1E')  # Set the desired background color
-        self.plot_item.showGrid(x=True, y=True)
 
+        # Set the color and transparency of grid lines
+        grid_color = (128, 128, 128, 64)  # Light gray with half transparency (RGBA)
         self.plot_item.getAxis('left').setGrid(100)  # Set the width of the y-axis grid lines
         self.plot_item.getAxis('bottom').setGrid(100)  # Set the width of the x-axis grid lines
-        self.plot_item.getAxis('left').setPen(pg.mkPen(color=(120, 120, 120, 120)))  # Set the color and transparency of y-axis grid lines
-        self.plot_item.getAxis('bottom').setPen(pg.mkPen(color=(120, 120, 120, 120)))  # Set the color and transparency of x-axis grid lines
+        self.plot_item.getAxis('left').setPen(pg.mkPen(color=grid_color))  # Set the color and transparency of y-axis grid lines
+        self.plot_item.getAxis('bottom').setPen(pg.mkPen(color=grid_color))  # Set the color and transparency of x-axis grid lines
 
-        self.plot_item.setTitle("Plot Title")
-        self.plot_item.setLabel("bottom", "X Axis")
-        self.plot_item.setLabel("left", "Y Axis")
+        # Set the color of plot labels and title
+        label_color = '#EEEEEE'
+        self.plot_item.setTitle("", color=label_color)
+        self.plot_item.setLabel("bottom", "X Axis", color=label_color)
+        self.plot_item.setLabel("left", "Y Axis", color=label_color)
+        self.plot_item.getAxis('bottom').showLabel(False)
+        self.plot_item.getAxis('left').showLabel(False)
 
         self.legend = pg.LegendItem(offset=(70, 30))
         self.legend.setParentItem(self.plot_item)
-    
         legend_color = (64, 64, 64, 64)  # Middle gray with half transparency (RGBA)
         # self.legend.setLabelTextColor(legend_color)
         self.legend.setBrush(pg.mkBrush(legend_color))

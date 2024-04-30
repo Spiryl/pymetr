@@ -1,7 +1,7 @@
 /* styles.qss */
 QMainWindow {
     background-color: #1E1E1E;
-    color: #ccc;
+    color: #EEEEEE;
 }
 
 QTabWidget::pane {
@@ -12,7 +12,7 @@ QTabWidget::pane {
 
 QTabBar::tab {
     background: #2A2A2A;
-    color: #ccc;
+    color: #EEEEEE;
     padding: 8px;
     border: none;
     border-bottom: 2px solid transparent;
@@ -28,8 +28,8 @@ QTabBar::tab:selected {
 QPushButton, QComboBox {
     background-color: #2A2A2A;
     border: none;
-    color: #ccc;
-    border-radius: 4px;
+    color: #EEEEEE;
+    border-radius: 3px;
     padding: 1px 12px;
     height: 22px;
 }
@@ -50,20 +50,36 @@ QPushButton:hover, QComboBox:hover {
     border: 1px solid #5E57FF;
 }
 
+QPushButton[class="toggle_button"] {
+    background-color: #1E1E1E;
+    height: 75;
+    width: 65;
+    /* other toggle button styles */
+}
+
+QPushButton[class="toggle_button"]:hover {
+    background-color: #3E3E3E;
+    border: 1px solid #5E57FF;
+}
+
+QPushButton[class="toggle_button"] QIcon {
+    filter: invert(1);
+}
+
 QTextEdit {
     background-color: #2A2A2A;
-    color: #ccc;
+    color: #EEEEEE;
     border: none;
     border-radius: 4px;
 }
 
 QGroupBox::title {
-    color: #888888; /* Adjust the color as needed */
+    color: #EEEEEE; /* Adjust the color as needed */
 }
 
 QMenuBar {
     background-color: #1E1E1E;
-    color: #dddddd; /* Adjust the color as needed */
+    color: #EEEEEE; /* Adjust the color as needed */
 }
 
 QMenuBar::item {
@@ -72,7 +88,7 @@ QMenuBar::item {
 
 QMenuBar::item:selected {
     background-color: #3E3E3E;
-    color: #cccccc; /* Adjust the color as needed */
+    color: #EEEEEE; /* Adjust the color as needed */
 }
 
 QSplitter::handle {
@@ -94,9 +110,13 @@ QDockWidget::separator:hover {
     background-color: #5E57FF;
 }
 
+QDockWidget#toggleDock {
+    background-color: #3E3E3E;  /* Set the desired background color */
+}
+
 QTreeWidget {
     background-color: #1E1E1E;
-    color: #ccc;
+    color: #EEEEEE;
     border: 1px;
 }
 
@@ -112,12 +132,12 @@ QTreeWidget::item:hover {
 
 QTreeWidget::item:selected {
     background-color: #5E57FF;
-    color: #ddd;
+    color: #EEEEEE;
 }
 
 QTreeWidget::item:has-children {
     background-color: #2A2A2A;
-    color: #ddd;
+    color: #EEEEEE;
 }
 
 QTreeWidget::item:!selected:hover {
@@ -138,12 +158,12 @@ QTreeWidget::item:selected:hover:active {
 
 QListWidget {
     background-color: #1E1E1E; 
-    show-decoration-selected: 1;
+    show-decoration-selected: 0;
     border: 0px;
 }
 
 QListWidget::item {
-    color: #ccc;
+    color: #EEEEEE;
     border-radius: 4px; 
     margin: 1px 0; 
 }

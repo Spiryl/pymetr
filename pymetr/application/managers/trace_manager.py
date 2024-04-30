@@ -54,28 +54,54 @@ class TraceManager(QObject):
                     f"Visible: {trace.visible}, Line Thickness: {trace.line_thickness}, Line Style: {trace.line_style}")
 
         if self.plot_mode == "Run":
-            if trace.label in [t.label for t in self.traces]:
+            print(f"Plot mode is 'Run'")
+            trace_labels = [t.label for t in self.traces]
+            print(f"Existing trace labels: {trace_labels}")
+            if trace.label in trace_labels:
+                print(f"Trace with label '{trace.label}' already exists, updating it.")
                 self.update_trace_by_label(trace)
                 return
+            else:
+                print(f"Trace with label '{trace.label}' does not exist, adding it.")
+
         elif self.plot_mode == "Single":
+            print(f"Plot mode is 'Single'")
             if trace.label:
+                print(f"Trace label is '{trace.label}', keeping it as is.")
                 trace.label = trace.label
             else:
+                print(f"Trace label is empty, generating a new label: 'Trace_{self.trace_counter}'")
                 trace.label = f"Trace_{self.trace_counter}"
                 self.trace_counter += 1
+
         elif self.plot_mode == "Stack":
+            print(f"Plot mode is 'Stack'")
             if trace.label:
+                print(f"Trace label is '{trace.label}'")
                 existing_labels = set(t.label for t in self.traces)
+                print(f"Existing trace labels: {existing_labels}")
                 if trace.label in existing_labels:
+                    print(f"Trace label '{trace.label}' already exists, generating a unique label.")
                     trace.label = self.generate_unique_label(trace.label)
+                else:
+                    print(f"Trace label '{trace.label}' is unique, keeping it as is.")
             else:
+                print("Trace label is empty, generating a new label.")
                 trace.label = self.generate_unique_label()
 
         if not trace.color:
+            print(f"Trace color is not set, assigning a color from the palette.")
             trace.color = self.get_next_color_from_palette()
+        else:
+            print(f"Trace color is '{trace.color}', keeping it as is.")
 
+        print(f"Setting trace mode to '{self.trace_mode}'")
         trace.mode = self.trace_mode
+
+        print(f"Appending trace to self.traces: {trace}")
         self.traces.append(trace)
+
+        print(f"Emitting traceAdded signal with trace: {trace}")
         self.traceAdded.emit(trace)
 
     def generate_unique_label(self, base_label=None):
@@ -204,7 +230,7 @@ class TraceGenerator:
 
     @staticmethod
     def generate_random_trace(mode='Group'):
-        x = np.arange(100)-50
+        x = np.arange(100)
         y = np.random.normal(loc=0, scale=20, size=100)
         trace = Trace(
             x_data=x,
