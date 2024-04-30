@@ -4,13 +4,8 @@ from PySide6.QtCore import Signal
 
 class QuickPanel(QWidget):
     plotModeChanged = Signal(str)
-    traceModeChanged = Signal(str)
     roiPlotToggled = Signal(bool)
-    groupAllClicked = Signal()
-    isolateAllClicked = Signal()
     testTraceClicked = Signal()
-    clearTracesClicked = Signal()
-    addInstrumentClicked = Signal()
     screenshotClicked = Signal()
 
     def __init__(self, parent=None):
@@ -36,9 +31,6 @@ class QuickPanel(QWidget):
         self.test_trace_button = QPushButton("Test Trace")
         self.test_trace_button.clicked.connect(self.on_test_trace_clicked)
         self.layout.addWidget(self.test_trace_button)
-
-    def on_add_instrument_clicked(self):
-        self.addInstrumentClicked.emit()
 
     def on_plot_mode_changed(self, plot_mode):
         self.plotModeChanged.emit(plot_mode)

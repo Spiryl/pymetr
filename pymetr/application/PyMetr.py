@@ -170,7 +170,7 @@ class PyMetrMainWindow(QMainWindow):
         self.add_toggle_button("Calculations", self.calculation_control_panel, "pymetr/application/icons/calculations.png")
         self.add_toggle_button("Plot Display", self.display_panel, "pymetr/application/icons/plot.png")
         self.add_toggle_button("Console", self.calculation_control_panel, "pymetr/application/icons/console.png")
-        self.button_bar_layout.addStretch(1)
+        # self.button_bar_layout.addStretch(1)
         
 
         # --- Instrument Interface Dock ---
@@ -181,8 +181,6 @@ class PyMetrMainWindow(QMainWindow):
         self.addDockWidget(Qt.RightDockWidgetArea, self.instrument_dock)
 
         self.control_panel_stack.setCurrentWidget(self.instrument_control_panel)
-        self.connect_signals()
-
         self.hide_instrument_dock()
 
     def update_control_panel_height(self, pos, index):

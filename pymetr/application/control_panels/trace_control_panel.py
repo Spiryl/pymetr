@@ -18,51 +18,46 @@ class TraceControlPanel(QWidget):
 
         layout = QVBoxLayout()
 
-
-        # Add a label for the columns
-        # Create a group box for the trace list
         self.trace_list_group_box = QGroupBox("Traces")
         trace_list_layout = QVBoxLayout()
 
-        # Add a label for the columns
-        column_label_layout = QHBoxLayout()
-        visible_label = QLabel("Visible")
-        visible_label.setMinimumWidth(20)
-        column_label_layout.addWidget(visible_label)
+        # column_label_layout = QHBoxLayout()
+        # visible_label = QLabel("Visible")
+        # visible_label.setMinimumWidth(20)
+        # column_label_layout.addWidget(visible_label)
 
-        label_label = QLabel("Label")
-        label_label.setMinimumWidth(120)
-        column_label_layout.addWidget(label_label)
-        column_label_layout.addStretch(1)  # This will make the "Label" column expand
+        # label_label = QLabel("Label")
+        # label_label.setMinimumWidth(120)
+        # column_label_layout.addWidget(label_label)
+        # column_label_layout.addStretch(1)  # This will make the "Label" column expand
 
-        color_label = QLabel("Color")
-        color_label.setMinimumWidth(80)
-        column_label_layout.addWidget(color_label)
+        # color_label = QLabel("Color")
+        # color_label.setMinimumWidth(80)
+        # column_label_layout.addWidget(color_label)
 
-        mode_label = QLabel("Mode")
-        mode_label.setMinimumWidth(80)
-        column_label_layout.addWidget(mode_label)
+        # mode_label = QLabel("Mode")
+        # mode_label.setMinimumWidth(80)
+        # column_label_layout.addWidget(mode_label)
 
-        thickness_label = QLabel("Thickness")
-        thickness_label.setMinimumWidth(80)
-        column_label_layout.addWidget(thickness_label)
+        # thickness_label = QLabel("Thickness")
+        # thickness_label.setMinimumWidth(80)
+        # column_label_layout.addWidget(thickness_label)
 
-        style_label = QLabel("Style")
-        style_label.setMinimumWidth(100)
-        column_label_layout.addWidget(style_label)
+        # style_label = QLabel("Style")
+        # style_label.setMinimumWidth(100)
+        # column_label_layout.addWidget(style_label)
 
-        delete_label = QLabel("Delete")
-        delete_label.setMinimumWidth(100)
-        column_label_layout.addWidget(delete_label)
+        # delete_label = QLabel("Delete")
+        # delete_label.setMinimumWidth(100)
+        # column_label_layout.addWidget(delete_label)
 
-        trace_list_layout.addLayout(column_label_layout)
+        # trace_list_layout.addLayout(column_label_layout)
 
         self.trace_list = QListWidget()
         trace_list_layout.addWidget(self.trace_list)
         self.trace_list_group_box.setLayout(trace_list_layout)
         layout.addWidget(self.trace_list_group_box)
 
-        # Add widgets moved from the quick panel
         button_layout = QHBoxLayout()
 
         self.trace_mode_combo = QComboBox()
@@ -89,21 +84,11 @@ class TraceControlPanel(QWidget):
         self.trace_manager.traceAdded.connect(self.add_trace)
 
     def add_trace(self, trace):
-        print(f"Trace added called with {trace}")
         item = TraceListItem(trace, self.trace_manager, self)
         list_item = QListWidgetItem()
         list_item.setSizeHint(item.sizeHint())
         self.trace_list.addItem(list_item)
         self.trace_list.setItemWidget(list_item, item)
-
-        # # Connect the signals from TraceListItem to the corresponding slots in TraceManager
-        # item.visibilityChanged.connect(self.trace_manager.set_trace_visibility)
-        # item.labelChanged.connect(self.trace_manager.set_trace_label)
-        # item.colorChanged.connect(self.trace_manager.set_trace_color)
-        # item.modeChanged.connect(self.trace_manager.set_trace_mode)
-        # item.lineThicknessChanged.connect(self.trace_manager.set_trace_line_thickness)
-        # item.lineStyleChanged.connect(self.trace_manager.set_trace_line_style)
-        # item.traceRemoved.connect(self.trace_manager.remove_trace)
 
     def remove_trace(self, trace_id):
         for i in range(self.trace_list.count()):

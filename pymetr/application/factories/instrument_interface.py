@@ -1,6 +1,6 @@
 #  --- instrument_interface.py ------
 import logging
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 from pyqtgraph.parametertree import Parameter, ParameterTree
 from PySide6.QtCore import Signal, Qt, Slot, QTimer
 from PySide6.QtWidgets import QVBoxLayout, QDockWidget, QPushButton, QWidget, QApplication
