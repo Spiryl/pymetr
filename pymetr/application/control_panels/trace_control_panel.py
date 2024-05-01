@@ -10,7 +10,6 @@ from PySide6.QtCore import Signal
 class TraceControlPanel(QWidget):
     groupTraces = Signal()
     isolateTraces = Signal()
-    clearTraces = Signal()
 
     def __init__(self, trace_manager, parent=None):
         super().__init__(parent)
@@ -20,38 +19,6 @@ class TraceControlPanel(QWidget):
 
         self.trace_list_group_box = QGroupBox("Traces")
         trace_list_layout = QVBoxLayout()
-
-        # column_label_layout = QHBoxLayout()
-        # visible_label = QLabel("Visible")
-        # visible_label.setMinimumWidth(20)
-        # column_label_layout.addWidget(visible_label)
-
-        # label_label = QLabel("Label")
-        # label_label.setMinimumWidth(120)
-        # column_label_layout.addWidget(label_label)
-        # column_label_layout.addStretch(1)  # This will make the "Label" column expand
-
-        # color_label = QLabel("Color")
-        # color_label.setMinimumWidth(80)
-        # column_label_layout.addWidget(color_label)
-
-        # mode_label = QLabel("Mode")
-        # mode_label.setMinimumWidth(80)
-        # column_label_layout.addWidget(mode_label)
-
-        # thickness_label = QLabel("Thickness")
-        # thickness_label.setMinimumWidth(80)
-        # column_label_layout.addWidget(thickness_label)
-
-        # style_label = QLabel("Style")
-        # style_label.setMinimumWidth(100)
-        # column_label_layout.addWidget(style_label)
-
-        # delete_label = QLabel("Delete")
-        # delete_label.setMinimumWidth(100)
-        # column_label_layout.addWidget(delete_label)
-
-        # trace_list_layout.addLayout(column_label_layout)
 
         self.trace_list = QListWidget()
         trace_list_layout.addWidget(self.trace_list)
@@ -82,6 +49,7 @@ class TraceControlPanel(QWidget):
         self.setLayout(layout)
 
         self.trace_manager.traceAdded.connect(self.add_trace)
+        self.trace_manager.tracesCleared.connect(self.clear_traces_slot)
 
     def add_trace(self, trace):
         item = TraceListItem(trace, self.trace_manager, self)
@@ -100,8 +68,10 @@ class TraceControlPanel(QWidget):
 
     def clear_traces(self):
         self.trace_list.clear()
-        self.clearTraces.emit()
         self.trace_manager.clear_traces()
+
+    def clear_traces_slot(self):
+        self.trace_list.clear()
 
     def group_all_traces(self):
         for i in range(self.trace_list.count()):
@@ -141,7 +111,7 @@ class TraceListItem(QWidget):
         layout.addWidget(self.visible_checkbox)
 
         self.label = QLineEdit(trace.label)
-        self.label.textChanged.connect(self.update_label)
+        self.label.editingFinished.connect(self.update_label)
         self.label.setMinimumWidth(120)
         layout.addWidget(self.label)
 
@@ -182,11 +152,11 @@ class TraceListItem(QWidget):
 
     def toggle_visibility(self, state):
         logger.debug(f"Toggling visibility for trace '{self.trace.label}' to {bool(state)}")
-        self.visibilityChanged.emit(self.trace.label, bool(state))
+        self.trace_manager.set_trace_visibility(self.trace.label, bool(state))
 
     def update_label(self, text):
         logger.debug(f"Updating label for trace '{self.trace.label}' to '{text}'")
-        self.labelChanged.emit(self.trace.label, text)
+        self.trace_manager.set_trace_label(self.trace.label, text)
 
     def select_color(self):
         color = QColorDialog.getColor(QColor(self.trace.color), self)
@@ -194,18 +164,19 @@ class TraceListItem(QWidget):
             logger.debug(f"Updating color for trace '{self.trace.label}' to '{color.name()}'")
             self.colorChanged.emit(self.trace.label, color.name())
             self.color_button.setStyleSheet(f"background-color: {color.name()}")
+            self.trace_manager.set_trace_color(self.trace.label, color.name())
 
     def update_mode(self, mode):
         logger.debug(f"Updating mode for trace '{self.trace.label}' to '{mode}'")
-        self.modeChanged.emit(self.trace.label, mode)
+        self.trace_manager.set_trace_mode(self.trace.label, mode)
 
     def update_line_width(self, width):
         logger.debug(f"Updating line width for trace '{self.trace.label}' to '{width}'")
-        self.lineThicknessChanged.emit(self.trace.label, width)
+        self.trace_manager.set_trace_line_thickness(self.trace.label, width)
 
     def update_line_style(self, style):
         logger.debug(f"Updating line style for trace '{self.trace.label}' to '{style}'")
-        self.lineStyleChanged.emit(self.trace.label, style)
+        self.trace_manager.set_trace_line_style(self.trace.label, style)
 
     def delete_trace(self):
         logger.debug(f"Deleting trace '{self.trace.label}'")

@@ -18,11 +18,11 @@ class TracePlot(QWidget):
         self.plot_layout.setBackground('#1E1E1E')  # Set the desired background color
 
         # Set the color and transparency of grid lines
-        grid_color = (128, 128, 128, 64)  # Light gray with half transparency (RGBA)
-        self.plot_item.getAxis('left').setGrid(100)  # Set the width of the y-axis grid lines
-        self.plot_item.getAxis('bottom').setGrid(100)  # Set the width of the x-axis grid lines
-        self.plot_item.getAxis('left').setPen(pg.mkPen(color=grid_color))  # Set the color and transparency of y-axis grid lines
-        self.plot_item.getAxis('bottom').setPen(pg.mkPen(color=grid_color))  # Set the color and transparency of x-axis grid lines
+        axis_color = '#EEEEEE'  
+        self.plot_item.getAxis('left').setPen(pg.mkPen(color=axis_color))  
+        self.plot_item.getAxis('bottom').setPen(pg.mkPen(color=axis_color))  
+        self.plot_item.getAxis('left').setGrid(64)  
+        self.plot_item.getAxis('bottom').setGrid(64)  
 
         # Set the color of plot labels and title
         label_color = '#EEEEEE'
@@ -32,12 +32,12 @@ class TracePlot(QWidget):
         self.plot_item.getAxis('bottom').showLabel(False)
         self.plot_item.getAxis('left').showLabel(False)
 
-        self.legend = pg.LegendItem(offset=(70, 30))
+        self.legend = pg.LegendItem(offset=(70, 70))
         self.legend.setParentItem(self.plot_item)
-        legend_color = (64, 64, 64, 64)  # Middle gray with half transparency (RGBA)
-        # self.legend.setLabelTextColor(legend_color)
+        legend_color = (80, 80, 80, 80)  # Middle gray with half transparency (RGBA)
+        self.legend.setLabelTextColor(label_color)
         self.legend.setBrush(pg.mkBrush(legend_color))
-        # self.legend.setPen(pg.mkPen(legend_color))
+        # self.legend.setPen(pg.mkPen(color=label_color))
 
         self.additional_axes = []
         self.additional_view_boxes = []
@@ -463,11 +463,12 @@ class TracePlot(QWidget):
 
     # --- Trace Update Methods ---------------
     def update_trace_visibility(self, trace_label, visible):
-        logger.debug(f"TP: Updating visibility for trace '{trace_label}' to {visible}")
+        logger.debug(f"Updating visibility for trace '{trace_label}' to {visible}")
         if trace_label in self.trace_curves:
             self.trace_curves[trace_label].setVisible(visible)
 
     def update_trace_label(self, old_label, new_label):
+        logger.debug(f"Updating label for trace '{old_label}' to {new_label}")
         if old_label in self.trace_curves:
             curve = self.trace_curves[old_label]
             curve.setName(new_label)
@@ -485,7 +486,7 @@ class TracePlot(QWidget):
                     break
 
     def update_trace_color(self, trace_label, color):
-        logger.debug(f"TP: Updating color for trace '{trace_label}' to {color}")
+        logger.debug(f"Updating color for trace '{trace_label}' to {color}")
         if trace_label in self.trace_curves:
             pen = self.trace_curves[trace_label].opts['pen']
             pen.setColor(color)
@@ -495,21 +496,21 @@ class TracePlot(QWidget):
         self.update_plot() # This is a hack right now.
 
     def update_trace_line_thickness(self, trace_label, thickness):
-        logger.debug(f"TP: Updating thickness for trace '{trace_label}' to {thickness}")
+        logger.debug(f"Updating thickness for trace '{trace_label}' to {thickness}")
         if trace_label in self.trace_curves:
             pen = self.trace_curves[trace_label].opts['pen']
             pen.setWidth(thickness)
             self.trace_curves[trace_label].setPen(pen)
 
     def update_trace_line_style(self, trace_label, style):
-        logger.debug(f"TP: Updating line style for trace '{trace_label}' to {style}")
+        logger.debug(f"Updating line style for trace '{trace_label}' to {style}")
         if trace_label in self.trace_curves:
             pen = self.trace_curves[trace_label].opts['pen']
             pen.setStyle(self.get_line_style(style))
             self.trace_curves[trace_label].setPen(pen)
 
     def remove_trace(self, trace_label):
-        logger.debug(f"TP: Removing trace '{trace_label}'")
+        logger.debug(f"Removing trace '{trace_label}'")
         if trace_label in self.trace_curves:
             curve = self.trace_curves[trace_label]
             if curve.getViewBox():

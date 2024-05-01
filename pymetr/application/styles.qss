@@ -4,6 +4,29 @@ QMainWindow {
     color: #EEEEEE;
 }
 
+QToolBar {
+    background-color: #2A2A2A; /* Set the toolbar background color */
+    spacing: 10px; /* This tries to add spacing between actions, might not work as expected */
+}
+
+QToolBar QToolButton {
+    background-color: #2A2A2A;
+    border: none;
+    padding: 8px;
+    color: #EEEEEE;
+    margin: 2px; /* Adjust margin to add space between buttons */
+}
+
+QToolBar QToolButton:hover {
+    background-color: #3E3E3E;
+    border: 1px solid #5E57FF;
+}
+
+QToolBar QToolButton:checked {
+    background-color: #3E3E3E;
+    color: #fff;
+}
+
 QTabWidget::pane {
     border: none;
     background: #1E1E1E;
@@ -25,52 +48,99 @@ QTabBar::tab:selected {
     border-bottom: 2px solid #5E57FF;
 }
 
-QPushButton, QComboBox {
+QPushButton {
     background-color: #2A2A2A;
-    border: none;
     color: #EEEEEE;
     border-radius: 3px;
     padding: 1px 12px;
     height: 22px;
 }
 
+QLabel {
+    color: #EEEEEE;
+}
+
+/* ComboBox Styles */
+QComboBox {
+    background-color: #2A2A2A;
+    color: #EEEEEE;
+    border: 1px solid #3E3E3E;
+    border-radius: 3px;
+    padding: 1px 12px;
+    height: 22px;
+    min-width: 80px; /* Ensure all text is visible */
+}
+
 QComboBox::drop-down {
     background: #2A2A2A;
-    width: 20px;
+    border-left: 1px solid #3E3E3E;
 }
 
-QComboBox::down-arrow {
-    image: url(:/icons/down_arrow.png);
-    width: 14px;
-    height: 14px;
+QComboBox QAbstractItemView {
+    background-color: #2A2A2A;
+    color: #EEEEEE;
+    selection-background-color: #5E57FF;
+    selection-color: #FFFFFF;
+    border-radius: 3px;
 }
 
-QPushButton:hover, QComboBox:hover {
-    background-color: #3E3E3E;
-    border: 1px solid #5E57FF;
-}
-
-QPushButton[class="toggle_button"] {
-    background-color: #1E1E1E;
-    height: 75;
-    width: 65;
-    /* other toggle button styles */
-}
-
-QPushButton[class="toggle_button"]:hover {
-    background-color: #3E3E3E;
-    border: 1px solid #5E57FF;
-}
-
-QPushButton[class="toggle_button"] QIcon {
-    filter: invert(1);
-}
-
+/* QTextEdit Styles */
 QTextEdit {
     background-color: #2A2A2A;
     color: #EEEEEE;
-    border: none;
+    border: 1px solid #3E3E3E;
     border-radius: 4px;
+    padding: 4px;
+}
+
+QLineEdit {
+    background-color: #2A2A2A;
+    color: #EEEEEE;
+    border: 1px solid #3E3E3E;
+    border-radius: 4px;
+    height: 22px;
+    padding: 4px;
+}
+
+QLineEdit:hover {
+    background-color: #3E3E3E;
+    border: 1px solid #5E57FF;
+}
+
+QSpinBox {
+    background-color: #2A2A2A;
+    color: #EEEEEE;
+    border: 1px solid #3E3E3E;
+    border-radius: 4px;
+    height: 22px;
+    padding: 1px; 
+}
+
+QSpinBox:hover {
+    background-color: #3E3E3E;
+    border: 1px solid #5E57FF;
+}
+
+QDoubleSpinBox {
+    background-color: #2A2A2A;
+    color: #EEEEEE;
+    border: 1px solid #3E3E3E;
+    border-radius: 4px;
+    padding: 1px;
+    height: 22px;
+}
+
+QDoubleSpinBox:hover {
+    background-color: #3E3E3E;
+    border: 1px solid #5E57FF;
+}
+
+
+
+/* Hover effects for interactive elements */
+QPushButton:hover, QComboBox:hover, QCheckBox:hover {
+    background-color: #3E3E3E;
+    border: 1px solid #5E57FF;
 }
 
 QGroupBox::title {
@@ -177,6 +247,14 @@ QListWidget::item:hover {
 QListWidget::item:selected {
     background-color: #2E2E2E;
     border: 1px solid #5E57FF;
+}
+
+QListWidget QTextEdit {
+    background-color: #2A2A2A;
+    color: #EEEEEE;
+    border: 1px solid #3E3E3E;
+    border-radius: 4px;
+    padding: 1px;
 }
 
 /* Style the scrollbar to match */

@@ -1,7 +1,7 @@
 #  --- instrument_manager.py ---------
 import os
 import logging
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 
 import importlib.util
 from pyqtgraph.parametertree import Parameter
@@ -15,7 +15,7 @@ from pymetr.application.factories.instrument_factory import InstrumentFactory
 
 class InstrumentManager(QObject):
     instrument_connected = Signal(str)
-    trace_data_ready = Signal(object)
+    traceDataReady = Signal(object)
     parameter_updated = Signal(str, str, object)
     source_updated = Signal(str, str, bool) 
 
@@ -134,7 +134,7 @@ class InstrumentManager(QObject):
 
     def connect_signals_and_slots(self, unique_id):
         instr = self.instruments[unique_id]['instance']
-        instr.trace_data_ready.connect(lambda data: self.trace_data_ready.emit(data))
+        instr.traceDataReady.connect(lambda data: self.traceDataReady.emit(data))
 
     def synchronize_instrument(self, unique_id):
         parameters = self.instruments[unique_id]['parameters']

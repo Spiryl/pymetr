@@ -103,7 +103,7 @@ class Dsox1204g(Instrument):
         return voltages
     
     # Trace thread is a special decorator for the abstract method 
-    # fetch_trace to handle in a separate thread and emit the trace_data_ready_signal
+    # fetch_trace to handle in a separate thread and emit the traceDataReady_signal
     # with the traces list returned by this method. 
     @Instrument.trace_thread
     @Sources.source_command(":DIGitize {}")

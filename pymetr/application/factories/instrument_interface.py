@@ -11,7 +11,7 @@ from pymetr.application.managers.instrument_manager import InstrumentManager
 class InstrumentInterface(QDockWidget):
     instrument_connected = Signal(str)
     instrument_disconnected = Signal(str)
-    trace_data_ready = Signal(object)
+    traceDataReady = Signal(object)
     continuous_mode_changed = Signal(bool)
     plot_update_requested = Signal()
 
@@ -21,6 +21,7 @@ class InstrumentInterface(QDockWidget):
         self.instrument_manager.parameter_updated.connect(self.handle_parameter_update)
         self.instrument_manager.source_updated.connect(self.handle_source_update)
         self.widget = QWidget()
+        self.widget.setWindowFlag(Qt.WindowCloseButtonHint, False)
         self.layout = QVBoxLayout(self.widget)
         self.setWidget(self.widget)
         self.instruments = {}  # Dictionary to store connected instruments
@@ -188,41 +189,22 @@ class InstrumentInterface(QDockWidget):
         self.setup_sources_group(instrument['sources'])
 
         self.acquire_button = QPushButton("Acquire Data")
-        self.acquire_button.setStyleSheet("""
-            QPushButton {
-                background-color: #2A2A2A;
-                color: #ccc;
-                border: 1px solid #5E57FF;
-            }
-            QPushButton:hover {
-                background-color: #3E3E3E;
-            }
-        """)
         
         self.acquire_button.clicked.connect(instrument['instance'].fetch_trace)  # Initially connect to fetch_trace
         logger.debug("Acquire button initially connected to fetch_trace")
         self.layout.addWidget(self.acquire_button)
 
         self.syncInstrumentButton = QPushButton(f"Sync Settings")
-        self.syncInstrumentButton.setStyleSheet("""
-            QPushButton {
-                background-color: #2A2A2A;
-                color: #ccc;
-                border: 1px solid #FF9535;
-            }
-            QPushButton:hover {
-                background-color: #3E3E3E;
-            }
-        """)
+
         self.syncInstrumentButton.clicked.connect(lambda: self.instrument_manager.synchronize_instrument(unique_id))
         self.layout.addWidget(self.syncInstrumentButton)
 
-        instrument['instance'].trace_data_ready.connect(self.on_trace_data_ready)
+        instrument['instance'].traceDataReady.connect(self.on_traceDataReady)
 
-    def on_trace_data_ready(self, trace_data):
+    def on_traceDataReady(self, trace_data):
         logger.debug("Received trace data")
         # QApplication.processEvents()
-        self.trace_data_ready.emit(trace_data)  # Emit the trace_data_ready signal
+        self.traceDataReady.emit(trace_data)  # Emit the traceDataReady signal
 
     def toggle_acquisition(self, instrument_instance):
         logger.debug(f"Toggling acquisition for {self.unique_id}")
@@ -257,30 +239,6 @@ class InstrumentInterface(QDockWidget):
             self.acquire_button.setCheckable(True)
             self.acquire_button.setText("Stop" if self.continuous_mode else "Run")
 
-            # Set the acquire button style based on the mode
-            if self.continuous_mode:
-                self.acquire_button.setStyleSheet("""
-                    QPushButton {
-                        background-color: #2A2A2A;
-                        color: #ccc;
-                        border: 1px solid #F23CA6;
-                    }
-                    QPushButton:hover {
-                        background-color: #3E3E3E;
-                    }
-                """)
-            else:
-                self.acquire_button.setStyleSheet("""
-                    QPushButton {
-                        background-color: #2A2A2A;
-                        color: #ccc;
-                        border: 1px solid #4BFF36;
-                    }
-                    QPushButton:hover {
-                        background-color: #3E3E3E;
-                    }
-                """)
-
             self.acquire_button.clicked.disconnect()  # Disconnect the previous signal
             logger.debug("Disconnected previous signal from acquire button")
             self.acquire_button.clicked.connect(lambda: self.toggle_acquisition(instrument_instance))
@@ -289,11 +247,7 @@ class InstrumentInterface(QDockWidget):
             logger.debug("Plot mode is not 'Run'")
             self.acquire_button.setCheckable(False)
             self.acquire_button.setText("Acquire Data")
-            self.acquire_button.setStyleSheet(
-                "background-color: #2A2A2A;"
-                "color: #ccc;"
-                "border: 1px solid #5E57FF;"
-            )
+
             self.acquire_button.clicked.disconnect()  # Disconnect the previous signal
             logger.debug("Disconnected previous signal from acquire button")
             self.acquire_button.clicked.connect(instrument_instance.fetch_trace)

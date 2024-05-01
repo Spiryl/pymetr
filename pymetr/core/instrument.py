@@ -27,7 +27,9 @@ class Instrument(QObject):
     """
 
     # Signal needed to emit for plotting
-    trace_data_ready = Signal(object)
+    traceDataReady = Signal(object)
+    commandSent = Signal(str, str)
+    responseReceived = Signal(str, str)
 
     def __init__(self, resource_string, sources=None, **kwargs):
         """
@@ -46,8 +48,9 @@ class Instrument(QObject):
         self.sources = Sources(sources) if sources else Sources([])
         self.active_trace_threads = []
         self.instrument = None
+        self.unique_id = None  
         self.continuous_mode = False
-        self._data_mode = 'ASCII'  # Default to BINARY
+        self._data_mode = 'ASCII'
         self._data_type = 'B'  # Default data type (e.g., for binary data)
         self.buffer_size = kwargs.pop('buffer_size', 2^16)  # Default buffer size, can be overridden via kwargs
         self.buffer_type = kwargs.pop('buffer_type', BufferType.io_in | BufferType.io_out)  # Default buffer type, can be overridden
@@ -58,6 +61,9 @@ class Instrument(QObject):
 
     def set_ready_for_data(self, ready):
         self._ready_for_data = ready
+
+    def set_unique_id(self, unique_id):
+        self.unique_id = unique_id
 
     @staticmethod
     def trace_thread(func):
@@ -75,7 +81,7 @@ class Instrument(QObject):
                         self.instance._ready_for_data = False
                         result = func(self.instance, *self.args, **self.kwargs)
                         if result is not None:
-                            self.instance.trace_data_ready.emit(result)
+                            self.instance.traceDataReady.emit(result)
                         QThread.msleep(1)  # Add a short sleep to keep things stable
                     else:
                         QThread.msleep(1)  # Add a small delay when data is not ready
@@ -271,13 +277,14 @@ class Instrument(QObject):
     def write(self, command):
         """
         Sends a command to the instrument.
-        
+
         Parameters:
             command (str): The SCPI command to be executed by the instrument.
         """
         try:
             self.instrument.write(command)
             logger.debug(f"Command sent: {command}")
+            self.commandSent.emit(self.unique_id, command)
         except (pyvisa.VisaIOError, AttributeError) as e:
             logger.exception(f"Failed to send command '{command}' to the instrument: {e}")
             raise
@@ -285,13 +292,14 @@ class Instrument(QObject):
     def read(self):
         """
         Reads the response from the instrument.
-        
+
         Returns:
             str: The raw response from the instrument.
         """
         try:
             response = self.instrument.read().strip()
             logger.debug(f"Response received: {response}")
+            self.responseReceived.emit(self.unique_id, response)
             return response
         except pyvisa.VisaIOError as e:
             logger.exception("Failed to read response from the instrument: {e}")
