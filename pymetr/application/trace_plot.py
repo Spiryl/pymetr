@@ -5,7 +5,7 @@ import numpy as np
 import pyqtgraph as pg
 from PySide6.QtWidgets import QWidget, QVBoxLayout
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QPainter, QPixmap, QGuiApplication
+from PySide6.QtGui import QPainter, QPixmap, QGuiApplication, QColor
 from pymetr.core.trace import Trace
 
 class TracePlot(QWidget):
@@ -18,14 +18,14 @@ class TracePlot(QWidget):
         self.plot_layout.setBackground('#1E1E1E')  # Set the desired background color
 
         # Set the color and transparency of grid lines
-        axis_color = '#EEEEEE'  
+        axis_color = '#888888'  
         self.plot_item.getAxis('left').setPen(pg.mkPen(color=axis_color))  
         self.plot_item.getAxis('bottom').setPen(pg.mkPen(color=axis_color))  
-        self.plot_item.getAxis('left').setGrid(64)  
-        self.plot_item.getAxis('bottom').setGrid(64)  
+        self.plot_item.getAxis('left').setGrid(24)  
+        self.plot_item.getAxis('bottom').setGrid(24)  
 
         # Set the color of plot labels and title
-        label_color = '#EEEEEE'
+        label_color = '#888888'
         self.plot_item.setTitle("", color=label_color)
         self.plot_item.setLabel("bottom", "X Axis", color=label_color)
         self.plot_item.setLabel("left", "Y Axis", color=label_color)
@@ -57,13 +57,14 @@ class TracePlot(QWidget):
         self.plot_item.scene().sigMouseClicked.connect(self.handleMouseClicked)
         self.plot_item.vb.sigResized.connect(self.update_view_boxes)
 
+        self.trace_manager.traceDataChanged.connect(self.update_plot)
         self.trace_manager.traceVisibilityChanged.connect(self.update_trace_visibility)
         self.trace_manager.traceLabelChanged.connect(self.update_trace_label)
         self.trace_manager.traceColorChanged.connect(self.update_trace_color)
-        self.trace_manager.traceModeChanged.connect(self.update_trace_mode)
         self.trace_manager.traceLineThicknessChanged.connect(self.update_trace_line_thickness)
         self.trace_manager.traceLineStyleChanged.connect(self.update_trace_line_style)
         self.trace_manager.traceRemoved.connect(self.remove_trace)
+        self.trace_manager.tracesCleared.connect(self.clear_traces)
 
     def set_continuous_mode(self, mode):
         logger.debug(f"trace_plot: setting continuous mode: {mode}")
@@ -519,6 +520,7 @@ class TracePlot(QWidget):
                 self.plot_item.removeItem(curve)
             self.legend.removeItem(trace_label)
             del self.trace_curves[trace_label]
+        self.update_roi_plot(self.traces)
 
     def clear_traces(self):
         # Clear all traces from the plot, legend, and additional axes
@@ -536,6 +538,7 @@ class TracePlot(QWidget):
             self.plot_layout.removeItem(axis)
             axis.deleteLater()
         self.additional_axes.clear()
+        self.update_roi_plot(self.traces)
 
     # --- Misc Methods ----------------
     def handleMouseClicked(self, event):
@@ -565,3 +568,14 @@ class TracePlot(QWidget):
             return Qt.DashDotLine
         else:
             return Qt.SolidLine
+        
+    def set_highlight_color(self, color):
+        color_obj = QColor(color)  # Convert string to QColor object if necessary
+        color_obj.setAlpha(50)     # Set transparency to 50, adjust as needed for desired transparency
+
+        # Convert QColor to an RGBA tuple that pyqtgraph can use
+        rgba = (color_obj.red(), color_obj.green(), color_obj.blue(), color_obj.alpha())
+
+        # Assuming you have an attribute `roi` which is your LinearRegionItem
+        if hasattr(self, 'roi'):
+            self.roi.setBrush(pg.mkBrush(rgba))

@@ -1,30 +1,57 @@
 /* styles.qss */
 QMainWindow {
     background-color: #1E1E1E;
-    color: #EEEEEE;
+    color: #AAAAAA;
+}
+
+
+QPushButton {
+    background-color: #3E3E3E;
+    color: #AAAAAA;
+    border-radius: 3px;
+    padding: 3px 12px;
+    height: 22px;
+    border: 1px solid #555555;
+}
+
+QPushButton:pressed {
+    background-color: #5E57FF;
+    color: #FFFFFF;
+    border: 1px solid #888888;
 }
 
 QToolBar {
     background-color: #2A2A2A; /* Set the toolbar background color */
-    spacing: 10px; /* This tries to add spacing between actions, might not work as expected */
+    border: none; /* Ensure there is no border */
+    spacing: 2px; /* This tries to add spacing between actions, might not work as expected */
 }
 
-QToolBar QToolButton {
-    background-color: #2A2A2A;
+QToolButton {
+    background-color: transparent;
     border: none;
-    padding: 8px;
-    color: #EEEEEE;
+    padding: 2px;
+    color: #AAAAAA;
     margin: 2px; /* Adjust margin to add space between buttons */
 }
 
-QToolBar QToolButton:hover {
-    background-color: #3E3E3E;
+QToolButton:pressed {
+    background-color: #5E57FF;
+    color: #FFFFFF;
+}
+
+QToolButton:hover {
+    background-color: transparent;
     border: 1px solid #5E57FF;
 }
 
-QToolBar QToolButton:checked {
+QToolButton:checked {
     background-color: #3E3E3E;
     color: #fff;
+}
+
+QToolButton:pressed {
+    background-color: #5E57FF;
+    color: #FFFFFF;
 }
 
 QTabWidget::pane {
@@ -35,7 +62,7 @@ QTabWidget::pane {
 
 QTabBar::tab {
     background: #2A2A2A;
-    color: #EEEEEE;
+    color: #AAAAAA;
     padding: 8px;
     border: none;
     border-bottom: 2px solid transparent;
@@ -48,27 +75,19 @@ QTabBar::tab:selected {
     border-bottom: 2px solid #5E57FF;
 }
 
-QPushButton {
-    background-color: #2A2A2A;
-    color: #EEEEEE;
-    border-radius: 3px;
-    padding: 1px 12px;
-    height: 22px;
-}
-
 QLabel {
-    color: #EEEEEE;
+    color: #AAAAAA;
 }
 
 /* ComboBox Styles */
 QComboBox {
     background-color: #2A2A2A;
-    color: #EEEEEE;
+    color: #AAAAAA;
     border: 1px solid #3E3E3E;
     border-radius: 3px;
     padding: 1px 12px;
-    height: 22px;
     min-width: 80px; /* Ensure all text is visible */
+    height: 22px;
 }
 
 QComboBox::drop-down {
@@ -78,7 +97,7 @@ QComboBox::drop-down {
 
 QComboBox QAbstractItemView {
     background-color: #2A2A2A;
-    color: #EEEEEE;
+    color: #AAAAAA;
     selection-background-color: #5E57FF;
     selection-color: #FFFFFF;
     border-radius: 3px;
@@ -87,7 +106,7 @@ QComboBox QAbstractItemView {
 /* QTextEdit Styles */
 QTextEdit {
     background-color: #2A2A2A;
-    color: #EEEEEE;
+    color: #AAAAAA;
     border: 1px solid #3E3E3E;
     border-radius: 4px;
     padding: 4px;
@@ -95,7 +114,7 @@ QTextEdit {
 
 QLineEdit {
     background-color: #2A2A2A;
-    color: #EEEEEE;
+    color: #AAAAAA;
     border: 1px solid #3E3E3E;
     border-radius: 4px;
     height: 22px;
@@ -109,7 +128,7 @@ QLineEdit:hover {
 
 QSpinBox {
     background-color: #2A2A2A;
-    color: #EEEEEE;
+    color: #AAAAAA;
     border: 1px solid #3E3E3E;
     border-radius: 4px;
     height: 22px;
@@ -123,7 +142,7 @@ QSpinBox:hover {
 
 QDoubleSpinBox {
     background-color: #2A2A2A;
-    color: #EEEEEE;
+    color: #AAAAAA;
     border: 1px solid #3E3E3E;
     border-radius: 4px;
     padding: 1px;
@@ -135,8 +154,6 @@ QDoubleSpinBox:hover {
     border: 1px solid #5E57FF;
 }
 
-
-
 /* Hover effects for interactive elements */
 QPushButton:hover, QComboBox:hover, QCheckBox:hover {
     background-color: #3E3E3E;
@@ -144,12 +161,12 @@ QPushButton:hover, QComboBox:hover, QCheckBox:hover {
 }
 
 QGroupBox::title {
-    color: #EEEEEE; /* Adjust the color as needed */
+    color: #AAAAAA; /* Adjust the color as needed */
 }
 
 QMenuBar {
     background-color: #1E1E1E;
-    color: #EEEEEE; /* Adjust the color as needed */
+    color: #AAAAAA; /* Adjust the color as needed */
 }
 
 QMenuBar::item {
@@ -158,7 +175,7 @@ QMenuBar::item {
 
 QMenuBar::item:selected {
     background-color: #3E3E3E;
-    color: #EEEEEE; /* Adjust the color as needed */
+    color: #AAAAAA; /* Adjust the color as needed */
 }
 
 QSplitter::handle {
@@ -186,7 +203,7 @@ QDockWidget#toggleDock {
 
 QTreeWidget {
     background-color: #1E1E1E;
-    color: #EEEEEE;
+    color: #AAAAAA;
     border: 1px;
 }
 
@@ -196,23 +213,19 @@ QTreeWidget::item {
 }
 
 QTreeWidget::item:hover {
-    background-color: #3E3E3E;
     border: 1px solid #5E57FF;
 }
 
 QTreeWidget::item:selected {
     background-color: #5E57FF;
-    color: #EEEEEE;
+    color: #AAAAAA;
 }
 
 QTreeWidget::item:has-children {
     background-color: #2A2A2A;
-    color: #EEEEEE;
+    color: #AAAAAA;
 }
 
-QTreeWidget::item:!selected:hover {
-    background: #3E3E3E;
-}
 
 QTreeWidget::item:!selected:hover:active {
     background: #4E4E4E;
@@ -233,25 +246,22 @@ QListWidget {
 }
 
 QListWidget::item {
-    color: #EEEEEE;
+    color: #AAAAAA;
     border-radius: 4px; 
     margin: 1px 0; 
 }
 
 QListWidget::item:hover {
-    background-color: #111111;
     border: 1px solid #5E57FF;
 }
 
 /* Make the selected item pop */
 QListWidget::item:selected {
-    background-color: #2E2E2E;
     border: 1px solid #5E57FF;
 }
 
 QListWidget QTextEdit {
-    background-color: #2A2A2A;
-    color: #EEEEEE;
+    color: #AAAAAA;
     border: 1px solid #3E3E3E;
     border-radius: 4px;
     padding: 1px;

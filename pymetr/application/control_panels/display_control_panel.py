@@ -1,8 +1,8 @@
-# --- display_panel.py ---
+# --- display_control_panel.py ---
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QGroupBox, QCheckBox, QLineEdit, QComboBox, QLabel
 from PySide6.QtCore import Signal
 
-class DisplayPanel(QWidget):
+class DisplayControlPanel(QWidget):
     gridToggled = Signal(bool)
     xLogScaleToggled = Signal(bool)
     yLogScaleToggled = Signal(bool)

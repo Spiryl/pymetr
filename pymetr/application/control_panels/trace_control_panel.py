@@ -2,10 +2,10 @@
 import logging
 logger = logging.getLogger(__name__)
 
-from PySide6.QtWidgets import QWidget, QPushButton, QVBoxLayout, QListWidget, QListWidgetItem, QGroupBox
+from PySide6.QtWidgets import QWidget, QPushButton, QVBoxLayout, QListWidget, QListWidgetItem, QGroupBox, QToolButton
 from PySide6.QtWidgets import QCheckBox, QHBoxLayout, QLineEdit, QComboBox, QColorDialog,  QDoubleSpinBox, QLabel
-from PySide6.QtGui import QColor
-from PySide6.QtCore import Signal
+from PySide6.QtGui import QColor, QPixmap, QIcon
+from PySide6.QtCore import Signal, Qt
 
 class TraceControlPanel(QWidget):
     groupTraces = Signal()
@@ -49,6 +49,7 @@ class TraceControlPanel(QWidget):
         self.setLayout(layout)
 
         self.trace_manager.traceAdded.connect(self.add_trace)
+        self.trace_manager.traceRemoved.connect(self.remove_trace)
         self.trace_manager.tracesCleared.connect(self.clear_traces_slot)
 
     def add_trace(self, trace):
@@ -104,11 +105,17 @@ class TraceListItem(QWidget):
         self.trace_manager = trace_manager
         layout = QHBoxLayout()
 
-        self.visible_checkbox = QCheckBox()
-        self.visible_checkbox.setChecked(trace.visible)
-        self.visible_checkbox.stateChanged.connect(self.toggle_visibility)
-        self.visible_checkbox.setMinimumWidth(20)
-        layout.addWidget(self.visible_checkbox)
+        self.visible_button = QToolButton()
+        self.visible_button.setIcon(QIcon("pymetr/application/icons/visibility_on.png"))
+        self.visible_button.setCheckable(True)
+        self.visible_button.setChecked(trace.visible)
+        self.visible_button.toggled.connect(self.toggle_visibility)
+        self.visible_button.setFixedSize(24, 24)
+        layout.addWidget(self.visible_button)
+
+        self.label_icon = QLabel()
+        self.label_icon.setPixmap(QPixmap("pymetr/application/icons/label.png").scaled(20, 20, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+        layout.addWidget(self.label_icon)
 
         self.label = QLineEdit(trace.label)
         self.label.editingFinished.connect(self.update_label)
@@ -143,16 +150,19 @@ class TraceListItem(QWidget):
         self.line_style_combo.setMinimumWidth(80)
         layout.addWidget(self.line_style_combo)
 
-        self.delete_button = QPushButton("Delete")
+        self.delete_button = QToolButton()
+        self.delete_button.setIcon(QIcon("pymetr/application/icons/delete.png"))
         self.delete_button.clicked.connect(self.delete_trace)
-        self.delete_button.setMinimumWidth(120)
+        self.delete_button.setFixedSize(24, 24)
         layout.addWidget(self.delete_button)
 
         self.setLayout(layout)
 
-    def toggle_visibility(self, state):
-        logger.debug(f"Toggling visibility for trace '{self.trace.label}' to {bool(state)}")
-        self.trace_manager.set_trace_visibility(self.trace.label, bool(state))
+    def toggle_visibility(self, checked):
+        logger.debug(f"Toggling visibility for trace '{self.trace.label}' to {bool(checked)}")
+        icon = QIcon("pymetr/application/icons/visibility_on.png") if checked else QIcon("pymetr/application/icons/visibility_off.png")
+        self.visible_button.setIcon(icon)
+        self.trace_manager.set_trace_visibility(self.trace.label, checked)
 
     def update_label(self, text):
         logger.debug(f"Updating label for trace '{self.trace.label}' to '{text}'")

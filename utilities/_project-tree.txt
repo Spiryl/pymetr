@@ -49,7 +49,7 @@ pymetr/
 │   │   ├── control_panels/
 │   │   │   │   ├── calculation_control_panel.py
 │   │   │   │   ├── cursor_control_panel.py
-│   │   │   │   ├── display_panel.py
+│   │   │   │   ├── display_control_panel.py
 │   │   │   │   ├── instrument_control_panel.py
 │   │   │   │   ├── marker_control_panel.py
 │   │   │   │   ├── measurement_control_panel.py

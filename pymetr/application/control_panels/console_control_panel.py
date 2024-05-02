@@ -5,7 +5,7 @@ from PySide6.QtWidgets import (QWidget, QHBoxLayout, QVBoxLayout, QPushButton, Q
 from PySide6.QtCore import Signal, Qt
 from PySide6.QtGui import QKeySequence
 
-class ConsolePanel(QWidget):
+class ConsoleControlPanel(QWidget):
     commandIssued = Signal(str, str)  # Signal to emit the command and instrument identifier
     queryIssued = Signal(str, str)  # Signal to emit the query and instrument identifier
 
