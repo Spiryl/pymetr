@@ -25,8 +25,8 @@ class TraceManager(QObject):
         self.trace_mode = 'Group'
         self.continuous_mode = False
 
-        self.color_palette = ['#5E57FF', '#4BFF36', '#F23CA6', '#FF9535', '#02FEE4', '#2F46FA', '#FFFE13', '#55FC77']
-        self.highlight_color = '#5E57FF'
+        self.color_palette = ['#FFAA00', '#4BFF36', '#F23CA6', '#FF9535', '#02FEE4', '#2F46FA', '#FFFE13', '#55FC77']
+        self.highlight_color = '#FFAA00'
         self.color_index = 0
         self.trace_counter = 0
 

@@ -4,20 +4,8 @@ QMainWindow {
     color: #AAAAAA;
 }
 
-
-QPushButton {
-    background-color: #3E3E3E;
-    color: #AAAAAA;
-    border-radius: 3px;
-    padding: 3px 12px;
-    height: 22px;
-    border: 1px solid #555555;
-}
-
-QPushButton:pressed {
-    background-color: #5E57FF;
-    color: #FFFFFF;
-    border: 1px solid #888888;
+#centralWidget {
+    background-color: #1E1E1E; /* Dark background color */
 }
 
 QToolBar {
@@ -35,13 +23,13 @@ QToolButton {
 }
 
 QToolButton:pressed {
-    background-color: #5E57FF;
+    background-color: #FFAA00;
     color: #FFFFFF;
 }
 
 QToolButton:hover {
     background-color: transparent;
-    border: 1px solid #5E57FF;
+    border: 1px solid #FFAA00;
 }
 
 QToolButton:checked {
@@ -50,7 +38,7 @@ QToolButton:checked {
 }
 
 QToolButton:pressed {
-    background-color: #5E57FF;
+    background-color: #FFAA00;
     color: #FFFFFF;
 }
 
@@ -72,7 +60,7 @@ QTabBar::tab {
 QTabBar::tab:selected {
     background: #3E3E3E;
     color: #fff;
-    border-bottom: 2px solid #5E57FF;
+    border-bottom: 2px solid #FFAA00;
 }
 
 QLabel {
@@ -98,7 +86,7 @@ QComboBox::drop-down {
 QComboBox QAbstractItemView {
     background-color: #2A2A2A;
     color: #AAAAAA;
-    selection-background-color: #5E57FF;
+    selection-background-color: #FFAA00;
     selection-color: #FFFFFF;
     border-radius: 3px;
 }
@@ -123,7 +111,7 @@ QLineEdit {
 
 QLineEdit:hover {
     background-color: #3E3E3E;
-    border: 1px solid #5E57FF;
+    border: 1px solid #FFAA00;
 }
 
 QSpinBox {
@@ -137,7 +125,7 @@ QSpinBox {
 
 QSpinBox:hover {
     background-color: #3E3E3E;
-    border: 1px solid #5E57FF;
+    border: 1px solid #FFAA00;
 }
 
 QDoubleSpinBox {
@@ -151,21 +139,16 @@ QDoubleSpinBox {
 
 QDoubleSpinBox:hover {
     background-color: #3E3E3E;
-    border: 1px solid #5E57FF;
+    border: 1px solid #FFAA00;
 }
 
-/* Hover effects for interactive elements */
-QPushButton:hover, QComboBox:hover, QCheckBox:hover {
-    background-color: #3E3E3E;
-    border: 1px solid #5E57FF;
-}
 
 QGroupBox::title {
     color: #AAAAAA; /* Adjust the color as needed */
 }
 
 QMenuBar {
-    background-color: #1E1E1E;
+    background-color: #3E3E3E;
     color: #AAAAAA; /* Adjust the color as needed */
 }
 
@@ -184,21 +167,7 @@ QSplitter::handle {
 }
 
 QSplitter::handle:hover {
-    background-color: #5E57FF;
-}
-
-QDockWidget::separator {
-    background-color: #2A2A2A;
-    width: 2px;
-    padding: 0px;
-}
-
-QDockWidget::separator:hover {
-    background-color: #5E57FF;
-}
-
-QDockWidget#toggleDock {
-    background-color: #3E3E3E;  /* Set the desired background color */
+    background-color: #FFAA00;
 }
 
 QTreeWidget {
@@ -213,30 +182,18 @@ QTreeWidget::item {
 }
 
 QTreeWidget::item:hover {
-    border: 1px solid #5E57FF;
+    border: 1px solid #FFAA00;
 }
 
 QTreeWidget::item:selected {
-    background-color: #5E57FF;
-    color: #AAAAAA;
+    background-color: #2A2A2A;
+    border: 1px solid #FFAA00;
+    color: #CCCCCC;
 }
 
 QTreeWidget::item:has-children {
     background-color: #2A2A2A;
     color: #AAAAAA;
-}
-
-
-QTreeWidget::item:!selected:hover:active {
-    background: #4E4E4E;
-}
-
-QTreeWidget::item:selected:hover {
-    background: #6E67FF;
-}
-
-QTreeWidget::item:selected:hover:active {
-    background: #7E77FF;
 }
 
 QListWidget {
@@ -252,12 +209,12 @@ QListWidget::item {
 }
 
 QListWidget::item:hover {
-    border: 1px solid #5E57FF;
+    background-color: #2A2A2A;
 }
 
 /* Make the selected item pop */
 QListWidget::item:selected {
-    border: 1px solid #5E57FF;
+    border: 1px solid #FFAA00;
 }
 
 QListWidget QTextEdit {
@@ -276,7 +233,7 @@ QScrollBar:vertical {
 }
 
 QScrollBar::handle:vertical {
-    background: #5E57FF;
+    background: #FFAA00;
     min-height: 20px;
 }
 
@@ -294,4 +251,23 @@ QScrollBar::sub-line:vertical {
     height: 20px;
     subcontrol-position: top;
     subcontrol-origin: margin;
+}
+
+QPushButton {
+    background-color: #2A2A2A;
+    color: #CCCCCC;
+    border-radius: 3px;
+    padding: 3px 12px;
+    border: 1px solid #555555;
+}
+
+QPushButton:hover {
+    background-color: #3E3E3E;
+    border: 1px solid #FFAA00;
+}
+
+QPushButton:pressed {
+    background-color: #FFAA00;
+    color: #FFFFFF;
+    border: 1px solid #888888;
 }

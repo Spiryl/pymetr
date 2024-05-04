@@ -15,10 +15,10 @@ import pyqtgraph as pg
 pg.setConfigOptions(antialias=True)
 
 from PySide6.QtWidgets import QVBoxLayout, QHBoxLayout,QDockWidget, QSplitter, QToolBar, QToolButton
-from PySide6.QtWidgets import QWidget, QMainWindow, QTabWidget, QLabel, QSpacerItem, QSizePolicy
-from PySide6.QtWidgets import QMenuBar, QColorDialog, QComboBox, QPushButton, QStatusBar
+from PySide6.QtWidgets import QWidget, QMainWindow, QTabWidget, QLabel, QSpacerItem, QSizePolicy, QMenu
+from PySide6.QtWidgets import QMenuBar, QColorDialog, QComboBox, QPushButton, QStatusBar, QWidgetAction, QTreeWidget, QTreeWidgetItem
 from PySide6.QtCore import Qt, QFile, QTextStream, QSize
-from PySide6.QtCore import Signal, Qt, QRectF, QPoint
+from PySide6.QtCore import Signal, Qt, QRectF, QPoint, QTimer
 from PySide6.QtGui import QAction, QIcon, QColor, QPainter, QPainterPath, QBrush, QPen
 
 from pymetr.application.trace_plot import TracePlot
@@ -27,157 +27,91 @@ from pymetr.application.managers.instrument_manager import InstrumentManager
 from pymetr.application.factories.instrument_interface import InstrumentInterface
 from pymetr.application.managers.trace_manager import TraceManager
 
-# TODO:  Build out MainMenuBar into its own class.
-class MainMenuBar(QMenuBar):
-    def __init__(self, parent=None):
-        super(MainMenuBar, self).__init__(parent)
 
-        # File menu
-        self.fileMenu = self.addMenu("&File")
-        self.toolMenu = self.addMenu("&Tools")
-        self.settingsMenu = self.addMenu("&Settings")
-
-        # Add actions to the file menu
-        self.setupFileMenuActions(parent)
-
-    def setupFileMenuActions(self, parent):
-        exportPlotAction = QAction("&Export Plot", self)
-        exportPlotAction.triggered.connect(self.exportPlot)
-        self.fileMenu.addAction(exportPlotAction)
-
-        generateReportAction = QAction("&Generate Report", self)
-        generateReportAction.triggered.connect(self.generateReport)
-        self.fileMenu.addAction(generateReportAction)
-
-        importTraceDataAction = QAction("&Import Trace Data", self)
-        importTraceDataAction.triggered.connect(self.importTraceData)
-        self.fileMenu.addAction(importTraceDataAction)
-
-    # Placeholder methods for menu actions
-    def exportPlot(self):
-        # Placeholder for export plot logic
-        print("Exporting plot...")
-
-    def generateReport(self):
-        # Placeholder for generate report logic
-        print("Generating report...")
-
-    def importTraceData(self):
-        # Placeholder for import trace data logic
-        print("Importing trace data...")
-
-class QuickToolbar(QToolBar):
+class TitleBar(QWidget):
     plotModeChanged = Signal(str)
     roiPlotToggled = Signal(bool)
     testTraceClicked = Signal()
     screenshotClicked = Signal()
-    highlightColorChanged = Signal(str)
+    icon_path = "pymetr/application/icons/"
 
-    def __init__(self, parent=None):
-        super(QuickToolbar, self).__init__(parent)
-        self.setMovable(False)  # Ensure toolbar cannot be moved
-        self.setIconSize(QSize(20, 20))  # Set a suitable icon size
-        self.color_palette = ['#5E57FF', '#4BFF36', '#F23CA6', '#FF9535', '#02FEE4', '#2F46FA', '#FFFE13', '#55FC77']
-
-        spacer = QWidget()
-        spacer.setFixedSize(10, 10)  # Set the desired spacing (width, height)
-        self.addWidget(spacer)
-
-        self.color_picker_button = QPushButton()
-        self.color_picker_button.setStyleSheet("background-color: #5E57FF; width: 20px; height: 20px;")
-        self.color_picker_button.clicked.connect(self.show_color_dialog)
-        self.addWidget(self.color_picker_button)
-
-        self.addSeparator()
-
-        self.plot_mode_combo_box = QComboBox()
-        self.plot_mode_combo_box.addItems(["Single", "Stack", "Run"])
-        self.plot_mode_combo_box.currentTextChanged.connect(self.on_plot_mode_changed)
-        self.addWidget(self.plot_mode_combo_box)
-
-        self.addSeparator()
-
-        self.roi_plot_action = self.addAction(QIcon("pymetr/application/icons/zoom_in_g.png"), "Region Plot")
-        self.roi_plot_action.setCheckable(True)
-        self.roi_plot_action.toggled.connect(self.on_roi_plot_toggled)
-
-        self.screenshot_action = self.addAction(QIcon("pymetr/application/icons/capture_g.png"), "Screenshot")
-        self.screenshot_action.triggered.connect(self.on_screenshot_clicked)
-
-        self.test_trace_action = self.addAction(QIcon("pymetr/application/icons/lab_g.png"), "Test Trace")
-        self.test_trace_action.triggered.connect(self.on_test_trace_clicked)
-
-    def on_plot_mode_changed(self, plot_mode):
-        self.plotModeChanged.emit(plot_mode)
-
-    def on_roi_plot_toggled(self, checked):
-        if checked:
-            self.roi_plot_action.setIcon(QIcon("pymetr/application/icons/zoom_in.png"))
-        else:
-            self.roi_plot_action.setIcon(QIcon("pymetr/application/icons/zoom_in_g.png"))
-        self.roiPlotToggled.emit(checked)
-
-    def on_screenshot_clicked(self):
-        self.screenshotClicked.emit()
-
-    def on_test_trace_clicked(self):
-        self.testTraceClicked.emit()
-
-    def show_color_dialog(self):
-        color = QColorDialog.getColor()
-        if color.isValid():
-            new_color = color.name()
-            self.color_picker_button.setStyleSheet(f"background-color: {new_color}; width: 20px; height: 20px;")
-            self.update_stylesheet(new_color)
-            self.highlightColorChanged.emit(new_color)
-
-    def update_stylesheet(self, new_color):
-        # Read the current stylesheet
-        with open("pymetr/application/styles.qss", "r") as f:
-            stylesheet = f.read()
-
-        # Replace the old highlight color with the new color
-        old_color = "#5E57FF"
-        stylesheet = stylesheet.replace(old_color, new_color)
-
-        # Set the updated stylesheet on the application
-        app = pg.mkQApp()  # Get the application instance
-        app.setStyleSheet(stylesheet)
-
-class TitleBar(QWidget):
     def __init__(self, parent=None):
         super(TitleBar, self).__init__(parent)
         self.layout = QHBoxLayout(self)
         self.layout.setContentsMargins(5, 0, 5, 0)
         self.layout.setSpacing(10)
+        self.color_palette = ['#FFAA00', '#4BFF36', '#F23CA6', '#FF9535', '#02FEE4', '#2F46FA', '#FFFE13', '#55FC77']
 
-        # Standard label
-        self.title_label = QLabel("PyMetr - Instrument Control")
-        self.title_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        # Create and configure each button separately
+        self.file_button = QToolButton(self)
+        self.file_button.setText("File")
+        self.layout.addWidget(self.file_button)  # Add to layout
 
-        # Tool buttons for additional functionalities
-        self.settings_button = QToolButton()
-        self.settings_button.setText("Settings")  # Example button
-        self.settings_button.clicked.connect(self.on_settings_clicked)
+        self.report_button = QToolButton(self)
+        self.report_button.setText("Report")
+        self.layout.addWidget(self.report_button)  # Add to layout
+
+        self.automation_button = QToolButton(self)
+        self.automation_button.setText("Automation")
+        self.layout.addWidget(self.automation_button)  # Add to layout
+
+        self.window_button = QToolButton(self)
+        self.window_button.setText("Window")
+        self.layout.addWidget(self.window_button)  # Add to layout
+
+        # Plot mode combo box
+        self.plot_mode_combo_box = QComboBox()
+        self.plot_mode_combo_box.addItems(["Single", "Stack", "Run"])
+        self.plot_mode_combo_box.currentTextChanged.connect(self.on_plot_mode_changed)
+
+        # ROI plot action
+        self.roi_plot_action = QAction(QIcon(f"{self.icon_path}region_g.png"), "Region Plot", self)
+        self.roi_plot_action.setCheckable(True)
+        self.roi_plot_action.toggled.connect(self.on_roi_plot_toggled)
+        self.roi_plot_button = QToolButton(self)
+        self.roi_plot_button.setDefaultAction(self.roi_plot_action)
+
+        # Screenshot action
+        self.screenshot_action = QAction(QIcon(f"{self.icon_path}camera.png"), "Screenshot", self)
+        self.screenshot_action.triggered.connect(self.on_screenshot_clicked)
+        self.screenshot_button = QToolButton(self)
+        self.screenshot_button.setDefaultAction(self.screenshot_action)
+
+        # Test trace action
+        self.test_trace_action = QAction(QIcon(f"{self.icon_path}lab_g.png"), "Test Trace", self)
+        self.test_trace_action.triggered.connect(self.on_test_trace_clicked)
+        self.test_trace_button = QToolButton(self)
+        self.test_trace_button.setDefaultAction(self.test_trace_action)
 
         # Spacer that pushes the control buttons to the right
         spacer = QSpacerItem(40, 10, QSizePolicy.Expanding, QSizePolicy.Minimum)
 
-        # Window control buttons
+        # Window control buttons using icons
         self.minimize_button = QToolButton()
-        self.minimize_button.setText("V")
+        self.minimize_button.setIcon(QIcon(f"{self.icon_path}minimize.png"))
+        self.minimize_button.setIconSize(QSize(20, 20))  # Adjust size as needed
+
         self.maximize_button = QToolButton()
-        self.maximize_button.setText("[]")
+        self.maximize_button.setIcon(QIcon(f"{self.icon_path}maximize.png"))
+        self.maximize_button.setIconSize(QSize(20, 20))  # Adjust size as needed
+
         self.close_button = QToolButton()
-        self.close_button.setText("X")
+        self.close_button.setIcon(QIcon(f"{self.icon_path}close.png"))
+        self.close_button.setIconSize(QSize(20, 20))  # Adjust size as needed
 
         self.minimize_button.clicked.connect(parent.showMinimized)
         self.maximize_button.clicked.connect(parent.showMaximized)
         self.close_button.clicked.connect(parent.close)
 
         # Adding widgets to the layout
-        self.layout.addWidget(self.title_label)
-        self.layout.addWidget(self.settings_button)  # Add your tool button
+        self.layout.addWidget(self.file_button)
+        self.layout.addWidget(self.report_button)
+        self.layout.addWidget(self.automation_button)
+        self.layout.addWidget(self.window_button)
+        self.layout.addWidget(self.plot_mode_combo_box)
+        self.layout.addWidget(self.roi_plot_button)
+        self.layout.addWidget(self.screenshot_button)
+        self.layout.addWidget(self.test_trace_button)
         self.layout.addSpacerItem(spacer)
         self.layout.addWidget(self.minimize_button)
         self.layout.addWidget(self.maximize_button)
@@ -185,8 +119,85 @@ class TitleBar(QWidget):
 
         self.setLayout(self.layout)
 
-    def on_settings_clicked(self):
-        print("Settings button clicked")  # Placeholder for settings action
+    def show_file_menu(self):
+        menu = QMenu(self)
+        menu.setStyleSheet('''
+            QMenu {
+                background-color: #2A2A2A;
+                border: 1px solid #3E3E3E;
+            }
+            QMenu::item {
+                padding: 8px 12px;
+                background-color: transparent;
+                color: #AAAAAA;
+            }
+            QMenu::item:selected {
+                background-color: #FFAA00;
+                color: #FFFFFF;
+            }
+        ''')
+
+        # Create a QTreeWidget as the central widget of the menu
+        tree_widget = QTreeWidget(menu)
+        tree_widget.setHeaderHidden(True)
+        tree_widget.setRootIsDecorated(False)
+        tree_widget.setExpandsOnDoubleClick(False)
+
+        # Create QTreeWidgetItem for each file action
+        export_item = QTreeWidgetItem(["Export Plot"])
+        export_item.setIcon(0, QIcon("path/to/export_icon.png"))
+        export_item.setData(0, Qt.UserRole, self.export_plot)
+
+        generate_report_item = QTreeWidgetItem(["Generate Report"])
+        generate_report_item.setIcon(0, QIcon("path/to/report_icon.png"))
+        generate_report_item.setData(0, Qt.UserRole, self.generate_report)
+
+        import_item = QTreeWidgetItem(["Import Trace Data"])
+        import_item.setIcon(0, QIcon("path/to/import_icon.png"))
+        import_item.setData(0, Qt.UserRole, self.import_trace_data)
+
+        tree_widget.addTopLevelItems([export_item, generate_report_item, import_item])
+
+        # Connect itemClicked signal to handle action triggering
+        tree_widget.itemClicked.connect(self.trigger_file_action)
+
+        # Set the QTreeWidget as the central widget of the menu
+        menu_widget = QWidgetAction(menu)
+        menu_widget.setDefaultWidget(tree_widget)
+        menu.addAction(menu_widget)
+
+        # Show the menu at the button's position
+        menu.exec(self.file_menu_button.mapToGlobal(QPoint(0, self.file_menu_button.height())))
+
+    def trigger_file_action(self, item, column):
+        action = item.data(0, Qt.UserRole)
+        if action:
+            action()
+
+    def export_plot(self):
+        print("Exporting plot...")
+
+    def generate_report(self):
+        print("Generating report...")
+
+    def import_trace_data(self):
+        print("Importing trace data...")
+
+    def on_plot_mode_changed(self, plot_mode):
+        self.plotModeChanged.emit(plot_mode)
+
+    def on_roi_plot_toggled(self, checked):
+        if checked:
+            self.roi_plot_action.setIcon(QIcon("pymetr/application/icons/region.png"))
+        else:
+            self.roi_plot_action.setIcon(QIcon("pymetr/application/icons/region_g.png"))
+        self.roiPlotToggled.emit(checked)
+
+    def on_screenshot_clicked(self):
+        self.screenshotClicked.emit()
+
+    def on_test_trace_clicked(self):
+        self.testTraceClicked.emit()
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
@@ -203,40 +214,68 @@ class TitleBar(QWidget):
     def mouseReleaseEvent(self, event):
         self.pressing = False
 
+class ControlPanelToggleBar(QToolBar):
+    actionToggled = Signal(str, bool)  # Signal to indicate toggle state changes
+
+    def __init__(self, parent=None):
+        super(ControlPanelToggleBar, self).__init__("Control Toggles", parent)
+        self.setOrientation(Qt.Vertical)
+        self.setIconSize(QSize(36, 36))
+        self.setMovable(False)
+
+        self.toggle_actions = {}  # Stores the toggle actions
+
+    def add_toggle_action(self, text, icon_path, panel_name, is_default=False):
+        logging.debug(f"Adding toggle action: {text}")
+        logging.debug(f"Icon path: {icon_path}")
+
+        # Prepare icon paths for both active and inactive states
+        active_icon_path = icon_path.replace("_g.png", ".png")
+        inactive_icon_path = icon_path  # Assuming passed icon path is the inactive (greyed out) icon
+
+        action = QAction(QIcon(inactive_icon_path), text, self)
+        action.setCheckable(True)
+        action.setChecked(is_default)
+        action.toggled.connect(self.handle_action_toggled)
+
+        # Store icon paths in the action for easy switching
+        action.setData({'active_icon': active_icon_path, 'inactive_icon': inactive_icon_path, 'panel_name': panel_name})
+
+        self.addAction(action)
+        self.toggle_actions[text] = action
+
+        # Emit toggled signal to handle initial state setup
+        if is_default:
+            # Make sure to use QTimer.singleShot to allow the event loop to process the newly created action completely
+            QTimer.singleShot(0, lambda: action.toggle())
+
+    def handle_action_toggled(self, checked):
+        action = self.sender()
+        icon_path = action.data()['active_icon'] if checked else action.data()['inactive_icon']
+        action.setIcon(QIcon(icon_path))
+
+        # Emit signal to notify others of the toggle state
+        self.actionToggled.emit(action.text(), checked)
+
+        # Update other actions to ensure only one is active at a time
+        if checked:
+            for other_action in self.actions():
+                if other_action != action and other_action.isChecked():
+                    other_action.setChecked(False)
+
 class PyMetrMainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowFlags(Qt.FramelessWindowHint)
         self.setGeometry(100, 100, 1200, 800)
-        self.setAttribute(Qt.WA_TranslucentBackground)  # Enable transparency
+        self.setAttribute(Qt.WA_TranslucentBackground)
 
         # Custom Title Bar
         self.title_bar = TitleBar(self)
-        self.setMenuWidget(self.title_bar)  # Adding custom title bar as the menu widget
-
-        # Quick Toolbar Setup
-        self.quick_toolbar = QuickToolbar(self)
-        self.addToolBar(Qt.TopToolBarArea, self.quick_toolbar)
-        self.quick_toolbar.setGeometry(0, self.title_bar.height(), self.width(), 50)
-
-
-        # Create the toolbar
-        self.control_panel_tool_bar = QToolBar("Control Toggles", self)
-        self.control_panel_tool_bar.setOrientation(Qt.Vertical)
-        self.control_panel_tool_bar.setIconSize(QSize(32, 32))  # Set the icon size for all actions in the toolbar
-        self.control_panel_tool_bar.setMovable(False)  # Make the toolbar fixed
-
-        self.addToolBar(Qt.LeftToolBarArea, self.control_panel_tool_bar)
-
-        spacer = QWidget()
-        spacer.setFixedSize(10, 10)  # Set the desired spacing (width, height)
-        self.control_panel_tool_bar.addWidget(spacer)
-
-        # Initialize the dictionary to track toggle actions
-        self.toggle_actions = {}
+        self.setMenuWidget(self.title_bar)
 
         self.central_widget = QWidget()
-        self.central_widget.setStyleSheet("background-color: #1E1E1E;")  
+        self.central_widget.setObjectName("centralWidget")
         self.setCentralWidget(self.central_widget)
         self.main_layout = QVBoxLayout(self.central_widget)
 
@@ -246,22 +285,28 @@ class PyMetrMainWindow(QMainWindow):
         self.trace_plot = TracePlot(self.trace_manager, self)
 
         # --- Control Panels ---
-        self.control_panel_layout = QVBoxLayout()
         self.control_panel = ControlPanel(self.trace_manager, self.instrument_manager, self.trace_plot, self)
-        self.control_panel_widget = QWidget()
-        self.control_panel_widget.setLayout(self.control_panel.control_panel_layout)
-        self.control_panel_height = 301  # TODO: Move to application state class
+        self.control_panel_height = 301
 
+        # Control Panel Toggle Bar
+        self.control_panel_toggle_bar = ControlPanelToggleBar(self)
+        self.addToolBar(Qt.LeftToolBarArea, self.control_panel_toggle_bar)
 
-        # Adding toggle actions for all panels
-        self.add_toolbar_action("Instruments", "pymetr/application/icons/instruments.png", self.control_panel.instrument_control_panel)
-        self.add_toolbar_action("Traces", "pymetr/application/icons/traces.png", self.control_panel.trace_control_panel)
-        self.add_toolbar_action("Markers", "pymetr/application/icons/markers.png", self.control_panel.marker_control_panel)
-        self.add_toolbar_action("Cursors", "pymetr/application/icons/cursors.png", self.control_panel.cursor_control_panel)
-        self.add_toolbar_action("Measurements", "pymetr/application/icons/measurements.png", self.control_panel.measurement_control_panel)
-        self.add_toolbar_action("Calculations", "pymetr/application/icons/calculations.png", self.control_panel.calculation_control_panel)
-        self.add_toolbar_action("Plot Display", "pymetr/application/icons/plot.png", self.control_panel.display_control_panel)
-        self.add_toolbar_action("Console", "pymetr/application/icons/console.png", self.control_panel.console_control_panel)
+        # Add toggle actions
+        self.control_panel_toggle_bar.add_toggle_action("Instruments", "pymetr/application/icons/instruments_g.png", "Instrument", is_default=True)
+        self.control_panel_toggle_bar.add_toggle_action("Traces", "pymetr/application/icons/traces_g.png", "Trace", False)
+        self.control_panel_toggle_bar.add_toggle_action("Markers", "pymetr/application/icons/markers_g.png", "Marker", False)
+        self.control_panel_toggle_bar.add_toggle_action("Cursors", "pymetr/application/icons/cursors_g.png", "Cursor", False)
+        self.control_panel_toggle_bar.add_toggle_action("Measurements", "pymetr/application/icons/measure_g.png", "Measurement", False)
+        self.control_panel_toggle_bar.add_toggle_action("Calculations", "pymetr/application/icons/analytics_g.png", "Calculation", False)
+        self.control_panel_toggle_bar.add_toggle_action("Plot Display", "pymetr/application/icons/display_g.png", "PlotDisplay", False)
+        spacer = QWidget()
+        spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.control_panel_toggle_bar.addWidget(spacer)
+        # self.control_panel_toggle_bar.add_toggle_action("Settings", "pymetr/application/icons/settings_g.png", "Setting", False)
+        self.control_panel_toggle_bar.add_toggle_action("Console", "pymetr/application/icons/console_g.png", "Console", False)
+
+        self.control_panel_toggle_bar.actionToggled.connect(self.toggle_control_panel)
 
         # --- Main Area Layout ---
         main_area_layout = QHBoxLayout()
@@ -269,7 +314,7 @@ class PyMetrMainWindow(QMainWindow):
         # --- Control Panel Splitter ---
         self.control_panel_splitter = QSplitter(Qt.Vertical)
         self.control_panel_splitter.addWidget(self.trace_plot)
-        self.control_panel_splitter.addWidget(self.control_panel_widget)
+        self.control_panel_splitter.addWidget(self.control_panel)
         main_area_layout.addWidget(self.control_panel_splitter, stretch=1)
         self.control_panel_splitter.splitterMoved.connect(self.update_control_panel_height)
         handle_width = 6
@@ -280,8 +325,8 @@ class PyMetrMainWindow(QMainWindow):
         self.instrument_tab_widget.setTabPosition(QTabWidget.East)
         self.instrument_tab_widget.setMovable(True)
         self.instrument_tab_widget.setDocumentMode(True)
-        self.instrument_tab_widget.setTabBarAutoHide(True)  # Hide the tab bar when only one tab is open
-        self.instrument_tab_widget.setTabsClosable(False)  # Disable the close button on tabs
+        self.instrument_tab_widget.setTabBarAutoHide(True)
+        self.instrument_tab_widget.setTabsClosable(False)
         main_area_layout.addWidget(self.instrument_tab_widget, stretch=0)
 
         self.main_layout.addLayout(main_area_layout, stretch=1)
@@ -291,13 +336,17 @@ class PyMetrMainWindow(QMainWindow):
         self.status_bar = QStatusBar()
         self.setStatusBar(self.status_bar)
 
-        self.quick_toolbar.plotModeChanged.connect(self.trace_manager.set_plot_mode)
-        self.quick_toolbar.roiPlotToggled.connect(self.trace_plot.on_roi_plot_enabled)
-        self.quick_toolbar.roiPlotToggled.connect(self.trace_manager.emit_trace_data)
-        self.quick_toolbar.testTraceClicked.connect(self.trace_manager.add_random_trace)
-        self.quick_toolbar.screenshotClicked.connect(self.trace_plot.capture_screenshot)
-        self.quick_toolbar.highlightColorChanged.connect(self.trace_manager.set_highlight_color)
-        self.quick_toolbar.highlightColorChanged.connect(self.trace_plot.set_highlight_color)
+        self.color_picker_button = QPushButton()
+        self.color_picker_button.setStyleSheet("background-color: #FFAA00; width: 20px; height: 20px;")
+        self.color_picker_button.clicked.connect(self.show_color_dialog)
+        self.status_bar.addPermanentWidget(self.color_picker_button)
+
+        # Connect signals
+        self.title_bar.plotModeChanged.connect(self.trace_manager.set_plot_mode)
+        self.title_bar.roiPlotToggled.connect(self.trace_plot.on_roi_plot_enabled)
+        self.title_bar.roiPlotToggled.connect(self.trace_manager.emit_trace_data)
+        self.title_bar.testTraceClicked.connect(self.trace_manager.add_random_trace)
+        self.title_bar.screenshotClicked.connect(self.trace_plot.capture_screenshot)
 
         self.control_panel.instrument_control_panel.instrument_connected.connect(self.on_instrument_connected)
         self.control_panel.instrument_control_panel.instrument_disconnected.connect(self.on_instrument_disconnected)
@@ -307,32 +356,32 @@ class PyMetrMainWindow(QMainWindow):
         if index == 1:
             self.control_panel_height = self.control_panel_splitter.sizes()[1]
 
-    def add_toolbar_action(self, label, icon_path, panel):
-        action = QAction(QIcon(icon_path), label, self)
-        action.setCheckable(True)
-        action.toggled.connect(lambda checked, p=panel, a=action: self.toggle_panel(p, checked, a))
-        self.control_panel_tool_bar.addAction(action)
-        self.toggle_actions[label] = action
+    def update_control_panel_height(self, pos, index):
+        if index == 1:
+            self.control_panel_height = self.control_panel_splitter.sizes()[1]
 
-    def toggle_panel(self, panel, checked, action):
+    def toggle_control_panel(self, action_text, checked):
+        action = self.control_panel_toggle_bar.toggle_actions.get(action_text)
+        logging.debug(f"Calling toggle with: '{action_text}': {checked}")
+
+        if not action:
+            logging.warning(f"Invalid action text: {action_text}")
+            return
+
         if checked:
-            self.control_panel.control_panel_stack.setCurrentWidget(panel)
-            self.control_panel_widget.show()
-            # Uncheck other actions
-            for other_label, other_action in self.toggle_actions.items():
-                if other_action is not action:
-                    other_action.setChecked(False)
-            logging.debug(f"Panel {panel} shown, all other panels hidden.")
+            # Set the control panel to the corresponding panel index
+            action_index = list(self.control_panel_toggle_bar.toggle_actions.keys()).index(action_text)
+            self.control_panel.control_panel_stack.setCurrentIndex(action_index)
+            self.control_panel.show()
         else:
-            # Check if any action is still checked, if not hide the control panel widget
-            if not any(a.isChecked() for a in self.toggle_actions.values()):
-                self.control_panel_widget.hide()
-                logging.debug("All panels are now hidden.")
+            # If no toggle action is checked, hide the control panel
+            if not any(a.isChecked() for a in self.control_panel_toggle_bar.toggle_actions.values()):
+                self.control_panel.hide()
 
     def on_instrument_connected(self, unique_id):
         logger.debug(f"Instrument connected with unique ID: {unique_id}")
         instrument = self.instrument_manager.instruments[unique_id]
-        instrument['instance'].set_unique_id(unique_id)  # Set the unique ID on the instrument instance
+        instrument['instance'].set_unique_id(unique_id) 
 
         instrument_panel = InstrumentInterface(self.instrument_manager)
         instrument_panel.setup_interface(instrument, unique_id)
@@ -341,7 +390,7 @@ class PyMetrMainWindow(QMainWindow):
         instrument_panel.continuous_mode_changed.connect(self.trace_plot.set_continuous_mode)
         instrument_panel.plot_update_requested.connect(self.trace_plot.update_plot)
         instrument_panel.traceDataReady.connect(self.trace_manager.add_trace)
-        self.quick_toolbar.plotModeChanged.connect(instrument_panel.set_plot_mode)
+        self.title_bar.plotModeChanged.connect(instrument_panel.set_plot_mode)
         self.trace_plot.finished_update.connect(instrument['instance'].set_ready_for_data)
 
         # Create a new tab and set the widget as the instrument_widget
@@ -429,32 +478,27 @@ class PyMetrMainWindow(QMainWindow):
         painter.setClipPath(path)
         painter.fillRect(self.rect(), QColor("#2A2A2A"))  # Fill the window with the main background color
 
+    def show_color_dialog(self):
+        color = QColorDialog.getColor()
+        if color.isValid():
+            new_color = color.name()
+            self.color_picker_button.setStyleSheet(f"background-color: {new_color}; width: 20px; height: 20px;")
+            self.update_stylesheet(new_color)
+            self.trace_manager.set_highlight_color(new_color)
+            self.trace_plot.set_highlight_color(new_color)
 
-    # def mousePressEvent(self, event):
-    #     pos = event.position().toPoint()  # Updated for deprecation
-    #     if event.button() == Qt.LeftButton and self.title_bar_rect().contains(pos):
-    #         self.dragging = True
-    #         self.drag_position = event.globalPosition().toPoint() - self.pos()
-    #         event.accept()
+    def update_stylesheet(self, new_color):
+        # Read the current stylesheet
+        with open("pymetr/application/styles.qss", "r") as f:
+            stylesheet = f.read()
 
-    # def mouseMoveEvent(self, event):
-    #     if event.buttons() & Qt.LeftButton and self.dragging:
-    #         self.move(event.globalPosition().toPoint() - self.drag_position)
-    #         event.accept()
+        # Replace the old highlight color with the new color
+        old_color = "#FFAA00"
+        stylesheet = stylesheet.replace(old_color, new_color)
 
-    # def mouseReleaseEvent(self, event):
-    #     if event.button() == Qt.LeftButton:
-    #         self.dragging = False
-
-    # def mouseDoubleClickEvent(self, event):
-    #     if event.button() == Qt.LeftButton and self.close_button_rect().contains(event.pos()):
-    #         self.close()
-
-    # def title_bar_rect(self):
-    #     return QRectF(0, 0, self.width(), self.title_bar_height)
-
-    # def close_button_rect(self):
-    #     return QRectF(self.width() - 30, 0, 30, self.title_bar_height)
+        # Set the updated stylesheet on the application
+        app = pg.mkQApp()  # Get the application instance
+        app.setStyleSheet(stylesheet)
 
 if __name__ == "__main__":
 

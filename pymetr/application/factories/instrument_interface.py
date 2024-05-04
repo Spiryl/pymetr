@@ -26,7 +26,7 @@ class InstrumentInterface(QDockWidget):
         self.setWidget(self.widget)
         self.instruments = {}  # Dictionary to store connected instruments
         self.plot_mode = 'Single'
-        self.color_palette = ['#5E57FF', '#4BFF36', '#F23CA6', '#FF9535', '#02FEE4', '#2F46FA', '#FFFE13', '#55FC77']
+        self.color_palette = ['#FFAA00', '#4BFF36', '#F23CA6', '#FF9535', '#02FEE4', '#2F46FA', '#FFFE13', '#55FC77']
         self.continuous_mode = False
         self.update_timer = QTimer()
         self.update_timer.timeout.connect(self.request_plot_update)

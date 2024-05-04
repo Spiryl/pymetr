@@ -15,21 +15,21 @@ class ControlPanel(QWidget):
         self.control_panel_layout = QVBoxLayout()
         self.control_panel_stack = QStackedWidget()
 
+        self.instrument_control_panel = InstrumentControlPanel(instrument_manager)
         self.trace_control_panel = TraceControlPanel(trace_manager)
         self.marker_control_panel = MarkerControlPanel()
         self.cursor_control_panel = CursorControlPanel()
         self.measurement_control_panel = MeasurementControlPanel()
         self.calculation_control_panel = CalculationControlPanel()
-        self.instrument_control_panel = InstrumentControlPanel(instrument_manager)
         self.display_control_panel = DisplayControlPanel(trace_plot)
         self.console_control_panel = ConsoleControlPanel()
 
+        self.control_panel_stack.addWidget(self.instrument_control_panel)
         self.control_panel_stack.addWidget(self.trace_control_panel)
         self.control_panel_stack.addWidget(self.marker_control_panel)
         self.control_panel_stack.addWidget(self.cursor_control_panel)
         self.control_panel_stack.addWidget(self.measurement_control_panel)
         self.control_panel_stack.addWidget(self.calculation_control_panel)
-        self.control_panel_stack.addWidget(self.instrument_control_panel)
         self.control_panel_stack.addWidget(self.display_control_panel)
         self.control_panel_stack.addWidget(self.console_control_panel)
 
