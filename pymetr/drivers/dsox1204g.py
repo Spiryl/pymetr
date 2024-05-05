@@ -46,14 +46,33 @@ class Dsox1204g(Instrument):
     def autoscale(self, *sources):
         pass
 
+    @Instrument.gui_command
+    @Sources.source_command(":DIGitize {}")
+    def digitize(self, *sources):
+        pass
+
+    @Instrument.gui_command
     def run(self): # Start continuous
         self.write(":RUN")
 
+    @Instrument.gui_command
     def stop(self): # Stop continuous trigger
         self.write(":STOP")
 
+    @Instrument.gui_command
     def single(self): # Single trigger
         self.write(":SINGLE")
+
+        if not sources:
+            sources = self.sources.source
+
+        traces = []
+        for source in sources:
+            time = self.fetch_time(source)
+            data = self.fetch_data(source)
+            trace_data = Trace(data, x_data=time, label=source)
+            traces.append(trace_data)
+        return traces
 
     def fetch_time(self, source=None):
         if source:

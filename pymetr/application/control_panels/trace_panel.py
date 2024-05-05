@@ -91,7 +91,9 @@ class TracePanel(QDockWidget):
         trace = next((t for t in self.trace_manager.traces if t.label == trace_id), None)
         if trace:
             setattr(trace, parameter, value)
-            if trace.mode == 'Isolate':
+            if parameter == 'mode':
+                self.trace_manager.set_trace_mode(trace_id, value)
+            elif trace.mode == 'Isolate':
                 if parameter == 'color':
                     axis = self.trace_plot.trace_axes.get(trace.label)
                     if axis:

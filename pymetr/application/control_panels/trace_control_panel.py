@@ -25,32 +25,12 @@ class TraceControlPanel(QWidget):
         self.trace_list_group_box.setLayout(trace_list_layout)
         layout.addWidget(self.trace_list_group_box)
 
-        button_layout = QHBoxLayout()
-
-        self.trace_mode_combo = QComboBox()
-        self.trace_mode_combo.addItems(["Group", "Isolate"])
-        self.trace_mode_combo.currentTextChanged.connect(self.trace_manager.set_trace_mode)
-        button_layout.addWidget(self.trace_mode_combo)
-
-        self.group_all_button = QPushButton("Group All")
-        self.group_all_button.clicked.connect(self.group_all_traces)
-        button_layout.addWidget(self.group_all_button)
-
-        self.isolate_all_button = QPushButton("Isolate All")
-        self.isolate_all_button.clicked.connect(self.isolate_all_traces)
-        button_layout.addWidget(self.isolate_all_button)
-
-        self.clear_traces_button = QPushButton("Clear Traces")
-        self.clear_traces_button.clicked.connect(self.clear_traces)
-        button_layout.addWidget(self.clear_traces_button)
-
-        layout.addLayout(button_layout)
-
         self.setLayout(layout)
 
         self.trace_manager.traceAdded.connect(self.add_trace)
         self.trace_manager.traceRemoved.connect(self.remove_trace)
-        self.trace_manager.tracesCleared.connect(self.clear_traces_slot)
+        self.trace_manager.tracesCleared.connect(self.clear_traces)
+
 
     def add_trace(self, trace):
         item = TraceListItem(trace, self.trace_manager, self)
@@ -68,10 +48,6 @@ class TraceControlPanel(QWidget):
                 break
 
     def clear_traces(self):
-        self.trace_list.clear()
-        self.trace_manager.clear_traces()
-
-    def clear_traces_slot(self):
         self.trace_list.clear()
 
     def group_all_traces(self):
@@ -164,7 +140,8 @@ class TraceListItem(QWidget):
         self.visible_button.setIcon(icon)
         self.trace_manager.set_trace_visibility(self.trace.label, checked)
 
-    def update_label(self, text):
+    def update_label(self):
+        text = self.label.text()
         logger.debug(f"Updating label for trace '{self.trace.label}' to '{text}'")
         self.trace_manager.set_trace_label(self.trace.label, text)
 

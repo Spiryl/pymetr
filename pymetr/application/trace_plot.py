@@ -343,17 +343,19 @@ class TracePlot(QWidget):
             print(f"Unexpected view_box object: {view_box}")
 
     def clear_additional_axes(self):
-        for axis in self.additional_axes:
-            self.plot_layout.removeItem(axis)
-            axis.deleteLater()
-        for view_box in self.additional_view_boxes:
-            self.plot_layout.scene().removeItem(view_box)
-            view_box.deleteLater()
-        self.additional_axes.clear()
-        self.additional_view_boxes.clear()
-        self.legend.clear()
+        for axis in list(self.additional_axes):
+            if axis in self.plot_layout.items():
+                self.plot_layout.removeItem(axis)
+                axis.deleteLater()
+                self.additional_axes.remove(axis)
+        for view_box in list(self.additional_view_boxes):
+            if view_box in self.plot_layout.scene().items():
+                self.plot_layout.scene().removeItem(view_box)
+                view_box.deleteLater()
+                self.additional_view_boxes.remove(view_box)
         self.trace_view_boxes.clear()
         self.trace_axes.clear()
+        self.legend.clear()
 
     def update_view_boxes(self):
         for view_box in self.additional_view_boxes:
@@ -387,11 +389,14 @@ class TracePlot(QWidget):
                 self.update_roi_plot(self.trace_manager.traces)
                 self.set_roi_region()  # Adjust the ROI to current range
 
-    def update_roi_plot(self, traces):
+    def update_roi_plot(self, traces=None):
         if self.roi_plot_item is None or not self.roi_plot_item.isVisible():
             return
 
         self.roi_plot_item.clear()
+
+        if traces is None:
+            traces = self.trace_manager.traces
 
         if isinstance(traces, Trace):
             traces = [traces]
@@ -427,11 +432,12 @@ class TracePlot(QWidget):
 
      # --- Plot Label Methods ----------------
 
+    # --- Plot Methods ----------------
     def set_title(self, title):
         # Set the title of the plot
         self.plot_item.setTitle(title)
 
-    def set_title_visible(self, visible):
+    def set_title_visibility(self, visible):
         # Set the visibility of the plot title
         if visible:
             self.plot_item.setTitle(self.plot_item.titleLabel.text)
@@ -442,7 +448,7 @@ class TracePlot(QWidget):
         # Set the label for the x-axis
         self.plot_item.setLabel("bottom", label)
 
-    def set_x_label_visible(self, visible):
+    def set_x_label_visibility(self, visible):
         # Set the visibility of the x-axis label
         self.plot_item.getAxis('bottom').showLabel(visible)
 
@@ -454,7 +460,7 @@ class TracePlot(QWidget):
         # Set the label for the y-axis
         self.plot_item.setLabel("left", label)
 
-    def set_y_label_visible(self, visible):
+    def set_y_label_visibility(self, visible):
         # Set the visibility of the y-axis label
         self.plot_item.getAxis('left').showLabel(visible)
 
@@ -520,25 +526,29 @@ class TracePlot(QWidget):
                 self.plot_item.removeItem(curve)
             self.legend.removeItem(trace_label)
             del self.trace_curves[trace_label]
-        self.update_roi_plot(self.traces)
 
-    def clear_traces(self):
-        # Clear all traces from the plot, legend, and additional axes
-        for curve in self.trace_curves.values():
-            if curve.getViewBox():
-                curve.getViewBox().removeItem(curve)
-            else:
-                self.plot_item.removeItem(curve)
-        self.traces.clear()
-        self.trace_curves.clear()
-        self.legend.clear()
+            if trace_label in self.trace_view_boxes:
+                view_box = self.trace_view_boxes[trace_label]
+                axis = self.trace_axes[trace_label]
 
-        # Clear additional axes
-        for axis in self.additional_axes:
-            self.plot_layout.removeItem(axis)
-            axis.deleteLater()
-        self.additional_axes.clear()
-        self.update_roi_plot(self.traces)
+                # Remove the axis and view box from the layout
+                self.plot_layout.removeItem(axis)
+                self.plot_layout.removeItem(view_box)
+
+                # Remove the axis and view box from their respective lists
+                self.additional_axes.remove(axis)
+                self.additional_view_boxes.remove(view_box)
+
+                # Delete the axis and view box
+                axis.deleteLater()
+                view_box.deleteLater()
+
+                # Remove the trace label from the dictionaries
+                del self.trace_view_boxes[trace_label]
+                del self.trace_axes[trace_label]
+
+        self.trace_manager.remove_trace(trace_label)
+        self.update_roi_plot()
 
     # --- Misc Methods ----------------
     def handleMouseClicked(self, event):

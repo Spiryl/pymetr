@@ -186,8 +186,8 @@ class TraceManager(QObject):
             if trace.label == trace_label:
                 logger.debug(f"Setting mode for trace '{trace_label}' to {mode}")
                 trace.mode = mode
-                self.traceModeChanged.emit(trace_label, mode)
                 break
+        self.traceDataChanged.emit()
 
     def set_trace_line_thickness(self, trace_label, thickness):
         for trace in self.traces:
