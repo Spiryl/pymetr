@@ -23,7 +23,7 @@ class TitleBar(QWidget):
     def __init__(self, parent=None):
         super(TitleBar, self).__init__(parent)
         self.layout = QHBoxLayout(self)
-        self.layout.setContentsMargins(5, 0, 5, 0)
+        self.layout.setContentsMargins(5, 5, 5, 5)
         self.layout.setSpacing(10)
         self.color_palette = ['#FFAA00', '#4BFF36', '#F23CA6', '#FF9535', '#02FEE4', '#2F46FA', '#FFFE13', '#55FC77']
 
@@ -85,20 +85,20 @@ class TitleBar(QWidget):
         self.test_trace_button.setDefaultAction(self.test_trace_action)
 
         # Spacer that pushes the control buttons to the right
-        spacer = QSpacerItem(40, 10, QSizePolicy.Expanding, QSizePolicy.Minimum)
+        spacer = QSpacerItem(40, 24, QSizePolicy.Expanding, QSizePolicy.Minimum)
 
         # Window control buttons using icons
         self.minimize_button = QToolButton()
         self.minimize_button.setIcon(QIcon(f"{self.icon_path}minimize.png"))
-        self.minimize_button.setIconSize(QSize(20, 20))  # Adjust size as needed
+        self.minimize_button.setIconSize(QSize(24, 24))  # Adjust size as needed
 
         self.maximize_button = QToolButton()
         self.maximize_button.setIcon(QIcon(f"{self.icon_path}maximize.png"))
-        self.maximize_button.setIconSize(QSize(20, 20))  # Adjust size as needed
+        self.maximize_button.setIconSize(QSize(24, 24))  # Adjust size as needed
 
         self.close_button = QToolButton()
         self.close_button.setIcon(QIcon(f"{self.icon_path}close.png"))
-        self.close_button.setIconSize(QSize(20, 20))  # Adjust size as needed
+        self.close_button.setIconSize(QSize(24, 24))  # Adjust size as needed
 
         self.minimize_button.clicked.connect(parent.showMinimized)
         self.maximize_button.clicked.connect(parent.showMaximized)

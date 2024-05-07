@@ -1,6 +1,6 @@
 import logging
 logger = logging.getLogger()
-logger.setLevel(logging.CRITICAL)
+logger.setLevel(logging.DEBUG)
 logging.getLogger('pyvisa').setLevel(logging.CRITICAL)
 handler = logging.StreamHandler()
 formatter = logging.Formatter("%(name)s - %(message)s")
@@ -27,6 +27,8 @@ from pymetr.application.control_panel import ControlPanel
 from pymetr.application.managers.instrument_manager import InstrumentManager
 from pymetr.application.factories.instrument_interface import InstrumentInterface
 from pymetr.application.managers.trace_manager import TraceManager
+from pymetr.application.managers.marker_manager import MarkerManager
+from pymetr.application.managers.cursor_manager import CursorManager
 
 
 class ControlPanelToggleBar(QToolBar):
@@ -94,13 +96,28 @@ class PyMetrMainWindow(QMainWindow):
         self.setCentralWidget(self.central_widget)
         self.main_layout = QVBoxLayout(self.central_widget)
 
-        # --- Plot Displays ---
+        # --- Instance Managers ---
         self.instrument_manager = InstrumentManager()
         self.trace_manager = TraceManager()
-        self.trace_plot = TracePlot(self.trace_manager, self)
+        self.marker_manager = MarkerManager()
+        self.cursor_manager = CursorManager()
+
+        # --- Plot Displays ---
+        self.trace_plot = TracePlot(self.trace_manager, 
+                                    self.cursor_manager, 
+                                    self.marker_manager,
+                                    self
+                                    )
 
         # --- Control Panels ---
-        self.control_panel = ControlPanel(self.trace_manager, self.instrument_manager, self.trace_plot, self)
+        self.control_panel = ControlPanel(self.trace_manager,  
+                                        self.marker_manager,
+                                        self.cursor_manager,
+                                        self.instrument_manager, 
+                                        self.trace_plot, 
+                                        self
+                                        )
+        
         self.control_panel_height = 301
 
         # Control Panel Toggle Bar
@@ -186,6 +203,36 @@ class PyMetrMainWindow(QMainWindow):
         self.control_panel.display_control_panel.xLabelVisibilityChanged.connect(self.trace_plot.set_x_label_visibility)
         self.control_panel.display_control_panel.yLabelChanged.connect(self.trace_plot.set_y_label)
         self.control_panel.display_control_panel.yLabelVisibilityChanged.connect(self.trace_plot.set_y_label_visibility)
+
+        # Connect marker-related signals
+        self.marker_manager.markerAdded.connect(self.trace_plot.on_marker_added)
+        self.marker_manager.markerRemoved.connect(self.trace_plot.on_marker_removed)
+
+        self.marker_manager.markerVisibilityChanged.connect(self.trace_plot.on_marker_visibility_changed)
+        self.marker_manager.markerLabelChanged.connect(self.trace_plot.on_marker_label_changed)
+        self.marker_manager.markerColorChanged.connect(self.trace_plot.on_marker_color_changed)
+        self.marker_manager.markerShapeChanged.connect(self.trace_plot.on_marker_shape_changed)
+        self.marker_manager.markersCleared.connect(self.trace_plot.on_markers_cleared)
+        self.marker_manager.markerSizeChanged.connect(self.trace_plot.on_marker_size_changed)
+        self.marker_manager.markerPlacementModeChanged.connect(self.trace_plot.on_marker_placement_mode_changed)
+        self.marker_manager.markerPositionChanged.connect(self.trace_plot.on_marker_position_changed)
+
+        self.control_panel.marker_control_panel.markerAdded.connect(self.marker_manager.add_marker)
+        self.control_panel.marker_control_panel.markerRemoved.connect(self.marker_manager.remove_marker)
+
+        # Connect cursor-related signals
+        self.cursor_manager.cursorAdded.connect(self.trace_plot.on_cursor_added)
+        self.cursor_manager.cursorRemoved.connect(self.trace_plot.on_cursor_removed)
+        # self.cursor_manager.cursorVisibilityChanged.connect(self.trace_plot.on_cursor_visibility_changed)
+        # self.cursor_manager.cursorLabelChanged.connect(self.trace_plot.on_cursor_label_changed)
+        # self.cursor_manager.cursorColorChanged.connect(self.trace_plot.on_cursor_color_changed)
+        # self.cursor_manager.cursorLineStyleChanged.connect(self.trace_plot.on_cursor_line_style_changed)
+        # self.cursor_manager.cursorLineThicknessChanged.connect(self.trace_plot.on_cursor_line_thickness_changed)
+        self.cursor_manager.cursorPositionChanged.connect(self.trace_plot.on_cursor_position_changed)
+        # self.cursor_manager.cursorsCleared.connect(self.trace_plot.on_cursors_cleared)
+
+        self.control_panel.cursor_control_panel.cursorAdded.connect(self.cursor_manager.add_cursor)
+        self.control_panel.cursor_control_panel.cursorRemoved.connect(self.cursor_manager.remove_cursor)
 
     def update_control_panel_height(self, pos, index):
         if index == 1:

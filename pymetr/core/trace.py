@@ -30,6 +30,7 @@ class Trace:
         self.y_range = None
         self.line_thickness = line_thickness
         self.line_style = line_style
+        self.show_markers = True
 
     def update_data(self, y_data, x_data=None, z_data=None):
         """Update the trace data."""

@@ -9,7 +9,7 @@ from pymetr.application.control_panels.display_control_panel import DisplayContr
 from pymetr.application.control_panels.console_control_panel import ConsoleControlPanel
 
 class ControlPanel(QWidget):
-    def __init__(self, trace_manager, instrument_manager, trace_plot, parent=None):
+    def __init__(self, trace_manager, marker_manager, cursor_manager, instrument_manager, trace_plot, parent=None):
         super().__init__(parent)
 
         self.control_panel_layout = QVBoxLayout()
@@ -17,8 +17,8 @@ class ControlPanel(QWidget):
 
         self.instrument_control_panel = InstrumentControlPanel(instrument_manager)
         self.trace_control_panel = TraceControlPanel(trace_manager)
-        self.marker_control_panel = MarkerControlPanel()
-        self.cursor_control_panel = CursorControlPanel()
+        self.marker_control_panel = MarkerControlPanel(marker_manager)
+        self.cursor_control_panel = CursorControlPanel(cursor_manager)
         self.measurement_control_panel = MeasurementControlPanel()
         self.calculation_control_panel = CalculationControlPanel()
         self.display_control_panel = DisplayControlPanel(trace_plot)

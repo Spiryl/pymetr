@@ -11,23 +11,26 @@ QMainWindow {
 QToolBar {
     background-color: #2A2A2A; /* Set the toolbar background color */
     border: none; /* Ensure there is no border */
-    spacing: 2px; /* This tries to add spacing between actions, might not work as expected */
+    spacing: 10px; /* This tries to add spacing between actions, might not work as expected */
+    margin: 6px;
 }
 
 QToolButton {
     background-color: transparent;
+    border-radius: 3px;
     border: none;
-    padding: 2px;
     color: #AAAAAA;
 }
 
 QToolButton:pressed {
     background-color: #FFAA00;
+    border-radius: 3px;
     color: #FFFFFF;
 }
 
 QToolButton:hover {
     background-color: transparent;
+    border-radius: 3px;
     border: 1px solid #FFAA00;
 }
 
@@ -37,6 +40,7 @@ QToolButton:checked {
 }
 
 QToolButton:pressed {
+    border-radius: 3px;
     background-color: #FFAA00;
     color: #FFFFFF;
 }
@@ -61,86 +65,6 @@ QTabBar::tab:selected {
     color: #fff;
     border-bottom: 2px solid #FFAA00;
 }
-
-QLabel {
-    color: #AAAAAA;
-}
-
-/* ComboBox Styles */
-QComboBox {
-    background-color: #2A2A2A;
-    color: #AAAAAA;
-    border: 1px solid #3E3E3E;
-    border-radius: 3px;
-    padding: 1px 12px;
-    min-width: 80px; /* Ensure all text is visible */
-    height: 22px;
-}
-
-QComboBox::drop-down {
-    background: #2A2A2A;
-    border-left: 1px solid #3E3E3E;
-}
-
-QComboBox QAbstractItemView {
-    background-color: #2A2A2A;
-    color: #AAAAAA;
-    selection-background-color: #FFAA00;
-    selection-color: #FFFFFF;
-    border-radius: 3px;
-}
-
-/* QTextEdit Styles */
-QTextEdit {
-    background-color: #2A2A2A;
-    color: #AAAAAA;
-    border: 1px solid #3E3E3E;
-    border-radius: 4px;
-    padding: 4px;
-}
-
-QLineEdit {
-    background-color: #2A2A2A;
-    color: #AAAAAA;
-    border: 1px solid #3E3E3E;
-    border-radius: 4px;
-    height: 22px;
-    padding: 4px;
-}
-
-QLineEdit:hover {
-    background-color: #3E3E3E;
-    border: 1px solid #FFAA00;
-}
-
-QSpinBox {
-    background-color: #2A2A2A;
-    color: #AAAAAA;
-    border: 1px solid #3E3E3E;
-    border-radius: 4px;
-    height: 22px;
-    padding: 1px; 
-}
-
-QSpinBox:hover {
-    background-color: #3E3E3E;
-    border: 1px solid #FFAA00;
-}
-
-QDoubleSpinBox {
-    background-color: #2A2A2A;
-    color: #AAAAAA;
-    border: 1px solid #3E3E3E;
-    border-radius: 4px;
-    padding: 1px;
-    height: 22px;
-}
-
-QDoubleSpinBox:hover {
-    background-color: #3E3E3E;
-    border: 1px solid #FFAA00;
-}
-
 
 QGroupBox::title {
     color: #AAAAAA; /* Adjust the color as needed */
@@ -211,7 +135,7 @@ QListWidget::item:hover {
     background-color: #2A2A2A;
 }
 
-/* Make the selected item pop */
+
 QListWidget::item:selected {
     border: 1px solid #FFAA00;
 }
@@ -223,7 +147,6 @@ QListWidget QTextEdit {
     padding: 1px;
 }
 
-/* Style the scrollbar to match */
 QScrollBar:vertical {
     border: 1px solid #2A2A2A;
     background: #1E1E1E;
@@ -261,7 +184,6 @@ QPushButton {
 }
 
 QPushButton:hover {
-    background-color: #3E3E3E;
     border: 1px solid #FFAA00;
 }
 
@@ -269,4 +191,15 @@ QPushButton:pressed {
     background-color: #FFAA00;
     color: #FFFFFF;
     border: 1px solid #888888;
+}
+
+QComboBox {
+    background-color: #2A2A2A;
+    border-radius: 3px;
+    width: 50px;
+}
+
+QComboBox:hover {
+    border: 1px solid #FFAA00;
+    border-radius: 3px;
 }

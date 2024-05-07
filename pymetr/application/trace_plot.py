@@ -7,11 +7,16 @@ from PySide6.QtWidgets import QWidget, QVBoxLayout
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QPainter, QPixmap, QGuiApplication, QColor
 from pymetr.core.trace import Trace
+from pymetr.core.marker import Marker
+from pymetr.core.cursor import Cursor
 
 class TracePlot(QWidget):
     finished_update = Signal(bool)
+    cursorAdded = Signal(Cursor)
+    cursorRemoved = Signal(str)
+    cursorPositionChanged = Signal(str, float)
 
-    def __init__(self, trace_manager, parent=None):
+    def __init__(self, trace_manager, cursor_manager, marker_manager, parent=None):
         super().__init__(parent)
         self.plot_layout = pg.GraphicsLayoutWidget()
         self.plot_item = self.plot_layout.addPlot(row=0, col=0)
@@ -48,6 +53,15 @@ class TracePlot(QWidget):
         self.traces = {}
         self.trace_curves = {}
 
+        self.cursor_manager = cursor_manager
+        self.cursors = {}
+
+        self.marker_manager = marker_manager
+        self.markers = {}
+        self.marker_labels = {}
+
+        self.active_trace = None 
+
         self.init_roi_plot()
         layout = QVBoxLayout(self)
         layout.addWidget(self.plot_layout)
@@ -65,6 +79,11 @@ class TracePlot(QWidget):
         self.trace_manager.traceLineStyleChanged.connect(self.update_trace_line_style)
         self.trace_manager.traceRemoved.connect(self.remove_trace)
         self.trace_manager.tracesCleared.connect(self.clear_traces)
+
+        self.cursor_manager.cursorAdded.connect(self.on_cursor_added)
+        self.cursor_manager.cursorRemoved.connect(self.on_cursor_removed)
+        self.cursor_manager.cursorPositionChanged.connect(self.on_cursor_position_changed)
+
 
     def set_continuous_mode(self, mode):
         logger.debug(f"trace_plot: setting continuous mode: {mode}")
@@ -133,6 +152,7 @@ class TracePlot(QWidget):
         else:
             logger.debug("ROI plot is not visible, skipping update")
 
+        self.update_markers()
         self.finished_update.emit(True)
 
     def _update_existing_trace(self, trace):
@@ -317,6 +337,7 @@ class TracePlot(QWidget):
         self.legend.clear()
         self.update_roi_plot()
         self.clear_additional_axes()
+        self.update_markers()
 
     # --- Isolated Trace Methods ----------------
     def restore_view_ranges(self, trace_data):
@@ -549,6 +570,247 @@ class TracePlot(QWidget):
 
         self.trace_manager.remove_trace(trace_label)
         self.update_roi_plot()
+
+
+    # --- Cursor Methods -------------
+    def on_cursor_added(self, cursor):
+        if cursor.orientation == 'x':
+            cursor_item = pg.InfiniteLine(angle=90, movable=True, pen=pg.mkPen(color=cursor.color, style=self.get_line_style(cursor.line_style), width=cursor.line_thickness))
+        elif cursor.orientation == 'y':
+            cursor_item = pg.InfiniteLine(angle=0, movable=True, pen=pg.mkPen(color=cursor.color, style=self.get_line_style(cursor.line_style), width=cursor.line_thickness))
+        else:
+            logger.warning(f"Invalid cursor orientation: {cursor.orientation}")
+            return
+
+        cursor_item.setPos(cursor.position)
+        self.plot_item.addItem(cursor_item)
+        self.cursors[cursor.label] = cursor_item
+
+        # Connect signals for cursor movement
+        cursor_item.sigPositionChanged.connect(lambda: self.on_cursor_position_changed(cursor.label, cursor_item.value()))
+
+    def on_cursor_removed(self, cursor_label):
+        if cursor_label in self.cursors:
+            cursor_item = self.cursors[cursor_label]
+            self.plot_item.removeItem(cursor_item)
+            del self.cursors[cursor_label]
+
+    def on_cursor_position_changed(self, cursor_label, position):
+        self.cursor_manager.set_cursor_position(cursor_label, position)
+
+    def get_trace_values_at_cursor(self, cursor_label):
+        if cursor_label in self.cursors:
+            cursor_item = self.cursors[cursor_label]
+            position = cursor_item.value()
+
+            trace_values = {}
+            for trace_label, curve in self.trace_curves.items():
+                if curve.isVisible():
+                    x_data = curve.xData
+                    y_data = curve.yData
+
+                    if cursor_item.angle == 90:  # Vertical cursor
+                        index = np.abs(x_data - position).argmin()
+                        trace_values[trace_label] = y_data[index]
+                    elif cursor_item.angle == 0:  # Horizontal cursor
+                        index = np.abs(y_data - position).argmin()
+                        trace_values[trace_label] = x_data[index]
+
+            return trace_values
+
+    def update_cursor_position(self, cursor_label, position):
+        # Implement method to update the cursor position based on user interactions
+        # Notify the cursor manager about the position change
+        pass
+
+    # --- Marker Methods -------------
+    def on_marker_added(self, marker):
+        logger.debug(f"Adding marker: {marker.label}")
+        marker_items = []
+
+        for trace_label, curve in self.trace_curves.items():
+            trace = self.trace_manager.get_trace_by_label(trace_label)
+            if trace and curve.isVisible() and trace.show_markers:
+                logger.debug(f"Processing trace: {trace_label}")
+                x_data = curve.xData
+                y_data = curve.yData
+
+                if marker.placement_mode == 'nearest':
+                    index = np.abs(x_data - marker.position).argmin()
+                elif marker.placement_mode == 'interpolate':
+                    index = np.interp(marker.position, x_data, np.arange(len(x_data)))
+                else:
+                    logger.warning(f"Invalid marker placement mode: {marker.placement_mode}")
+                    continue
+
+                x_pos = x_data[int(index)]
+                y_pos = y_data[int(index)]
+                logger.debug(f"Marker position: x={x_pos}, y={y_pos}")
+
+                symbol = self.get_marker_symbol(marker.shape)
+                color = pg.mkColor(marker.color)
+                size = marker.size
+
+                marker_item = pg.ScatterPlotItem(pos=[(x_pos, y_pos)], symbol=symbol, size=size, pen=color, brush=color)
+                label_item = pg.TextItem(text=marker.label, color=color, anchor=(0.5, 1))
+                label_item.setPos(x_pos, y_pos)
+                self.marker_labels[marker.label] = label_item
+
+                if trace_label in self.trace_view_boxes:
+                    view_box = self.trace_view_boxes[trace_label]
+                    view_box.addItem(marker_item)
+                    logger.debug(f"Added marker item to isolated view box for trace: {trace_label}")
+                else:
+                    self.plot_item.addItem(marker_item)
+                    logger.debug(f"Added marker item to main plot for trace: {trace_label}")
+
+                marker_items.append(marker_item)
+
+        self.markers[marker.label] = marker_items
+        logger.debug(f"Marker '{marker.label}' added successfully")
+        self.update_marker_labels()
+
+    def on_marker_removed(self, marker_label):
+        logger.debug(f"Removing marker: {marker_label}")
+        if marker_label in self.markers:
+            marker_items = self.markers[marker_label]
+            for marker_item in marker_items:
+                view_box = marker_item.getViewBox()
+                if view_box:
+                    view_box.removeItem(marker_item)
+                    logger.debug(f"Removed marker item from isolated view box")
+                else:
+                    self.plot_item.removeItem(marker_item)
+                    logger.debug(f"Removed marker item from main plot")
+            del self.markers[marker_label]
+            logger.debug(f"Marker '{marker_label}' removed successfully")
+
+    def update_markers(self):
+        logger.debug("Updating markers")
+        for marker_items in self.markers.values():
+            for marker_item in marker_items:
+                view_box = marker_item.getViewBox()
+                if view_box:
+                    view_box.removeItem(marker_item)
+                else:
+                    self.plot_item.removeItem(marker_item)
+        self.markers.clear()
+        logger.debug("Existing markers removed")
+
+        for marker in self.marker_manager.markers:
+            self.on_marker_added(marker)
+        logger.debug("Markers redrawn for visible traces")
+
+        # Redraw markers for visible traces
+        for marker in self.marker_manager.markers:
+            self.on_marker_added(marker)
+
+    def on_trace_clicked(self, trace_label):
+        self.active_trace = trace_label
+        self.update_marker_labels()
+
+    def update_marker_labels(self):
+        for marker_label, label_item in self.marker_labels.items():
+            if self.active_trace is not None and marker_label in self.markers:
+                marker_items = self.markers[marker_label]
+                if marker_items:
+                    marker_item = marker_items[0]  # Assuming only one marker item per trace
+                    label_item.setVisible(True)
+                    label_item.setPos(marker_item.pos())
+                else:
+                    label_item.setVisible(False)
+            else:
+                label_item.setVisible(False)
+
+    def get_marker_symbol(self, shape):
+        if shape == 'Circle':
+            return 'o'
+        elif shape == 'Square':
+            return 's'
+        elif shape == 'Triangle':
+            return 't'
+        elif shape == 'Diamond':
+            return 'd'
+        else:
+            return 'o'  # Default to circle if shape is not recognized
+        
+    def on_marker_size_changed(self, marker_label, size):
+        if marker_label in self.markers:
+            marker_items = self.markers[marker_label]
+            for marker_item in marker_items:
+                marker_item.setSize(size)
+
+    def on_marker_placement_mode_changed(self, marker_label, mode):
+        self.update_markers()
+
+    def on_marker_visibility_changed(self, marker_label, visible):
+        if marker_label in self.markers:
+            marker_items = self.markers[marker_label]
+            for marker_item in marker_items:
+                marker_item.setVisible(visible)
+
+    def on_marker_label_changed(self, old_label, new_label):
+        if old_label in self.markers:
+            self.markers[new_label] = self.markers.pop(old_label)
+            self.update_marker_labels()
+
+    def on_marker_color_changed(self, marker_label, color):
+        if marker_label in self.markers:
+            marker_items = self.markers[marker_label]
+            for marker_item in marker_items:
+                marker_item.setPen(pg.mkPen(color))
+                marker_item.setBrush(pg.mkBrush(color))
+
+    def on_marker_shape_changed(self, marker_label, shape):
+        if marker_label in self.markers:            
+            marker_items = self.markers[marker_label]
+            symbol = self.get_marker_symbol(shape)
+            for marker_item in marker_items:
+                marker_item.setSymbol(symbol)
+
+    def on_markers_cleared(self):
+        for marker_items in self.markers.values():
+            for marker_item in marker_items:
+                marker_item.getViewBox().removeItem(marker_item)
+        self.markers.clear()
+        self.marker_labels.clear()
+
+    def on_marker_position_changed(self, marker_label, position):
+        if marker_label in self.markers:
+            marker_items = self.markers[marker_label]
+            marker = self.marker_manager.get_marker_by_label(marker_label)
+            if marker is None:
+                logger.warning(f"Marker not found: {marker_label}")
+                return
+
+            for trace_label, curve in self.trace_curves.items():
+                if curve.isVisible() and self.trace_manager.get_trace_by_label(trace_label).show_markers:
+                    x_data = curve.xData
+                    y_data = curve.yData
+
+                    if position < x_data[0]:
+                        index = 0
+                    elif position > x_data[-1]:
+                        index = len(x_data) - 1
+                    else:
+                        if marker.placement_mode == 'nearest':
+                            index = np.abs(x_data - position).argmin()
+                        elif marker.placement_mode == 'interpolate':
+                            index = np.interp(position, x_data, np.arange(len(x_data)))
+                        else:
+                            logger.warning(f"Invalid marker placement mode: {marker.placement_mode}")
+                            continue
+
+                    x_pos = x_data[int(index)]
+                    y_pos = y_data[int(index)]
+
+                    marker_item = next((item for item in marker_items if item.getViewBox() == curve.getViewBox()), None)
+                    if marker_item is not None:
+                        marker_item.setPos(x_pos, y_pos)
+                    else:
+                        logger.warning(f"Marker item not found for trace: {trace_label}")
+
+            self.update_marker_labels()
 
     # --- Misc Methods ----------------
     def handleMouseClicked(self, event):

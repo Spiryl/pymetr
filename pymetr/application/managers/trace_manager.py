@@ -104,6 +104,12 @@ class TraceManager(QObject):
                 self.traces[index] = trace
                 break
 
+    def get_trace_by_label(self, trace_label):
+        for trace in self.traces:
+            if trace.label == trace_label:
+                return trace
+        return None
+    
     def set_plot_mode(self, mode):
         self.plot_mode = mode
         self.traceDataChanged.emit()
