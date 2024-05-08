@@ -14,7 +14,7 @@ class TracePlot(QWidget):
     finished_update = Signal(bool)
     cursorAdded = Signal(Cursor)
     cursorRemoved = Signal(str)
-    cursorPositionChanged = Signal(str, float)
+    cursorPositionChanged = Signal(str, float, bool)
 
     def __init__(self, trace_manager, cursor_manager, marker_manager, parent=None):
         super().__init__(parent)
@@ -300,13 +300,13 @@ class TracePlot(QWidget):
             logger.debug(f"Trace is not visible, skipping addition: {trace.label}")
 
     def remove_trace(self, trace_label):
+        logger.debug(f"Removing trace '{trace_label}'")
         if trace_label in self.trace_curves:
             curve = self.trace_curves[trace_label]
             if curve.getViewBox():
                 curve.getViewBox().removeItem(curve)
             else:
                 self.plot_item.removeItem(curve)
-
             self.legend.removeItem(trace_label)
             del self.trace_curves[trace_label]
 
@@ -314,16 +314,27 @@ class TracePlot(QWidget):
                 view_box = self.trace_view_boxes[trace_label]
                 axis = self.trace_axes[trace_label]
 
+                # Remove the axis and view box from the layout
                 self.plot_layout.removeItem(axis)
-                axis.deleteLater()
-                self.additional_axes.remove(axis)
+                self.plot_layout.removeItem(view_box)
 
-                self.plot_layout.scene().removeItem(view_box)
-                view_box.deleteLater()
+                # Remove the axis and view box from their respective lists
+                self.additional_axes.remove(axis)
                 self.additional_view_boxes.remove(view_box)
 
+                # Delete the axis and view box
+                axis.deleteLater()
+                view_box.deleteLater()
+
+                # Remove the trace label from the dictionaries
                 del self.trace_view_boxes[trace_label]
                 del self.trace_axes[trace_label]
+
+        self.trace_manager.remove_trace(trace_label)
+        self.update_roi_plot()
+        self.update_marker_labels()
+        self.update_markers()
+
 
     def clear_traces(self):
         for curve in self.trace_curves.values():
@@ -337,7 +348,7 @@ class TracePlot(QWidget):
         self.legend.clear()
         self.update_roi_plot()
         self.clear_additional_axes()
-        self.update_markers()
+        self.on_markers_cleared()
 
     # --- Isolated Trace Methods ----------------
     def restore_view_ranges(self, trace_data):
@@ -494,6 +505,8 @@ class TracePlot(QWidget):
         logger.debug(f"Updating visibility for trace '{trace_label}' to {visible}")
         if trace_label in self.trace_curves:
             self.trace_curves[trace_label].setVisible(visible)
+        self.update_markers()
+        self.update_marker_labels()
 
     def update_trace_label(self, old_label, new_label):
         logger.debug(f"Updating label for trace '{old_label}' to {new_label}")
@@ -537,43 +550,9 @@ class TracePlot(QWidget):
             pen.setStyle(self.get_line_style(style))
             self.trace_curves[trace_label].setPen(pen)
 
-    def remove_trace(self, trace_label):
-        logger.debug(f"Removing trace '{trace_label}'")
-        if trace_label in self.trace_curves:
-            curve = self.trace_curves[trace_label]
-            if curve.getViewBox():
-                curve.getViewBox().removeItem(curve)
-            else:
-                self.plot_item.removeItem(curve)
-            self.legend.removeItem(trace_label)
-            del self.trace_curves[trace_label]
-
-            if trace_label in self.trace_view_boxes:
-                view_box = self.trace_view_boxes[trace_label]
-                axis = self.trace_axes[trace_label]
-
-                # Remove the axis and view box from the layout
-                self.plot_layout.removeItem(axis)
-                self.plot_layout.removeItem(view_box)
-
-                # Remove the axis and view box from their respective lists
-                self.additional_axes.remove(axis)
-                self.additional_view_boxes.remove(view_box)
-
-                # Delete the axis and view box
-                axis.deleteLater()
-                view_box.deleteLater()
-
-                # Remove the trace label from the dictionaries
-                del self.trace_view_boxes[trace_label]
-                del self.trace_axes[trace_label]
-
-        self.trace_manager.remove_trace(trace_label)
-        self.update_roi_plot()
-
-
     # --- Cursor Methods -------------
     def on_cursor_added(self, cursor):
+        logger.debug(f"Adding cursor: {cursor.label}")
         if cursor.orientation == 'x':
             cursor_item = pg.InfiniteLine(angle=90, movable=True, pen=pg.mkPen(color=cursor.color, style=self.get_line_style(cursor.line_style), width=cursor.line_thickness))
         elif cursor.orientation == 'y':
@@ -587,16 +566,20 @@ class TracePlot(QWidget):
         self.cursors[cursor.label] = cursor_item
 
         # Connect signals for cursor movement
-        cursor_item.sigPositionChanged.connect(lambda: self.on_cursor_position_changed(cursor.label, cursor_item.value()))
+        cursor_item.sigPositionChanged.connect(lambda: self.on_cursor_position_changed(cursor.label, cursor_item.value(), from_plot_interaction=True))
 
     def on_cursor_removed(self, cursor_label):
+        logger.debug(f"Removing cursor: {cursor_label}")
         if cursor_label in self.cursors:
             cursor_item = self.cursors[cursor_label]
             self.plot_item.removeItem(cursor_item)
             del self.cursors[cursor_label]
 
-    def on_cursor_position_changed(self, cursor_label, position):
-        self.cursor_manager.set_cursor_position(cursor_label, position)
+    def on_cursor_position_changed(self, cursor_label, position, from_plot_interaction=True):
+        logger.debug(f"Cursor position changed: {cursor_label}, {position}, from_plot_interaction={from_plot_interaction}")
+        if from_plot_interaction:
+            self.cursor_manager.set_cursor_position(cursor_label, position)
+            self.cursorPositionChanged.emit(cursor_label, position, from_plot_interaction)
 
     def get_trace_values_at_cursor(self, cursor_label):
         if cursor_label in self.cursors:
@@ -618,11 +601,6 @@ class TracePlot(QWidget):
 
             return trace_values
 
-    def update_cursor_position(self, cursor_label, position):
-        # Implement method to update the cursor position based on user interactions
-        # Notify the cursor manager about the position change
-        pass
-
     # --- Marker Methods -------------
     def on_marker_added(self, marker):
         logger.debug(f"Adding marker: {marker.label}")
@@ -638,7 +616,7 @@ class TracePlot(QWidget):
                 if marker.placement_mode == 'nearest':
                     index = np.abs(x_data - marker.position).argmin()
                 elif marker.placement_mode == 'interpolate':
-                    index = np.interp(marker.position, x_data, np.arange(len(x_data)))
+                    index = np.searchsorted(x_data, marker.position)
                 else:
                     logger.warning(f"Invalid marker placement mode: {marker.placement_mode}")
                     continue
@@ -652,9 +630,8 @@ class TracePlot(QWidget):
                 size = marker.size
 
                 marker_item = pg.ScatterPlotItem(pos=[(x_pos, y_pos)], symbol=symbol, size=size, pen=color, brush=color)
-                label_item = pg.TextItem(text=marker.label, color=color, anchor=(0.5, 1))
+                label_item = pg.TextItem(text=f"{y_pos:.2f}", color=marker.color, anchor=(0.5, 1))
                 label_item.setPos(x_pos, y_pos)
-                self.marker_labels[marker.label] = label_item
 
                 if trace_label in self.trace_view_boxes:
                     view_box = self.trace_view_boxes[trace_label]
@@ -664,6 +641,7 @@ class TracePlot(QWidget):
                     self.plot_item.addItem(marker_item)
                     logger.debug(f"Added marker item to main plot for trace: {trace_label}")
 
+                self.marker_labels[marker.label] = label_item
                 marker_items.append(marker_item)
 
         self.markers[marker.label] = marker_items
@@ -677,11 +655,12 @@ class TracePlot(QWidget):
             for marker_item in marker_items:
                 view_box = marker_item.getViewBox()
                 if view_box:
-                    view_box.removeItem(marker_item)
-                    logger.debug(f"Removed marker item from isolated view box")
-                else:
-                    self.plot_item.removeItem(marker_item)
-                    logger.debug(f"Removed marker item from main plot")
+                    if view_box == self.plot_item.vb:
+                        self.plot_item.removeItem(marker_item)
+                        logger.debug(f"Removed marker item from main plot")
+                    else:
+                        view_box.removeItem(marker_item)
+                        logger.debug(f"Removed marker item from isolated view box")
             del self.markers[marker_label]
             logger.debug(f"Marker '{marker_label}' removed successfully")
 
@@ -699,11 +678,8 @@ class TracePlot(QWidget):
 
         for marker in self.marker_manager.markers:
             self.on_marker_added(marker)
-        logger.debug("Markers redrawn for visible traces")
 
-        # Redraw markers for visible traces
-        for marker in self.marker_manager.markers:
-            self.on_marker_added(marker)
+        logger.debug("Markers redrawn for visible traces")
 
     def on_trace_clicked(self, trace_label):
         self.active_trace = trace_label
@@ -776,41 +752,8 @@ class TracePlot(QWidget):
         self.marker_labels.clear()
 
     def on_marker_position_changed(self, marker_label, position):
-        if marker_label in self.markers:
-            marker_items = self.markers[marker_label]
-            marker = self.marker_manager.get_marker_by_label(marker_label)
-            if marker is None:
-                logger.warning(f"Marker not found: {marker_label}")
-                return
-
-            for trace_label, curve in self.trace_curves.items():
-                if curve.isVisible() and self.trace_manager.get_trace_by_label(trace_label).show_markers:
-                    x_data = curve.xData
-                    y_data = curve.yData
-
-                    if position < x_data[0]:
-                        index = 0
-                    elif position > x_data[-1]:
-                        index = len(x_data) - 1
-                    else:
-                        if marker.placement_mode == 'nearest':
-                            index = np.abs(x_data - position).argmin()
-                        elif marker.placement_mode == 'interpolate':
-                            index = np.interp(position, x_data, np.arange(len(x_data)))
-                        else:
-                            logger.warning(f"Invalid marker placement mode: {marker.placement_mode}")
-                            continue
-
-                    x_pos = x_data[int(index)]
-                    y_pos = y_data[int(index)]
-
-                    marker_item = next((item for item in marker_items if item.getViewBox() == curve.getViewBox()), None)
-                    if marker_item is not None:
-                        marker_item.setPos(x_pos, y_pos)
-                    else:
-                        logger.warning(f"Marker item not found for trace: {trace_label}")
-
-            self.update_marker_labels()
+        self.update_marker_labels()
+        self.update_markers()
 
     # --- Misc Methods ----------------
     def handleMouseClicked(self, event):

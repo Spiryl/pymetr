@@ -34,12 +34,14 @@ class CursorControlPanel(QWidget):
 
         self.setLayout(layout)
 
-        self.cursor_manager.cursorAdded.connect(self.add_cursor)
-        self.cursor_manager.cursorRemoved.connect(self.remove_cursor)
-        self.cursor_manager.cursorsCleared.connect(self.clear_cursors)
+        # self.cursor_manager.cursorAdded.connect(self.add_cursor)
+        # self.cursor_manager.cursorRemoved.connect(self.remove_cursor)
+        # self.cursor_manager.cursorsCleared.connect(self.clear_cursors)
+        # self.cursor_manager.cursorPositionChanged.connect(self.update_cursor_position)
 
     def add_cursor(self):
         # Generate a unique label for the new cursor
+        logger.debug("Adding new cursor")
         cursor_count = len(self.cursor_manager.cursors)
         cursor_label = f"Cursor_{cursor_count + 1}"
 
@@ -52,17 +54,32 @@ class CursorControlPanel(QWidget):
         list_item.setSizeHint(item.sizeHint())
         self.cursor_list.addItem(list_item)
         self.cursor_list.setItemWidget(list_item, item)
+        self.cursorAdded.emit(cursor)
 
     def remove_cursor(self, cursor_label):
+        logger.debug(f"Removing cursor: {cursor_label}")
         for i in range(self.cursor_list.count()):
             list_item = self.cursor_list.item(i)
             item_widget = self.cursor_list.itemWidget(list_item)
             if item_widget.cursor.label == cursor_label:
                 self.cursor_list.takeItem(i)
                 break
+        self.cursorRemoved.emit(cursor_label)
 
     def clear_cursors(self):
         self.cursor_list.clear()
+
+    def update_cursor_position(self, cursor_label, position, from_plot_interaction=True):
+        logger.debug(f"Updating cursor position in control panel: {cursor_label}, {position}, from_plot_interaction={from_plot_interaction}")
+        if not from_plot_interaction:
+            for i in range(self.cursor_list.count()):
+                list_item = self.cursor_list.item(i)
+                item_widget = self.cursor_list.itemWidget(list_item)
+                if item_widget.cursor.label == cursor_label:
+                    item_widget.position_spinbox.blockSignals(True)
+                    item_widget.position_spinbox.setValue(position)
+                    item_widget.position_spinbox.blockSignals(False)
+                    break
 
 class CursorListItem(QWidget):
     visibilityChanged = Signal(str, bool)
@@ -71,6 +88,7 @@ class CursorListItem(QWidget):
     lineStyleChanged = Signal(str, str)
     lineThicknessChanged = Signal(str, float)
     cursorRemoved = Signal(str)
+    positionChanged = Signal(str, float)
 
     def __init__(self, cursor, cursor_manager, parent=None):
         super().__init__(parent)
@@ -94,6 +112,12 @@ class CursorListItem(QWidget):
         self.label.editingFinished.connect(self.update_label)
         self.label.setMinimumWidth(120)
         layout.addWidget(self.label)
+
+        self.position_spinbox = QDoubleSpinBox()
+        self.position_spinbox.setRange(-1e9, 1e9)  # Adjust the range as needed
+        self.position_spinbox.setValue(cursor.position)
+        self.position_spinbox.valueChanged.connect(self.update_position)
+        layout.addWidget(self.position_spinbox)
 
         self.color_button = QPushButton()
         self.color_button.setStyleSheet(f"background-color: {cursor.color}")
@@ -154,3 +178,7 @@ class CursorListItem(QWidget):
     def delete_cursor(self):
         logger.debug(f"Deleting cursor '{self.cursor.label}'")
         self.cursor_manager.remove_cursor(self.cursor.label)
+
+    def update_position(self, position):
+        logger.debug(f"Updating cursor position from control panel: {self.cursor.label}, {position}")
+        self.positionChanged.emit(self.cursor.label, position)

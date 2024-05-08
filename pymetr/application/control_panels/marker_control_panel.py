@@ -63,6 +63,7 @@ class MarkerControlPanel(QWidget):
         item.shapeChanged.connect(self.marker_manager.set_marker_shape)
         item.markerRemoved.connect(self.marker_manager.remove_marker)
         item.positionChanged.connect(self.marker_manager.set_marker_position)
+        item.markerRemoved.connect(self.remove_marker)
 
         self.markerAdded.emit(marker)
 
@@ -204,6 +205,7 @@ class MarkerListItem(QWidget):
     def delete_marker(self):
         logger.debug(f"Deleting marker '{self.marker.label}'")
         self.marker_manager.remove_marker(self.marker.label)
+        self.markerRemoved.emit(self.marker.label)
 
     def update_position(self, position):
         logger.debug(f"Updating position for marker '{self.marker.label}' to '{position}'")

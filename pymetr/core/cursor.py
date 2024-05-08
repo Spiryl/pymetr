@@ -1,7 +1,7 @@
 # --- cursor.py ---
 
 class Cursor:
-    def __init__(self, label=None, color=None, line_style=None, line_thickness=None, position=None, orientation=None):
+    def __init__(self, label=None, color='#white', line_style='dotted', line_thickness='1px', position=0.0, orientation='x'):
         self.label = label
         self.color = color
         self.line_style = line_style

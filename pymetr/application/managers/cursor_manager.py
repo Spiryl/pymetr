@@ -14,7 +14,7 @@ class CursorManager(QObject):
     cursorColorChanged = Signal(str, str)
     cursorLineStyleChanged = Signal(str, str)
     cursorLineThicknessChanged = Signal(str, float)
-    cursorPositionChanged = Signal(str, float)
+    cursorPositionChanged = Signal(str, float, bool)
     cursorsCleared = Signal()
 
     def __init__(self):
@@ -22,10 +22,12 @@ class CursorManager(QObject):
         self.cursors = []
 
     def add_cursor(self, cursor):
+        logger.debug(f"Adding cursor: {cursor.label}")
         self.cursors.append(cursor)
         self.cursorAdded.emit(cursor)
 
     def remove_cursor(self, cursor_label):
+        logger.debug(f"Removing cursor: {cursor_label}")
         for cursor in self.cursors:
             if cursor.label == cursor_label:
                 self.cursors.remove(cursor)
@@ -68,10 +70,11 @@ class CursorManager(QObject):
                 break
 
     def set_cursor_position(self, cursor_label, position):
+        logger.debug(f"Setting cursor position: {cursor_label}, {position}")
         for cursor in self.cursors:
             if cursor.label == cursor_label:
                 cursor.position = position
-                self.cursorPositionChanged.emit(cursor_label, position)
+                self.cursorPositionChanged.emit(cursor_label, position, False)
                 break
 
     def clear_cursors(self):
