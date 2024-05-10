@@ -1,11 +1,11 @@
 /* styles.qss */
 QMainWindow {
-    background-color: #1E1E1E;
-    color: #AAAAAA;
+    background-color: #181818;
+    color: #DDDDDD;
 }
 
 #centralWidget {
-    background-color: #1E1E1E; /* Dark background color */
+    background-color: #181818; /* Dark background color */
 }
 
 QToolBar {
@@ -19,7 +19,7 @@ QToolButton {
     background-color: transparent;
     border-radius: 3px;
     border: none;
-    color: #AAAAAA;
+    color: #DDDDDD;
 }
 
 QToolButton:pressed {
@@ -47,13 +47,13 @@ QToolButton:pressed {
 
 QTabWidget::pane {
     border: none;
-    background: #1E1E1E;
+    background: #181818;
     margin: 6px;
 }
 
 QTabBar::tab {
     background: #2A2A2A;
-    color: #AAAAAA;
+    color: #DDDDDD;
     padding: 8px;
     border: none;
     border-bottom: 2px solid transparent;
@@ -67,12 +67,12 @@ QTabBar::tab:selected {
 }
 
 QGroupBox::title {
-    color: #AAAAAA; /* Adjust the color as needed */
+    color: #DDDDDD; /* Adjust the color as needed */
 }
 
 QMenuBar {
     background-color: #3E3E3E;
-    color: #AAAAAA; /* Adjust the color as needed */
+    color: #DDDDDD; /* Adjust the color as needed */
 }
 
 QMenuBar::item {
@@ -81,11 +81,11 @@ QMenuBar::item {
 
 QMenuBar::item:selected {
     background-color: #3E3E3E;
-    color: #AAAAAA; /* Adjust the color as needed */
+    color: #DDDDDD; /* Adjust the color as needed */
 }
 
 QSplitter::handle {
-    background-color: #1E1E1E;
+    background-color: #181818;
     width: 4px;
 }
 
@@ -94,8 +94,8 @@ QSplitter::handle:hover {
 }
 
 QTreeWidget {
-    background-color: #1E1E1E;
-    color: #AAAAAA;
+    background-color: #181818;
+    color: #DDDDDD;
     border: 1px;
 }
 
@@ -116,17 +116,17 @@ QTreeWidget::item:selected {
 
 QTreeWidget::item:has-children {
     background-color: #2A2A2A;
-    color: #AAAAAA;
+    color: #DDDDDD;
 }
 
 QListWidget {
-    background-color: #1E1E1E; 
+    background-color: #181818; 
     show-decoration-selected: 0;
     border: 0px;
 }
 
 QListWidget::item {
-    color: #AAAAAA;
+    color: #DDDDDD;
     border-radius: 4px; 
     margin: 1px 0; 
 }
@@ -141,7 +141,7 @@ QListWidget::item:selected {
 }
 
 QListWidget QTextEdit {
-    color: #AAAAAA;
+    color: #DDDDDD;
     border: 1px solid #3E3E3E;
     border-radius: 4px;
     padding: 1px;
@@ -149,7 +149,7 @@ QListWidget QTextEdit {
 
 QScrollBar:vertical {
     border: 1px solid #2A2A2A;
-    background: #1E1E1E;
+    background: #181818;
     width: 15px;
     margin: 22px 0 22px 0;
 }
@@ -190,7 +190,7 @@ QPushButton:hover {
 QPushButton:pressed {
     background-color: #FFAA00;
     color: #FFFFFF;
-    border: 1px solid #888888;
+    border: 1px solid #DDDDDD;
 }
 
 QComboBox {

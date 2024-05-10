@@ -46,7 +46,7 @@ class CursorControlPanel(QWidget):
         cursor_label = f"Cursor_{cursor_count + 1}"
 
         # Create a new cursor with default properties
-        cursor = Cursor(label=cursor_label, color="#FF0000", line_style="Solid", line_thickness=1.0, position=0.0, orientation="x")
+        cursor = Cursor(label=cursor_label, color="#888888", line_style="Dot", line_thickness=1.0, position=0.0, orientation="x")
 
         # Create a CursorListItem for the new cursor
         item = CursorListItem(cursor, self.cursor_manager, self)
@@ -69,17 +69,16 @@ class CursorControlPanel(QWidget):
     def clear_cursors(self):
         self.cursor_list.clear()
 
-    def update_cursor_position(self, cursor_label, position, from_plot_interaction=True):
-        logger.debug(f"Updating cursor position in control panel: {cursor_label}, {position}, from_plot_interaction={from_plot_interaction}")
-        if not from_plot_interaction:
-            for i in range(self.cursor_list.count()):
-                list_item = self.cursor_list.item(i)
-                item_widget = self.cursor_list.itemWidget(list_item)
-                if item_widget.cursor.label == cursor_label:
-                    item_widget.position_spinbox.blockSignals(True)
-                    item_widget.position_spinbox.setValue(position)
-                    item_widget.position_spinbox.blockSignals(False)
-                    break
+    def update_cursor_position(self, cursor_label, position):
+        logger.debug(f"Updating cursor position in control panel: {cursor_label}, {position}")
+        for i in range(self.cursor_list.count()):
+            list_item = self.cursor_list.item(i)
+            item_widget = self.cursor_list.itemWidget(list_item)
+            if item_widget.cursor.label == cursor_label:
+                item_widget.position_spinbox.blockSignals(True)
+                item_widget.position_spinbox.setValue(position)
+                item_widget.position_spinbox.blockSignals(False)
+                break
 
 class CursorListItem(QWidget):
     visibilityChanged = Signal(str, bool)

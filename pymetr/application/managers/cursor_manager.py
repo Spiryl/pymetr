@@ -14,7 +14,7 @@ class CursorManager(QObject):
     cursorColorChanged = Signal(str, str)
     cursorLineStyleChanged = Signal(str, str)
     cursorLineThicknessChanged = Signal(str, float)
-    cursorPositionChanged = Signal(str, float, bool)
+    cursorPositionChanged = Signal(str, float)
     cursorsCleared = Signal()
 
     def __init__(self):
@@ -74,7 +74,6 @@ class CursorManager(QObject):
         for cursor in self.cursors:
             if cursor.label == cursor_label:
                 cursor.position = position
-                self.cursorPositionChanged.emit(cursor_label, position, False)
                 break
 
     def clear_cursors(self):

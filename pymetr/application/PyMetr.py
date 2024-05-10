@@ -221,17 +221,16 @@ class PyMetrMainWindow(QMainWindow):
         self.control_panel.marker_control_panel.markerRemoved.connect(self.marker_manager.remove_marker)
 
         # Connect cursor-related signals
-
-        # self.cursor_manager.cursorVisibilityChanged.connect(self.trace_plot.on_cursor_visibility_changed)
         # self.cursor_manager.cursorLabelChanged.connect(self.trace_plot.on_cursor_label_changed)
-        # self.cursor_manager.cursorColorChanged.connect(self.trace_plot.on_cursor_color_changed)
-        # self.cursor_manager.cursorLineStyleChanged.connect(self.trace_plot.on_cursor_line_style_changed)
-        # self.cursor_manager.cursorLineThicknessChanged.connect(self.trace_plot.on_cursor_line_thickness_changed)
+        self.cursor_manager.cursorVisibilityChanged.connect(self.trace_plot.on_cursor_visibility_changed)
+        self.cursor_manager.cursorColorChanged.connect(self.trace_plot.on_cursor_color_changed)
+        self.cursor_manager.cursorLineStyleChanged.connect(self.trace_plot.on_cursor_line_style_changed)
+        self.cursor_manager.cursorLineThicknessChanged.connect(self.trace_plot.on_cursor_line_thickness_changed)
         # self.cursor_manager.cursorsCleared.connect(self.trace_plot.on_cursors_cleared)
 
         self.cursor_manager.cursorPositionChanged.connect(self.trace_plot.on_cursor_position_changed)
-        self.cursor_manager.cursorPositionChanged.connect(lambda cursor_label, position, from_plot_interaction: 
-                        self.control_panel.cursor_control_panel.update_cursor_position(cursor_label, position, from_plot_interaction))
+        self.trace_plot.cursorPositionChanged.connect(self.cursor_manager.set_cursor_position)
+        self.trace_plot.cursorPositionChanged.connect(self.control_panel.cursor_control_panel.update_cursor_position)
         
         self.control_panel.cursor_control_panel.cursorAdded.connect(self.cursor_manager.add_cursor)
         self.control_panel.cursor_control_panel.cursorRemoved.connect(self.cursor_manager.remove_cursor)

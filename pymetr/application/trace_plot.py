@@ -20,17 +20,17 @@ class TracePlot(QWidget):
         super().__init__(parent)
         self.plot_layout = pg.GraphicsLayoutWidget()
         self.plot_item = self.plot_layout.addPlot(row=0, col=0)
-        self.plot_layout.setBackground('#1E1E1E')  # Set the desired background color
+        self.plot_layout.setBackground('#181818')  # Set the desired background color
 
         # Set the color and transparency of grid lines
-        axis_color = '#888888'  
+        axis_color = '#AAAAAA'  
         self.plot_item.getAxis('left').setPen(pg.mkPen(color=axis_color))  
         self.plot_item.getAxis('bottom').setPen(pg.mkPen(color=axis_color))  
         self.plot_item.getAxis('left').setGrid(24)  
         self.plot_item.getAxis('bottom').setGrid(24)  
 
         # Set the color of plot labels and title
-        label_color = '#888888'
+        label_color = '#AAAAAA'
         self.plot_item.setTitle("", color=label_color)
         self.plot_item.setLabel("bottom", "X Axis", color=label_color)
         self.plot_item.setLabel("left", "Y Axis", color=label_color)
@@ -464,7 +464,7 @@ class TracePlot(QWidget):
 
      # --- Plot Label Methods ----------------
 
-    # --- Plot Methods ----------------
+    # --- Plot Display Methods ----------------
     def set_title(self, title):
         # Set the title of the plot
         self.plot_item.setTitle(title)
@@ -566,7 +566,7 @@ class TracePlot(QWidget):
         self.cursors[cursor.label] = cursor_item
 
         # Connect signals for cursor movement
-        cursor_item.sigPositionChanged.connect(lambda: self.on_cursor_position_changed(cursor.label, cursor_item.value(), from_plot_interaction=True))
+        cursor_item.sigPositionChanged.connect(lambda: self.on_cursor_position_changed(cursor.label, cursor_item.value()))
 
     def on_cursor_removed(self, cursor_label):
         logger.debug(f"Removing cursor: {cursor_label}")
@@ -575,11 +575,9 @@ class TracePlot(QWidget):
             self.plot_item.removeItem(cursor_item)
             del self.cursors[cursor_label]
 
-    def on_cursor_position_changed(self, cursor_label, position, from_plot_interaction=True):
-        logger.debug(f"Cursor position changed: {cursor_label}, {position}, from_plot_interaction={from_plot_interaction}")
-        if from_plot_interaction:
-            self.cursor_manager.set_cursor_position(cursor_label, position)
-            self.cursorPositionChanged.emit(cursor_label, position, from_plot_interaction)
+    def on_cursor_position_changed(self, cursor_label, position):
+        logger.debug(f"Cursor position changed: {cursor_label}, {position}")
+        self.cursorPositionChanged.emit(cursor_label, position)
 
     def get_trace_values_at_cursor(self, cursor_label):
         if cursor_label in self.cursors:
@@ -600,6 +598,32 @@ class TracePlot(QWidget):
                         trace_values[trace_label] = x_data[index]
 
             return trace_values
+
+    def on_cursor_visibility_changed(self, cursor_label, visible):
+        if cursor_label in self.cursors:
+            cursor_item = self.cursors[cursor_label]
+            cursor_item.setVisible(visible)
+
+    def on_cursor_color_changed(self, cursor_label, color):
+        if cursor_label in self.cursors:
+            cursor_item = self.cursors[cursor_label]
+            pen = cursor_item.pen
+            pen.setColor(color)
+            cursor_item.setPen(pen)
+
+    def on_cursor_line_style_changed(self, cursor_label, style):
+        if cursor_label in self.cursors:
+            cursor_item = self.cursors[cursor_label]
+            pen = cursor_item.pen
+            pen.setStyle(self.get_line_style(style))
+            cursor_item.setPen(pen)
+
+    def on_cursor_line_thickness_changed(self, cursor_label, thickness):
+        if cursor_label in self.cursors:
+            cursor_item = self.cursors[cursor_label]
+            pen = cursor_item.pen
+            pen.setWidth(thickness)
+            cursor_item.setPen(pen)
 
     # --- Marker Methods -------------
     def on_marker_added(self, marker):
