@@ -1,7 +1,7 @@
 import logging
 logger = logging.getLogger(__name__)
 import numpy as np
-from pymetr.core.instrument import Instrument
+from pymetr.core.instrument import Instrument, QTimer, QThread
 from pymetr.core.subsystem import Subsystem
 from pymetr.core.sources import Sources
 from pymetr.core.trace import Trace
@@ -14,6 +14,8 @@ class Dsox1204g(Instrument):
         self._format = "BYTE" # Global data format for all channels
         self.sources = Sources(['CHAN1', 'CHAN2', 'CHAN3', 'CHAN4'])
         self.sources.source = ["CHAN1"]
+
+        self.x_data = {}
 
         self.waveform = Waveform.build(self, ':WAVeform')
         self.trigger = Trigger.build(self, ':TRIGger')
@@ -47,32 +49,97 @@ class Dsox1204g(Instrument):
         pass
 
     @Instrument.gui_command
-    @Sources.source_command(":DIGitize {}")
     def digitize(self, *sources):
-        pass
+        self.fetch_trace()
+
+    def wait_for_trigger_armed(self):
+        while True:
+            QThread.msleep(1)  # Small wait to prevent excessive queries
+            armed = int(self.query(":AER?"))
+            if armed == 1:
+                break
+
+    def wait_for_acquisition_complete(self):
+        timeout = 30000  # 10 seconds
+        elapsed = 0
+
+        while elapsed <= timeout:
+            oper_cond = int(self.query(":OPERegister:CONDition?"))
+            if not (oper_cond & 0x8):  # Mask RUN bit (bit 3, &H8)
+                break
+            else:
+                QThread.msleep(1)  # Small wait to prevent excessive queries
+                elapsed += 1
+
+        if elapsed >= timeout:
+            logger.warning("Timeout waiting for single-shot trigger.")
 
     @Instrument.gui_command
-    def run(self): # Start continuous
-        self.write(":RUN")
-
-    @Instrument.gui_command
-    def stop(self): # Stop continuous trigger
+    def single(self):
+        logger.debug("Single trigger command received")
+        self.continuous_mode = False
+        # Stop acquisitions and wait for the operation to complete
         self.write(":STOP")
+        self.query_operation_complete()
+
+        # Start a single acquisition
+        self.write(":SINGle")
+        self.wait_for_trigger_armed()
+        logger.debug("Oscilloscope is armed and ready, enable DUT.")
+        self.wait_for_acquisition_complete()
+        self.fetch_trace()
 
     @Instrument.gui_command
-    def single(self): # Single trigger
-        self.write(":SINGLE")
+    def stop(self):
+        logger.debug("Stop command received")
+        self.write(":STOP")
+        self.continuous_mode = False
 
-        if not sources:
-            sources = self.sources.source
+    @Instrument.gui_command
+    def run(self):
+        logger.debug("Run command received")
+        self.write(":RUN")
+        self.continuous_mode = True
+        self.check_trigger_conditions()
 
+    def check_trigger_conditions(self):
+        if not self.continuous_mode:
+            return
+
+        oper_cond = int(self.query(":OPERegister:CONDition?").strip())
+        logger.debug(f"Operation Status Condition Register: {oper_cond}")
+
+        if oper_cond & (1 << 3):  # Check bit 3 (Run)
+            if oper_cond & (1 << 5):  # Check bit 5 (Wait Trig)
+                self.query(":TER?")  # Read Trigger Event Register to clear the bit
+                self.triggerArmed.emit(self.unique_id)
+                self.fetch_trace_data()
+            else:
+                QTimer.singleShot(1, self.check_trigger_conditions)
+        else:
+            QTimer.singleShot(1, self.check_trigger_conditions)
+
+    @Instrument.async_command
+    def fetch_trace_data(self):
+        sources = self.sources.source
         traces = []
+
+        if self.x_data is None:
+            self.x_data = self.fetch_time(sources[0])  # Fetch time data only once
+
         for source in sources:
-            time = self.fetch_time(source)
             data = self.fetch_data(source)
-            trace_data = Trace(data, x_data=time, label=source)
-            traces.append(trace_data)
-        return traces
+
+            if len(data) == len(self.x_data):
+                trace = Trace(data, x_data=self.x_data, label=source)
+                traces.append(trace)
+            else:
+                logger.error(f"Mismatched lengths for data and x_data arrays for source {source}")
+
+        self.traceDataReady.emit(traces)
+
+        if self.continuous_mode:
+            QTimer.singleShot(0, self.check_trigger_conditions)
 
     def fetch_time(self, source=None):
         if source:

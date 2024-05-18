@@ -3,7 +3,7 @@ logger = logging.getLogger(__name__)
 logging.getLogger('pyvisa').setLevel(logging.CRITICAL)
 
 from pyvisa.constants import BufferType
-from PySide6.QtCore import QObject, Signal, QThread
+from PySide6.QtCore import QObject, Signal, QThread, QTimer
 import sys
 import numpy as np
 import pyvisa
@@ -30,6 +30,7 @@ class Instrument(QObject):
     traceDataReady = Signal(object)
     commandSent = Signal(str, str)
     responseReceived = Signal(str, str)
+    triggerArmed = Signal(str)
 
     def __init__(self, resource_string, sources=None, **kwargs):
         """
@@ -130,7 +131,35 @@ class Instrument(QObject):
             - The decorator does not modify the behavior of the method itself; it only serves as a marker for the InstrumentVisitor.
             - The docstring of the decorated method will be used as the help text or tooltip for the corresponding GUI element.
         """
-        return func
+        def wrapper(instance, *args, **kwargs):
+            QTimer.singleShot(0, lambda: func(instance, *args, **kwargs))
+        return wrapper
+
+    @staticmethod
+    def async_command(func):
+        class AsyncThread(QThread):
+            def __init__(self, instance, *args, **kwargs):
+                super().__init__()
+                self.instance = instance
+                self.args = args
+                self.kwargs = kwargs
+                self.result = None
+
+            def run(self):
+                self.result = func(self.instance, *self.args, **self.kwargs)
+
+        def wrapper(instance, *args, **kwargs):
+            thread = AsyncThread(instance, *args, **kwargs)
+            thread.start()
+            thread.finished.connect(lambda: instance.handle_async_result(thread.result))
+
+        return wrapper
+
+    def handle_async_result(self, result):
+        if isinstance(result, list) and all(isinstance(item, Trace) for item in result):
+            self.traceDataReady.emit(result)
+        else:
+            logger.debug(f"Async result: {result}")
 
     @abstractmethod
     def fetch_trace(self):

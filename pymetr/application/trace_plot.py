@@ -14,7 +14,7 @@ class TracePlot(QWidget):
     finished_update = Signal(bool)
     cursorAdded = Signal(Cursor)
     cursorRemoved = Signal(str)
-    cursorPositionChanged = Signal(str, float, bool)
+    cursorPositionChanged = Signal(str, float)
 
     def __init__(self, trace_manager, cursor_manager, marker_manager, parent=None):
         super().__init__(parent)

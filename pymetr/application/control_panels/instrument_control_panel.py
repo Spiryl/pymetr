@@ -69,7 +69,8 @@ class InstrumentControlPanel(QWidget):
                 self.instrument_connected.emit(unique_id)
             else:
                 self.no_instruments_connected.emit()
-
+        self.available_instruments_list.clearSelection()
+        
     def on_disconnect_button_clicked(self):
         selected_item = self.connected_instruments_list.currentItem()
         if selected_item:
