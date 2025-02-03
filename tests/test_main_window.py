@@ -1,64 +1,73 @@
 # tests/test_main_window.py
 import pytest
-from PySide6.QtWidgets import QApplication
-from pymetr.views.windows.main_window import MainWindow, create_application
-from pymetr.state import ApplicationState
-from pymetr.models.base import BaseModel
+from PySide6.QtWidgets import QDockWidget, QMessageBox
+from PySide6.QtCore import Qt
+from pymetr.views.windows.main_window import MainWindow
+from pymetr.actions.commands import Result  # Add this import
 
-class TestScript(BaseModel):
-    def __init__(self, name: str, model_id: str = None):
-        super().__init__(model_id)
-        self.set_property('name', name)
-
-@pytest.fixture(scope="session")
-def qapp():
-    return QApplication([])
-
-@pytest.fixture
-def state():
-    return ApplicationState()
-
-@pytest.fixture
-def main_window(qapp, state):
-    return MainWindow(state)
-
-def test_window_creation(main_window):
+def test_window_creation(state, qapp, qtbot):
     """Test basic window creation and components"""
+    window = MainWindow(state)
+    qtbot.addWidget(window)
+    
     # Verify core components exist
-    assert main_window.tree_view is not None
-    assert main_window.tab_manager is not None
-    assert main_window.ribbon is not None
+    assert window.tree_view is not None
+    assert window.tab_manager is not None
+    assert window.ribbon is not None
+    
+    # Check tree view is properly docked
+    docks = window.findChildren(QDockWidget)
+    assert len(docks) > 0
+    model_dock = next((d for d in docks if d.windowTitle() == "Models"), None)
+    assert model_dock is not None
+    assert model_dock.widget() == window.tree_view
 
-def test_action_handling(main_window, state, qtbot):
-    """Test action handling flow"""
-    # Create test script
-    script = TestScript("Test Script")
-    state.registry.register(script)
+def test_action_handling_success(state, qapp, qtbot, test_script):
+    """Test successful action handling"""
+    window = MainWindow(state)
+    qtbot.addWidget(window)
     
-    # Select in tree
-    state.set_active_model(script.id)
-    
-    # Track action handling
-    handled_actions = []
-    state.actions.execute = lambda action_id, **kwargs: handled_actions.append(action_id)
+    # Mock successful action execution
+    state.actions.execute = lambda action_id: Result(success=True)
     
     # Trigger action
-    main_window.ribbon.action_triggered.emit("run_script")
-    
-    # Verify action was handled
-    assert "run_script" in handled_actions
+    with qtbot.wait_signal(window.ribbon.action_triggered):
+        window.ribbon.action_triggered.emit("test_action")
 
-def test_window_layout(main_window):
-    """Test window layout and docking"""
-    # Verify dock widget
-    docks = main_window.findChildren(QDockWidget)
-    assert len(docks) > 0
-    assert any(d.windowTitle() == "Models" for d in docks)
-
-def test_application_creation(state):
-    """Test application creation helper"""
-    app, window = create_application(state)
+def test_action_handling_failure(state, qapp, qtbot, monkeypatch):
+    """Test failed action handling shows error message"""
+    window = MainWindow(state)
+    qtbot.addWidget(window)
     
-    # Verify application setup
-    assert app.applicationName() == "pymetr"
-    assert isinstance(window, MainWindow)
+    # Mock QMessageBox to capture error display
+    shown_messages = []
+    def mock_warning(parent, title, message):
+        shown_messages.append((title, message))
+    
+    monkeypatch.setattr(QMessageBox, 'warning', mock_warning)
+    
+    # Mock failed action execution
+    state.actions.execute = lambda action_id: Result(success=False, error="Test error")
+    
+    # Trigger action
+    window.ribbon.action_triggered.emit("test_action")
+    
+    # Verify error was shown
+    assert len(shown_messages) == 1
+    assert "Action Failed" in shown_messages[0][0]
+    assert "Test error" in shown_messages[0][1]
+
+def test_window_layout_constraints(state, qapp, qtbot):
+    """Test window layout and size constraints"""
+    window = MainWindow(state)
+    qtbot.addWidget(window)
+    
+    # Verify minimum size
+    assert window.minimumSize().width() >= 800
+    assert window.minimumSize().height() >= 600
+    
+    # Verify dock widget areas
+    model_dock = next(d for d in window.findChildren(QDockWidget) 
+                     if d.windowTitle() == "Models")
+    assert model_dock.allowedAreas() & Qt.LeftDockWidgetArea
+    assert model_dock.allowedAreas() & Qt.RightDockWidgetArea

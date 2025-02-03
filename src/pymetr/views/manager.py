@@ -1,16 +1,20 @@
 # src/pymetr/views/manager.py
-from typing import Dict, Set, Any, Optional, Callable
+from typing import Dict, Set, Any, Optional, Callable, TYPE_CHECKING
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from pymetr.state import ApplicationState
 
+if TYPE_CHECKING:
+    from pymetr.state import ApplicationState
+    
 class ViewType(Enum):
     """Enumeration of supported view types"""
+    HOME = auto()
     TREE = auto()
     SCRIPT = auto()
     PLOT = auto()
     RESULT = auto()
     INSTRUMENT = auto()
+    DATA_TABLE = auto()
 
 @dataclass
 class ViewState:

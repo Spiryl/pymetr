@@ -1,9 +1,11 @@
 # src/pymetr/actions/commands.py
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, TYPE_CHECKING
 from dataclasses import dataclass
+from PySide6.QtCore import Qt
 
-from pymetr.state import ApplicationState
+if TYPE_CHECKING:
+        from pymetr.state import ApplicationState
 
 @dataclass
 class Result:
@@ -61,3 +63,45 @@ class ModelCommand(Command):
                     model.set_property(key, value)
                 return True
         return False
+    
+from .commands import Command, Result
+from pymetr.models.device import Device
+from pymetr.views.windows.instrument_discovery import InstrumentDiscoveryDialog
+from PySide6.QtWidgets import QApplication
+
+class DiscoverInstrumentsCommand(Command):
+    """
+    1) Opens the discovery dialog
+    2) If user selects an instrument, create an Instrument model in the registry
+    3) Emit a signal to let MainWindow (or any observer) know
+    """
+
+    def execute(self) -> Result:
+        dialog = InstrumentDiscoveryDialog(parent=QApplication.activeWindow())
+        ret = dialog.exec_()
+        if ret != dialog.Accepted or not dialog.selected_instrument:
+            return Result(False, error="No instrument selected.")
+
+        selected = dialog.selected_instrument  # dict with manufacturer, model, resource, driver_info, etc.
+
+        # Build a new device model
+        device = Device(
+            manufacturer=selected["manufacturer"],
+            model=selected["model"],
+            serial_number=selected["serial"],
+            firmware=selected["firmware"],
+            resource=selected["resource"]
+            # optionally: pass an id= or let it auto-generate
+        )
+
+        # Register in your state registry
+        # self.state.registry.register(instrument)
+
+        # Now let the MainWindow (or whomever) know
+        self.state.signals.emit("instrument_connected", device.id)
+
+        return Result(True)
+
+    def undo(self) -> bool:
+        # Typically not used here
+        return True
