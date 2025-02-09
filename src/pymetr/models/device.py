@@ -1,20 +1,20 @@
-# app/models/device_models.py
+from typing import Dict, Any, Optional
+from PySide6.QtCore import Signal
 
-from typing import Dict, Optional, Any, List
-from pathlib import Path
-from enum import Enum
-from .base import BaseModel
-from ..logging import logger
-
-class ConnectionState(Enum):
-    """Possible states for an device connection."""
-    DISCONNECTED = "disconnected"
-    CONNECTING = "connecting"
-    CONNECTED = "connected"
-    ERROR = "error"
+from pymetr.models.base import BaseModel
+from pymetr.core.registry import ConnectionType
+from pymetr.core.logging import logger
 
 class Device(BaseModel):
-    """Base class for all devices including DUTs."""
+    """
+    Model representing an instrument and its state.
+    Handles driver loading, connection management, and property updates.
+    """
+    
+    # Signals
+    connection_changed = Signal(bool)    # is_connected
+    property_changed = Signal(str, Any)  # property_path, value
+    error_occurred = Signal(str)         # error_message
     
     def __init__(self, 
                  manufacturer: Optional[str] = None,
@@ -24,27 +24,36 @@ class Device(BaseModel):
                  resource: Optional[str] = None,
                  id: Optional[str] = None):
         super().__init__(id)
+        self._driver_instance = None
+        self._connection = None
+        
+        # Store basic properties
         self._manufacturer = manufacturer
         self._model = model
         self._serial_number = serial_number
         self._firmware = firmware
         self._resource = resource
-        self._connection_state = ConnectionState.DISCONNECTED
         self._error_message: Optional[str] = None
         self._driver_info: Dict[str, Any] = {}
-        self.driver_instance = None
         self._parameters: Dict[str, Any] = {}
-
-        logger.info(f"Created Instrument with ID: {self.id}")
-
+        
+        # Set default properties
+        self.set_property('name', manufacturer or 'Unnamed Device')
+        self.set_property('model', model or '')
+        self.set_property('serial', serial_number or '')
+        self.set_property('driver_path', '')
+        self.set_property('connection_type', ConnectionType.VISA)
+        self.set_property('connection_string', resource or '')
+        self.set_property('is_connected', False)
+        
     @property
     def manufacturer(self) -> Optional[str]:
         return self._manufacturer
 
     @manufacturer.setter
     def manufacturer(self, value: Optional[str]):
-        old_value = self._manufacturer
         self._manufacturer = value
+        self.set_property('name', value or 'Unnamed Device')
 
     @property
     def model(self) -> Optional[str]:
@@ -52,8 +61,8 @@ class Device(BaseModel):
 
     @model.setter
     def model(self, value: Optional[str]):
-        old_value = self._model
         self._model = value
+        self.set_property('model', value or '')
 
     @property
     def serial_number(self) -> Optional[str]:
@@ -61,8 +70,8 @@ class Device(BaseModel):
 
     @serial_number.setter
     def serial_number(self, value: Optional[str]):
-        old_value = self._serial_number
         self._serial_number = value
+        self.set_property('serial', value or '')
 
     @property
     def firmware(self) -> Optional[str]:
@@ -70,7 +79,6 @@ class Device(BaseModel):
 
     @firmware.setter 
     def firmware(self, value: Optional[str]):
-        old_value = self._firmware
         self._firmware = value
 
     @property
@@ -79,17 +87,8 @@ class Device(BaseModel):
 
     @resource.setter
     def resource(self, value: Optional[str]):
-        old_value = self._resource
         self._resource = value
-
-    @property
-    def connection_state(self) -> ConnectionState:
-        return self._connection_state
-
-    @connection_state.setter
-    def connection_state(self, value: ConnectionState):
-        old_value = self._connection_state
-        self._connection_state = value
+        self.set_property('connection_string', value or '')
 
     @property
     def error_message(self) -> Optional[str]:
@@ -97,22 +96,67 @@ class Device(BaseModel):
 
     @error_message.setter
     def error_message(self, value: Optional[str]):
-        old_value = self._error_message
         self._error_message = value
+        self.set_property('error_message', value)
 
     @property
     def driver_info(self) -> Dict[str, Any]:
         return self._driver_info.copy()
+        
+    @property
+    def driver_instance(self):
+        """Get the driver instance."""
+        return self._driver_instance
+        
+    def connect(self):
+        """Establish connection to instrument."""
+        try:
+            from pymetr.core.connections import ConnectionFactory
+            
+            # Create connection
+            config = {
+                'type': self.get_property('connection_type'),
+                'resource': self.get_property('connection_string')
+            }
+            self._connection = ConnectionFactory.create_connection(config)
+            
+            # Create driver instance
+            from pymetr.core.registry import get_registry
+            registry = get_registry()
+            model = self.get_property('model')
+            self._driver_instance = registry.create_instance(model, self._connection)
+            
+            # Connect signals
+            self._driver_instance.property_changed.connect(self._handle_driver_property)
+            self._driver_instance.error_occurred.connect(self._handle_driver_error)
+            
+            # Open connection
+            self._connection.open()
+            self.set_property('is_connected', True)
+            self.connection_changed.emit(True)
+            
+        except Exception as e:
+            logger.error(f"Connection failed: {e}")
+            self.error_occurred.emit(str(e))
+            self.set_property('is_connected', False)
+            self.connection_changed.emit(False)
+            
+    def disconnect(self):
+        """Close connection to instrument."""
+        if self._connection:
+            try:
+                self._connection.close()
+            except Exception as e:
+                logger.error(f"Error closing connection: {e}")
+            finally:
+                self._connection = None
+                self._driver_instance = None
+                self.set_property('is_connected', False)
+                self.connection_changed.emit(False)
 
     def set_driver_info(self, info: Dict[str, Any]):
         """Update driver information."""
-        old_info = self._driver_info.copy()
         self._driver_info = info.copy()
-
-    def set_driver_instance(self, instance):
-        """Set the driver instance after successful connection"""
-        self.driver_instance = instance
-        self.connection_state = ConnectionState.CONNECTED if instance else ConnectionState.ERROR
         
     @property
     def parameters(self) -> Dict[str, Any]:
@@ -127,43 +171,13 @@ class Device(BaseModel):
                 current[part] = {}
             current = current[part]
             
-        old_value = current.get(parts[-1])
         current[parts[-1]] = value
-
-    def set_parameters(self, parameters: Dict[str, Any]):
-        """Set the complete parameter tree."""
-        old_params = self._parameters.copy()
-        self._parameters = parameters.copy()
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert instrument state to a dictionary for serialization."""
-        return {
-            'id': self.id,
-            'manufacturer': self.manufacturer,
-            'model': self.model,
-            'serial_number': self.serial_number,
-            'firmware': self.firmware,
-            'resource': self.resource,
-            'connection_state': self.connection_state.value,
-            'error_message': self.error_message,
-            'driver_info': self.driver_info,
-            'parameters': self.parameters
-        }
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'Device':
-        """Create a new instrument instance from a dictionary."""
-        inst = cls(
-            manufacturer=data.get('manufacturer'),
-            model=data.get('model'),
-            serial_number=data.get('serial_number'),
-            firmware=data.get('firmware'),
-            resource=data.get('resource'),
-            id=data.get('id')
-        )
-        if data.get('connection_state'):
-            inst._connection_state = ConnectionState(data['connection_state'])
-        inst._error_message = data.get('error_message')
-        inst._driver_info = data.get('driver_info', {}).copy()
-        inst._parameters = data.get('parameters', {}).copy()
-        return inst
+                
+    def _handle_driver_property(self, path: str, value: Any):
+        """Handle property changes from driver."""
+        self.property_changed.emit(path, value)
+        
+    def _handle_driver_error(self, error: str):
+        """Handle errors from driver."""
+        self.error_occurred.emit(error)
+        self.error_message = error

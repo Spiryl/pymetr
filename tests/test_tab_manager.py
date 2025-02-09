@@ -1,7 +1,7 @@
 # tests/test_tab_manager.py
 import pytest
 from PySide6.QtWidgets import QWidget
-from pymetr.views.widgets.tab_manager import TabManager
+from pymetr.views.tab_manager import TabManager
 from pymetr.views.manager import ViewType
 
 # Mock view classes for testing

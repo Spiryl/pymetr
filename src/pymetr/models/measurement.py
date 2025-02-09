@@ -1,76 +1,54 @@
-# app/models/measurement.py
-
 from typing import Optional
-from .base import BaseModel
-from ..logging import logger
+from pymetr.models.base import BaseModel
+from pymetr.core.logging import logger
 
 class Measurement(BaseModel):
-    """A calculated measurement result."""
-    
-    def __init__(self, test_id: str, label: str, value: float,
-                 units: str = "", id: Optional[str] = None):
-        super().__init__(id)
-        self.test_id = test_id
-        self.label = label
-        self._value = value
-        self._units = units
-        self._position: Optional[float] = None
-        self._color: str = "#00FF00"
-        self._visible: bool = True
-        self._pass_fail: Optional[bool] = None
-    
+    """
+    A single measurement value with optional limits for validation.
+    """
+    def __init__(self, name: str, value: float, units: str = "", model_id: Optional[str] = None):
+        super().__init__(model_id=model_id)
+        self.set_property("name", name)
+        self.set_property("value", value)
+        self.set_property("units", units)
+        self.set_property("timestamp", None)
+        self.set_property("limits", None)  # Optional (min, max) tuple
+        self.set_property("status", "Valid")  # 'Valid', 'Invalid', or 'Warning'
+
+    @property
+    def name(self) -> str:
+        return self.get_property("name")
+
     @property
     def value(self) -> float:
-        return self._value
-    
+        return self.get_property("value")
+
     @value.setter
-    def value(self, new_value: float):
-        old_value = self._value
-        self._value = new_value
-        self.notify_change("value", {
-            "measurement_id": self.id,
-            "old": old_value,
-            "new": new_value,
-            "label": self.label
-        })
-    
+    def value(self, val: float):
+        self.set_property("value", val)
+        # Check limits if present
+        limits = self.get_property("limits")
+        if limits:
+            min_val, max_val = limits
+            if not (min_val <= val <= max_val):
+                self.set_property("status", "Invalid")
+            else:
+                self.set_property("status", "Valid")
+
     @property
-    def pass_fail(self) -> Optional[bool]:
-        return self._pass_fail
-    
-    @pass_fail.setter
-    def pass_fail(self, value: Optional[bool]):
-        old_value = self._pass_fail
-        self._pass_fail = value
-        self.notify_change("pass_fail", {
-            "measurement_id": self.id,
-            "old": old_value,
-            "new": value,
-            "label": self.label
-        })
-    
-    @property
-    def position(self) -> Optional[float]:
-        return self._position
-    
-    @position.setter
-    def position(self, value: Optional[float]):
-        self._position = value
-        self.notify_change("position", {
-            "measurement_id": self.id,
-            "value": value,
-            "label": self.label
-        })
-    
-    @property
-    def visible(self) -> bool:
-        return self._visible
-    
-    @visible.setter
-    def visible(self, value: bool):
-        self._visible = value
-        self.notify_change("visibility", {
-            "measurement_id": self.id,
-            "visible": value,
-            "label": self.label
-        })
+    def units(self) -> str:
+        return self.get_property("units")
+
+    def set_limits(self, min_val: float, max_val: float):
+        """Set measurement limits and validate current value."""
+        self.set_property("limits", (min_val, max_val))
+        # Re-check current value
+        curr_val = self.value
+        if not (min_val <= curr_val <= max_val):
+            self.set_property("status", "Invalid")
+
+    def to_string(self) -> str:
+        """Simple string representation (e.g. '12.34 V')."""
+        if self.units:
+            return f"{self.value} {self.units}"
+        return str(self.value)
