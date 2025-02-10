@@ -69,7 +69,7 @@ class Plot(BaseModel):
         y_data: np.ndarray,
         mode: str = "Group",
         color: Optional[str] = "#ffffff",  # Default white
-        style: str = "solid",
+        style: str = "solid", 
         width: int = 1,
         marker_style: str = "",
         visible: bool = True,
@@ -77,7 +77,7 @@ class Plot(BaseModel):
     ):
         """
         A single-entry method to create or update a trace by name.
-        Ensures all properties have valid defaults.
+        Handles arbitrary data updates efficiently.
         """
         from pymetr.models import Trace
 
@@ -106,14 +106,21 @@ class Plot(BaseModel):
             )
             self.add_child(new_trace)
         else:
-            # Update the existing trace
-            logger.debug(f"Updating existing trace '{trace_name}' in Plot '{self.title}'.")
+            # Always update data - let Trace handle optimization
             existing_trace.update_data(x_data, y_data)
-            # Ensure we set ALL properties to maintain consistency
-            existing_trace.set_property("mode", mode)
-            existing_trace.set_property("color", color)
-            existing_trace.set_property("style", style)
-            existing_trace.set_property("width", width)
-            existing_trace.set_property("marker_style", marker_style)
-            existing_trace.set_property("visible", visible)
-            existing_trace.set_property("opacity", opacity)
+
+            # Only update style properties if they changed
+            props = {
+                "mode": mode,
+                "color": color,
+                "style": style,
+                "width": width,
+                "marker_style": marker_style,
+                "visible": visible,
+                "opacity": opacity
+            }
+
+            for prop_name, value in props.items():
+                current_value = existing_trace.get_property(prop_name)
+                if current_value != value:
+                    existing_trace.set_property(prop_name, value)

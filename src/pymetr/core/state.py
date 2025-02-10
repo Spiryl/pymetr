@@ -189,3 +189,24 @@ class ApplicationState(QObject):
         model = model_class(**kwargs)
         self.register_model(model)
         return model
+    
+    def remove_model(self, model_id: str) -> None:
+        """Remove a model and clean up its relationships."""
+        if model_id in self._models:
+            # Remove as child from any parent
+            parent = self.get_parent(model_id)
+            if parent:
+                self.unlink_models(parent.id, model_id)
+                
+            # Remove any children it might have
+            if model_id in self._relationships:
+                child_ids = list(self._relationships[model_id])
+                for child_id in child_ids:
+                    self.remove_model(child_id)
+                del self._relationships[model_id]
+                
+            # Remove the model itself
+            model = self._models[model_id]
+            model.deleteLater()
+            del self._models[model_id]
+            logger.debug(f"Removed model {model_id}")

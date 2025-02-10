@@ -60,6 +60,11 @@ class Trace(BaseModel):
 
     def update_data(self, x_data: np.ndarray, y_data: np.ndarray):
         """Update the underlying arrays and emit a property change."""
+        # Convert inputs to numpy arrays if they aren't already
+        x_data = np.asarray(x_data)
+        y_data = np.asarray(y_data)
+        
+        # Don't try to compare data - just update and emit
         self._x_data = x_data
         self._y_data = y_data
         self.property_changed.emit(self.id, "data", (x_data, y_data))

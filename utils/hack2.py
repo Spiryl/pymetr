@@ -160,7 +160,7 @@ class TestStatusWidget(QtWidgets.QWidget):
         
         menu.exec_(event.globalPos())
 
-class TestRunnerParameterItem(ParameterItem):
+class TestScriptParameterItem(ParameterItem):
     def __init__(self, param, depth):
         super().__init__(param, depth)
         self.hideWidget = False
@@ -220,7 +220,7 @@ class TestRunnerParameterItem(ParameterItem):
 
 class TestRunnerParameter(Parameter):
     """Parameter that can receive run/stop signals and status updates"""
-    itemClass = TestRunnerParameterItem
+    itemClass = TestScriptParameterItem
     
     # Signals for external connections
     sigRunClicked = QtCore.Signal(object)  # Emits self

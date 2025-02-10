@@ -6,6 +6,7 @@ from PySide6.QtCore import Signal, Qt, Slot
 from pyqtgraph.parametertree import Parameter, ParameterItem, registerParameterType
 from datetime import datetime, timedelta
 
+from .base import ModelParameter, ModelParameterItem
 from pymetr.core.logging import logger
 
 # Import the global state accessor.
@@ -183,7 +184,7 @@ class TestStatusWidget(QWidget):
         
         menu.exec_(event.globalPos())
 
-class TestRunnerParameterItem(ParameterItem):
+class TestScriptParameterItem(ModelParameterItem):
     """Parameter item for test script in tree."""
     
     def __init__(self, param, depth):
@@ -199,43 +200,56 @@ class TestRunnerParameterItem(ParameterItem):
         self.widget.rerun_clicked.connect(self._handle_rerun)
         self.widget.reset_clicked.connect(self._handle_reset)
         return self.widget
-            
+
+    def add_context_menu_actions(self, menu):
+        """Add test script specific actions"""
+        menu.addSeparator()
+        
+        run_action = menu.addAction("Run")
+        run_action.triggered.connect(self._handle_run)
+        
+        stop_action = menu.addAction("Stop")
+        stop_action.triggered.connect(self._handle_stop)
+        
+        reset_action = menu.addAction("Reset")
+        reset_action.triggered.connect(self._handle_reset)
+
     def _handle_run(self):
         """Start test execution using the specific script model ID."""
         try:
             # Get state from the parameter
             state = self.param.state
             if state is None:
-                logger.error("TestRunnerParameterItem: No state found on the parameter.")
+                logger.error(f"TestScriptParameterItem: No state found on the parameter. Param type: {type(self.param)}")
                 return
             
             script_id = self.param.model_id
             if not script_id:
-                logger.error("TestRunnerParameterItem: No model ID found on the parameter.")
+                logger.error(f"TestScriptParameterItem: No model ID found on the parameter. Param type: {type(self.param)}")
                 return
             
-            logger.debug(f"TestRunnerParameterItem: Running script with id {script_id}")
+            logger.debug(f"TestScriptParameterItem: Running script with id {script_id}")
             state.engine.run_test_script(script_id)
         except Exception as e:
-            logger.error(f"TestRunnerParameterItem: Error running script: {e}", exc_info=True)
+            logger.error(f"TestScriptParameterItem: Error running script: {e}", exc_info=True)
             
     def _handle_stop(self):
         """Stop test execution."""
         try:
             state = self.param.state
             if state is None:
-                logger.error("TestRunnerParameterItem: No state found on the parameter.")
+                logger.error("TestScriptParameterItem: No state found on the parameter.")
                 return
                 
             engine = state.engine
             if engine and engine.script_runner is not None:
-                logger.debug("TestRunnerParameterItem: Stopping script")
+                logger.debug("TestScriptParameterItem: Stopping script")
                 engine.script_runner.stop()
                 script = state.get_model(self.param.model_id)
                 if script:
                     script.status = TestStatus.NOT_RUN
         except Exception as e:
-            logger.error(f"TestRunnerParameterItem: Error stopping script: {e}", exc_info=True)
+            logger.error(f"TestScriptParameterItem: Error stopping script: {e}", exc_info=True)
 
     def _handle_rerun(self):
         """Restart test execution."""
@@ -250,7 +264,7 @@ class TestRunnerParameterItem(ParameterItem):
                 script.status = TestStatus.NOT_RUN
                 script.set_property('progress', 0)
         except Exception as e:
-            logger.error(f"TestRunnerParameterItem: Error resetting script status: {e}", exc_info=True)
+            logger.error(f"TestScriptParameterItem: Error resetting script status: {e}", exc_info=True)
             
     def valueChanged(self, param, val):
         """Handle progress updates."""
@@ -279,16 +293,23 @@ class TestRunnerParameterItem(ParameterItem):
         if self.param.hasValue():
             self.valueChanged(self.param, self.param.value())
 
-class TestRunnerParameter(Parameter):
+class TestScriptParameter(ModelParameter):
     """Parameter for test script control."""
-    itemClass = TestRunnerParameterItem
+    itemClass = TestScriptParameterItem
     
     def __init__(self, **opts):
-        # Extract state before calling super() as it will remove it from opts
-        self.state = opts.pop('state', None)
-        opts['type'] = 'testrunner'
+        # Set default type
+        opts['type'] = 'testscript'
+        opts.setdefault('status', TestStatus.NOT_RUN)
+        
+        # Initialize parent with all options including state
         super().__init__(**opts)
-        self.status = opts.get('status', TestStatus.NOT_RUN)
+        
+        # Store status after parent init
+        self.status = opts['status']
+        
+        if not self.state:
+            logger.error("TestScriptParameter: No state provided")
     
     def setStatus(self, status: str):
         """Update test status."""

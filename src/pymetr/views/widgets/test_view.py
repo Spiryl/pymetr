@@ -1,11 +1,16 @@
-from typing import Dict, Optional, Any
+from typing import Dict, Any
 from PySide6.QtWidgets import QHeaderView, QSizePolicy, QVBoxLayout
-from PySide6.QtCore import Qt, Signal, Slot
+from PySide6.QtCore import Signal, Slot
+
 import pyqtgraph.parametertree as pt
 from pyqtgraph.parametertree import Parameter
-from .test_runner_parameter import TestRunnerParameter
 from pyqtgraph.parametertree import registerParameterType
-registerParameterType("testrunner", TestRunnerParameter)
+
+from ..parameters.trace_parameter import TraceParameter
+registerParameterType("trace", TraceParameter)
+
+from ..parameters.test_script_parameter import TestScriptParameter
+registerParameterType("testscript", TestScriptParameter)
 
 from pymetr.views.widgets.base import BaseWidget
 from pymetr.core.logging import logger
@@ -119,10 +124,10 @@ class ModelTestView(BaseWidget):
             return
         
         param = selected[0].param
-        if not hasattr(param, 'model_id'):
-            self.state.set_active_model(None)
-            self.selection_changed.emit("")
-            return
+        # if not hasattr(param, 'model_id'):
+        #     self.state.set_active_model(None)
+        #     self.selection_changed.emit("")
+        #     return
             
         # Get the model for this parameter
         model = self.state.get_model(param.model_id)
@@ -224,18 +229,17 @@ class ModelTestView(BaseWidget):
         progress = model.get_property('progress', 0)
         status = model.get_property('status', 'Not Run')
         
-        # Use the existing TestRunnerParameter
-        from .test_runner_parameter import TestRunnerParameter
-        
-        param = TestRunnerParameter.create(
+        param = TestScriptParameter(
             name=name,
-            type='testrunner',
             title=f"{icon} {name}",
             value=progress,
             status=status,
-            state=self.state
+            state=self.state,  # Make sure this is passed
+            model_id=model.id  # And this
         )
-        param.model_id = model.id
+        
+        # Connect parameter changes to model updates
+        param.sigTreeStateChanged.connect(self._create_parameter_change_handler(model.id))
         return param
 
     def _create_test_result_item(self, model: TestResult) -> Parameter:
@@ -288,7 +292,7 @@ class ModelTestView(BaseWidget):
             name=title,
             type='group',
             title=f"{icon} {title}",
-            expanded=True,
+            expanded=False,
             children=[
                 dict(
                     name='grid_enabled',
@@ -333,52 +337,13 @@ class ModelTestView(BaseWidget):
         icon = self.MODEL_ICONS.get('Trace', '🌊')
         name = model.get_property('name', 'Trace')
         
-        children = [
-            dict(
-                name='mode',
-                type='list',
-                values=['Group', 'Isolate'],
-                value=model.get_property('mode', 'Group')
-            ),
-            dict(
-                name='color',
-                type='color',
-                value=model.get_property('color', '#ffffff')
-            ),
-            dict(
-                name='style',
-                type='list',
-                values=['solid', 'dash', 'dot', 'dash-dot'],
-                value=model.get_property('style', 'solid')
-            ),
-            dict(
-                name='width',
-                type='int',
-                value=model.get_property('width', 1),
-                limits=(1, 10)
-            ),
-            dict(
-                name='visible',
-                type='bool',
-                value=model.get_property('visible', True)
-            ),
-            dict(
-                name='opacity',
-                type='float',
-                value=model.get_property('opacity', 1.0),
-                limits=(0.0, 1.0),
-                step=0.1
-            )
-        ]
-        
-        param = Parameter.create(
+        param = TraceParameter(
             name=name,
-            type='group',
             title=f"{icon} {name}",
-            children=children,
-            expanded=False
+            expanded=False,
+            state=self.state,
+            model_id=model.id
         )
-        param.model_id = model.id
         
         # Connect parameter changes to model updates
         param.sigTreeStateChanged.connect(self._create_parameter_change_handler(model.id))
@@ -572,3 +537,20 @@ class ModelTestView(BaseWidget):
                         
         except Exception as e:
             logger.error(f"Error handling model change: {e}")
+
+    def cleanup_parameter(self, param):
+        """Properly clean up a parameter and its children"""
+        if hasattr(param, 'children'):
+            for child in param.children():
+                self.cleanup_parameter(child)
+        if hasattr(param, 'widget') and param.widget:
+            param.widget.deleteLater()
+            param.widget = None
+
+    def _handle_model_removed(self, model_id: str):
+        """Handle model removal"""
+        if model_id in self._items:
+            param = self._items[model_id]
+            self.cleanup_parameter(param)
+            param.remove()
+            del self._items[model_id]
