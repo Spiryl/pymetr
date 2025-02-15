@@ -1,3 +1,4 @@
+# pymetr/models/test.py
 from pathlib import Path
 from datetime import datetime
 from typing import Optional
@@ -12,13 +13,17 @@ class TestScript(BaseModel):
     Represents a test script and its execution state.
     Links to TestResults created during execution (if any).
     """
-    def __init__(self, script_path: Path, model_id: Optional[str] = None):
-        super().__init__(model_id=model_id)
+    def __init__(self, script_path: Path, model_id: Optional[str] = None, name: Optional[str] = None):
+        # If no name is provided, default to the stem of the script file.
+        if name is None:
+            name = script_path.stem
+        super().__init__(model_id=model_id, name=name)
         self.set_property('script_path', script_path)
         self.set_property('status', 'Not Run')
         self.set_property('start_time', None)
         self.set_property('elapsed_time', 0)
         self.set_property('progress', 0.0)
+        # Now, the 'name' property is automatically set in BaseModel.
 
     @property
     def script_path(self) -> Path:
@@ -63,7 +68,7 @@ class TestScript(BaseModel):
         self.set_property('start_time', datetime.now())
         self.status = 'Running'
         self.progress = 0.0
-        logger.info(f"Script {self.script_path.name} started.")
+        logger.info(f"Script {self.name} started.")
         
     @Slot(bool, str)
     def on_finished(self, success: bool, error_msg: str = ""):
@@ -74,7 +79,7 @@ class TestScript(BaseModel):
         else:
             self.status = 'Error'
             self.set_property('error', error_msg)
-        logger.info(f"Script {self.script_path.name} finished: {self.status}")
+        logger.info(f"Script {self.name} finished: {self.status}")
 
 
 class TestGroup(BaseModel):
@@ -83,9 +88,24 @@ class TestGroup(BaseModel):
     Users can add children (plots, measurements, etc.) to organize data.
     """
     def __init__(self, state=None, name="", **kwargs):
-        super().__init__(state=state, **kwargs)
-        self.set_property("name", name)
-        logger.debug(f"TestGroup '{name}' created with id {self.id}.")
+        # Generate a unique name if necessary.
+        if state:
+            name = self._get_unique_name(state, name)
+        super().__init__(state=state, name=name, **kwargs)
+        logger.debug(f"TestGroup '{self.name}' created with id {self.id}.")
+
+    def _get_unique_name(self, state, base_name: str) -> str:
+        """Generate a unique name by appending an incrementing number if needed."""
+        existing_groups = state.get_models_by_type(TestGroup)
+        existing_names = {group.get_property("name") for group in existing_groups}
+        
+        if base_name not in existing_names:
+            return base_name
+            
+        counter = 1
+        while f"{base_name}_{counter}" in existing_names:
+            counter += 1
+        return f"{base_name}_{counter}"
 
     def add(self, child_or_children):
         """
@@ -95,7 +115,7 @@ class TestGroup(BaseModel):
         if not isinstance(child_or_children, list):
             child_or_children = [child_or_children]
         for child in child_or_children:
-            # If child has another parent, unlink it first
+            # If child has another parent, unlink it first.
             if self.state:
                 current_parent = self.state.get_parent(child.id)
                 if current_parent and current_parent.id != self.id:
@@ -114,7 +134,7 @@ class TestResult(TestGroup):
         self.set_property("created_time", datetime.now())
         self.set_property("completed_time", None)
         self.set_property("error", None)
-        logger.debug(f"TestResult '{name}' created with id {self.id}.")
+        logger.debug(f"TestResult '{self.name}' created with id {self.id}.")
 
     @property
     def status(self) -> str:
@@ -128,7 +148,7 @@ class TestResult(TestGroup):
         prev_status = self.status
         self.set_property("status", value)
 
-        # Update completion time if moving from "Not Run"/"Running" to a final state
+        # Update completion time if moving from "Not Run"/"Running" to a final state.
         if prev_status in ["Not Run", "Running"] and value in ["Pass", "Fail", "Error"]:
             self.set_property("completed_time", datetime.now())
 

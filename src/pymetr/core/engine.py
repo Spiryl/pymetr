@@ -109,18 +109,17 @@ class Engine(QObject):
         if not script or not isinstance(script, TestScript):
             logger.error(f"Engine.run_test_script: No TestScript found with id '{script_id}'.")
             return
+
+        # Clear previous child models to avoid name collisions and stale views.
+        self.state.clear_children(script.id)
         
-        # Mark this script as the currently active test in the global state
         self.state.set_active_test(script_id)
-        
-        # Notify the script model that it is starting
         script.on_started()
         self.script_started.emit(script.id)
-        
+
         self.start_time = datetime.now()
         self.elapsed_timer.start()
-        
-        # Launch the runner using the script's stored path
+
         self.script_runner = ScriptRunner(script.script_path, self.globals)
         self.script_runner.finished.connect(self._on_script_finished)
         self.script_runner.start()
@@ -210,8 +209,6 @@ class Engine(QObject):
         active_test = self.state.get_active_test()
         if active_test:
             self.state.link_models(active_test.id, plot.id)
-        # Set as active model
-        self.state.set_active_model(plot.id)
         return plot
 
     def create_table(self, title: str) -> DataTable:

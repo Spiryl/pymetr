@@ -1,185 +1,372 @@
-from typing import Optional, Dict, Any
+# views/widgets/result_view.py
+from enum import Enum, auto
+from typing import Any
 from PySide6.QtWidgets import (
-    QVBoxLayout, QHBoxLayout, QSplitter,
-    QLabel, QFrame, QWidget
+    QVBoxLayout, QHBoxLayout, QWidget, QFrame,
+    QLabel, QScrollArea, QGridLayout, QSizePolicy
 )
-from PySide6.QtCore import Qt, Slot
-
+from PySide6.QtCore import Qt
 from pymetr.views.widgets.base import BaseWidget
 from pymetr.views.widgets.plot_view import PlotView
 from pymetr.views.widgets.table_view import TableView
+from pymetr.models.plot import Plot
+from pymetr.models.table import DataTable
+from pymetr.models.measurement import Measurement
 from pymetr.core.logging import logger
 
+
 class ResultHeader(QFrame):
-    """Header showing test result info and status."""
-    
-    STATUS_STYLES = {
-        "Pass": {
-            "color": "#2ECC71",
-            "icon": "✅"
-        },
-        "Fail": {
-            "color": "#E74C3C",
-            "icon": "❌"
-        },
-        "Error": {
-            "color": "#F1C40F",
-            "icon": "⚠️"
-        },
-        "Running": {
-            "color": "#3498DB",
-            "icon": "🔄"
-        },
-        "Not Run": {
-            "color": "#95A5A6",
-            "icon": "⭕"
-        }
-    }
+    """Header showing result name and status."""
     
     def __init__(self, parent=None):
         super().__init__(parent)
-        self._setup_ui()
-        
-    def _setup_ui(self):
-        """Initialize header UI."""
+        self.setFrameStyle(QFrame.StyledPanel | QFrame.Raised)
         self.setStyleSheet("""
             QFrame {
-                background-color: #2D2D2D;
+                background: #2D2D2D;
+                border: none;
                 border-bottom: 1px solid #3D3D3D;
             }
             QLabel {
                 color: #FFFFFF;
             }
         """)
+        self._setup_ui()
         
+    def _setup_ui(self):
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(8, 8, 8, 8)
+        layout.setContentsMargins(10, 5, 10, 5)
         
+        # Name label (left-aligned, bold)
         self.name_label = QLabel()
         self.name_label.setStyleSheet("font-weight: bold; font-size: 14px;")
         layout.addWidget(self.name_label)
         
-        self.status_label = QLabel()
-        layout.addWidget(self.status_label)
-        
-        self.info_label = QLabel()
-        self.info_label.setStyleSheet("color: #95A5A6;")
-        layout.addWidget(self.info_label)
-        
         layout.addStretch()
         
+        # Status label (right-aligned)
+        self.status_label = QLabel()
+        self.status_label.setStyleSheet("font-size: 12px;")
+        layout.addWidget(self.status_label)
+        
     def update_name(self, name: str):
-        """Update test name."""
         self.name_label.setText(name)
         
     def update_status(self, status: str):
-        """Update test status with proper styling."""
-        style = self.STATUS_STYLES.get(status, self.STATUS_STYLES["Not Run"])
-        self.status_label.setStyleSheet(f"color: {style['color']}; font-size: 13px;")
-        self.status_label.setText(f"{style['icon']} {status}")
+        """Update status with appropriate color."""
+        color = {
+            'Passed': '#4EC9B0',  # Green
+            'Failed': '#F14C4C',  # Red
+            'Running': '#CCCCCC', # Light gray
+            'Pending': '#CCCCCC'  # Light gray
+        }.get(status, '#CCCCCC')
         
-    def update_info(self, info: str):
-        """Update additional info display."""
-        self.info_label.setText(info)
+        self.status_label.setStyleSheet(f"""
+            font-size: 12px;
+            color: {color};
+            font-weight: bold;
+        """)
+        self.status_label.setText(status)
 
-class ResultView(BaseWidget):
-    """
-    Widget for displaying test results including:
-    - Test status and info
-    - Plot visualization
-    - Data tables
-    """
+
+class MeasurementWidget(QFrame):
+    """Widget for displaying a single measurement."""
     
-    def __init__(self, state, model_id: str, parent=None):
-        super().__init__(state, parent)
-        
-        # Track child views
-        self.plot_view: Optional[PlotView] = None
-        self.table_view: Optional[TableView] = None
-        
-        # Set up UI before setting model
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setFrameStyle(QFrame.StyledPanel)
+        self.setStyleSheet("""
+            QFrame {
+                background: #252525;
+                border: 1px solid #3D3D3D;
+                border-radius: 4px;
+            }
+            QLabel {
+                color: #FFFFFF;
+            }
+        """)
         self._setup_ui()
         
-        # Set model and load content
+    def _setup_ui(self):
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(8, 8, 8, 8)
+        
+        self.name_label = QLabel()
+        self.name_label.setStyleSheet("font-weight: bold;")
+        layout.addWidget(self.name_label)
+        
+        self.value_label = QLabel()
+        self.value_label.setStyleSheet("font-size: 16px;")
+        layout.addWidget(self.value_label)
+        
+    def update_measurement(self, measurement: Measurement):
+        self.name_label.setText(measurement.name)
+        self.value_label.setText(f"{measurement.value} {measurement.units}")
+        
+        # Update color based on limits if set
+        if hasattr(measurement, 'min_val') and hasattr(measurement, 'max_val'):
+            if measurement.value < measurement.min_val or measurement.value > measurement.max_val:
+                self.value_label.setStyleSheet("font-size: 16px; color: #F14C4C;")
+            else:
+                self.value_label.setStyleSheet("font-size: 16px; color: #4EC9B0;")
+
+
+class LayoutMode(Enum):
+    """Available layout modes for result content."""
+    Vertical = auto()      # Stack everything vertically
+    Grid2 = auto()         # 2 columns
+    Grid3 = auto()         # 3 columns
+    GridAuto = auto()      # Auto-adjust columns based on window width
+
+
+class ResultView(BaseWidget):
+    def __init__(self, state, model_id: str, parent=None):
+        logger.debug(f"Initializing ResultView for model_id: {model_id}")
+        super().__init__(state, parent)
+        
+        self.child_views = {}
+        self.layout_mode = LayoutMode.GridAuto
+        
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.setMinimumSize(400, 300)
+        logger.debug(f"ResultView initial size: {self.size()}")
+        
+        self._init_ui()
+        logger.debug("Setting model...")
         self.set_model(model_id)
         
-    def _setup_ui(self):
-        """Initialize UI components."""
+    def _init_ui(self):
+        """Initialize the UI components."""
+        logger.debug("Setting up ResultView UI")
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
         
         # Header
         self.header = ResultHeader()
+        self.header.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.header.setMinimumHeight(40)
         layout.addWidget(self.header)
         
-        # Content splitter
-        self.content_splitter = QSplitter(Qt.Vertical)
-        layout.addWidget(self.content_splitter)
+        # Scroll area setup
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.scroll_area.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.scroll_area.setStyleSheet("""
+            QScrollArea {
+                background: #1E1E1E;
+                border: none;
+            }
+        """)
+        layout.addWidget(self.scroll_area)
         
-    def _handle_property_update(self, prop: str, value: Any):
-        """Handle model property updates."""
-        if prop == 'name':
-            self.header.update_name(value)
-        elif prop == 'status':
-            self.header.update_status(value)
-            
-    def _handle_child_added(self, child_id: str, child_model):
-        """Handle child model addition."""
-        model_type = type(child_model).__name__
+        # Content widget setup
+        self.content_widget = QWidget()
+        self.content_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.scroll_area.setWidget(self.content_widget)
         
-        if model_type == 'Plot' and not self.plot_view:
-            # Create plot view
-            self.plot_view = PlotView(self.state, child_id, self)
-            self.content_splitter.insertWidget(0, self.plot_view)
+        # Content layout setup
+        self.content_layout = QGridLayout(self.content_widget)
+        self.content_layout.setContentsMargins(10, 10, 10, 10)
+        self.content_layout.setSpacing(10)
+        # Remove vertical alignment to allow expansion; keep left alignment.
+        self.content_layout.setAlignment(Qt.AlignLeft)
+        
+        logger.debug("ResultView UI setup complete")
+    
+    def set_model(self, model_id: str):
+        """Set up model and establish connections."""
+        logger.debug(f"Setting model for ResultView: {model_id}")
+        super().set_model(model_id)
+        if self.model:
+            logger.debug(f"Model found. Name: {self.model.get_property('name')}")
+            name = self.model.get_property('name', 'Untitled Result')
+            status = self.model.get_property('status', 'Pending')
+            self.header.update_name(name)
+            self.header.update_status(status)
             
-        elif model_type == 'DataTable' and not self.table_view:
-            # Create table view
-            self.table_view = TableView(self.state, child_id, self)
-            self.content_splitter.addWidget(self.table_view)
+            self.state.model_changed.connect(self._handle_model_changed)
+            self.state.models_linked.connect(self._handle_models_linked)
             
-        # Set initial splitter sizes if both views exist
-        if self.plot_view and self.table_view:
-            self.content_splitter.setSizes([600, 400])
+            children = self.model.get_children()
+            logger.debug(f"Found {len(children)} existing children")
+            for child in children:
+                logger.debug(f"Adding child view for {type(child).__name__} with id {child.id}")
+                self._add_child_view(child)
+    
+    def _add_child_view(self, model):
+        """Add appropriate view for child model."""
+        logger.debug(f"Adding child view for model {model.id} of type {type(model).__name__}")
+        if model.id in self.child_views:
+            logger.debug(f"View already exists for model {model.id}")
+            return
             
-    def _update_header_info(self):
-        """Update header info from model state."""
+        view = None
+        if isinstance(model, Plot):
+            logger.debug(f"Creating PlotView for {model.id}")
+            view = PlotView(self.state, model.id, self)
+            view.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+            view.setMinimumSize(300, 250)
+        elif isinstance(model, DataTable):
+            logger.debug(f"Creating TableView for {model.id}")
+            view = TableView(self.state, model.id, self)
+            view.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+            view.setMinimumHeight(200)
+        elif isinstance(model, Measurement):
+            logger.debug(f"Creating MeasurementWidget for {model.id}")
+            view = MeasurementWidget(self)
+            view.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+            view.setMinimumHeight(80)
+            view.update_measurement(model)
+            
+        if view:
+            logger.debug("Adding view to child_views dictionary")
+            self.child_views[model.id] = view
+            logger.debug(f"Current number of child views: {len(self.child_views)}")
+            self._update_layout()
+        else:
+            logger.warning(f"No view created for model {model.id} of type {type(model).__name__}")
+    
+    def _update_layout(self):
+        """Rearrange content based on current layout mode."""
+        logger.debug("Updating layout")
+        logger.debug(f"Current widget size: {self.size()}")
+        logger.debug(f"Content widget size: {self.content_widget.size()}")
+        logger.debug(f"Scroll area viewport size: {self.scroll_area.viewport().size()}")
+        
+        # Remove all widgets from layout
+        while self.content_layout.count():
+            item = self.content_layout.takeAt(0)
+            if item.widget():
+                item.widget().setParent(None)
+        
+        views = list(self.child_views.values())
+        logger.debug(f"Updating layout with {len(views)} views")
+        if not views:
+            logger.debug("No views to layout")
+            return
+            
+        # Calculate grid dimensions
+        count = len(views)
+        viewport_width = self.scroll_area.viewport().width()
+        
+        if self.layout_mode == LayoutMode.GridAuto:
+            width = self.width()
+            logger.debug(f"Current width: {width}")
+            if width < 800:
+                cols = 1
+            elif width < 1200:
+                cols = 2
+            else:
+                cols = 3
+        elif self.layout_mode == LayoutMode.Grid2:
+            cols = 2
+        elif self.layout_mode == LayoutMode.Grid3:
+            cols = 3
+        else:  # LayoutMode.Vertical
+            cols = 1
+            
+        rows = (count + cols - 1) // cols
+        logger.debug(f"Layout grid: {rows} rows x {cols} columns")
+        
+        # Reset column stretches
+        for col in range(self.content_layout.columnCount()):
+            self.content_layout.setColumnStretch(col, 0)
+        
+        # Configure grid based on column count
+        if cols == 1:
+            # Single column - stretch to full width
+            self.content_layout.setColumnStretch(0, 1)
+            for view in views:
+                if isinstance(view, PlotView):
+                    view.setMinimumWidth(viewport_width - 40)  # Account for margins
+                    view.setMaximumWidth(16777215)  # Qt's QWIDGETSIZE_MAX
+        else:
+            # Multi-column - equal width columns
+            for col in range(cols):
+                self.content_layout.setColumnStretch(col, 1)
+            for view in views:
+                if isinstance(view, PlotView):
+                    view.setMinimumWidth(300)
+                    view.setMaximumWidth(16777215)
+        
+        # Add widgets to grid
+        for idx, view in enumerate(views):
+            row = idx // cols
+            col = idx % cols
+            logger.debug(f"Adding view at position ({row}, {col})")
+            self.content_layout.addWidget(view, row, col)
+            logger.debug(f"View size: {view.size()}")
+            
+        # Set equal stretch for each row so they fill the vertical space
+        for row in range(rows):
+            self.content_layout.setRowStretch(row, 1)
+        
+        # Update minimum width of content widget
+        logger.debug(f"Setting content widget minimum width: {viewport_width}")
+        self.content_widget.setMinimumWidth(viewport_width)
+    
+    def resizeEvent(self, event):
+        """Handle resize events to update layout if needed."""
+        super().resizeEvent(event)
+        viewport = self.scroll_area.viewport()
+        # Set the content widget's minimum dimensions to match the viewport.
+        self.content_widget.setMinimumWidth(viewport.width())
+        self.content_widget.setMinimumHeight(viewport.height())
+        if self.layout_mode == LayoutMode.GridAuto:
+            self._update_layout()
+    
+    def set_layout_mode(self, mode: LayoutMode):
+        """Change how content is arranged."""
+        logger.debug(f"Setting layout mode to: {mode}")
+        if mode != self.layout_mode:
+            self.layout_mode = mode
+            self._update_layout()
+    
+    def _handle_models_linked(self, parent_id: str, child_id: str):
+        """Handle new model relationships."""
+        logger.debug(f"Models linked: parent={parent_id}, child={child_id}")
+        if not self.model or parent_id != self.model.id:
+            return
+        
+        child = self.state.get_model(child_id)
+        if child:
+            logger.debug(f"Adding view for newly linked child {child_id}")
+            self._add_child_view(child)
+    
+    def _handle_model_changed(self, model_id: str, prop: str, value: Any):
+        """Handle model property changes for both this model and children."""
         if not self.model:
             return
             
-        # Update test info
-        info_parts = []
+        if model_id == self.model.id:
+            if prop == 'name':
+                logger.debug(f"Updating header name to: {value}")
+                self.header.update_name(value)
+            elif prop == 'status':
+                logger.debug(f"Updating header status to: {value}")
+                self.header.update_status(value)
+        elif model_id in self.child_views:
+            view = self.child_views[model_id]
+            if hasattr(view, 'handle_property_update'):
+                view.handle_property_update(prop, value)
+            elif isinstance(view, MeasurementWidget):
+                child_model = self.state.get_model(model_id)
+                if child_model:
+                    view.update_measurement(child_model)
+    
+    def cleanup(self):
+        """Clean up signal connections and resources."""
+        logger.debug("Cleaning up ResultView")
+        if hasattr(self, 'state') and self.state:
+            self.state.model_changed.disconnect(self._handle_model_changed)
+            self.state.models_linked.disconnect(self._handle_models_linked)
         
-        # Add timestamp if available
-        if created_time := self.model.get_property('created_time'):
-            info_parts.append(f"Created: {created_time.strftime('%H:%M:%S')}")
-            
-        # Add execution time if available
-        if exec_time := self.model.get_property('execution_time'):
-            info_parts.append(f"Time: {exec_time:.1f}s")
-            
-        # Add measurements summary if available
-        if measurements := self.model.get_property('measurements'):
-            passed = sum(1 for m in measurements if m.get('pass_fail', True))
-            total = len(measurements)
-            info_parts.append(f"Measurements: {passed}/{total}")
-            
-        self.header.update_info(" | ".join(info_parts))
+        for view in self.child_views.values():
+            if hasattr(view, 'cleanup'):
+                view.cleanup()
+        self.child_views.clear()
         
-    def update_layout(self):
-        """Update layout based on visible components."""
-        if self.plot_view:
-            self.plot_view.setVisible(self.plot_view.model is not None)
-            
-        if self.table_view:
-            self.table_view.setVisible(self.table_view.model is not None)
-            
-        # Update splitter sizes
-        visible_widgets = []
-        if self.plot_view and self.plot_view.isVisible():
-            visible_widgets.append(self.plot_view)
-        if self.table_view and self.table_view.isVisible():
-            visible_widgets.append(self.table_view)
-            
-        if len(visible_widgets) == 2:
-            self.content_splitter.setSizes([600, 400])
+        super().cleanup()

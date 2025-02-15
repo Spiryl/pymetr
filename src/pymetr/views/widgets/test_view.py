@@ -1,3 +1,4 @@
+# views/widgets/test_view.py
 from typing import Dict, Any
 from PySide6.QtWidgets import QHeaderView, QSizePolicy, QVBoxLayout
 from PySide6.QtCore import Signal, Slot
@@ -11,6 +12,9 @@ registerParameterType("trace", TraceParameter)
 
 from ..parameters.test_script_parameter import TestScriptParameter
 registerParameterType("testscript", TestScriptParameter)
+
+from ..parameters.test_result_parameter import TestResultParameter
+registerParameterType('testresult', TestResultParameter)
 
 from pymetr.views.widgets.base import BaseWidget
 from pymetr.core.logging import logger
@@ -55,14 +59,6 @@ class ModelTestView(BaseWidget):
         'Device': '🔌',
         'default': '📄'
     }
-    
-    STATUS_ICONS = {
-        "Pass": "✅",
-        "Fail": "❌",
-        "Error": "⚠️",
-        "Running": "🔄",
-        "Not Run": "⭕"
-    }
 
     def __init__(self, state, parent=None):
         super().__init__(state, parent)
@@ -105,6 +101,8 @@ class ModelTestView(BaseWidget):
         self.state.model_registered.connect(self._handle_model_registered)
         self.state.models_linked.connect(self._handle_models_linked)
         self.state.model_changed.connect(self._handle_model_changed)
+        self.state.model_removed.connect(self._handle_model_removed)
+
 
     def _find_viewable_parent(self, model_id: str):
         """Find the first parent that has a view (Plot, TestScript, etc.)"""
@@ -116,36 +114,38 @@ class ModelTestView(BaseWidget):
         return None
 
     def _handle_selection_changed(self):
-        """When the user clicks a parameter item, update the active model."""
+        """When the user clicks a parameter item, show the appropriate view."""
         selected = self.tree.selectedItems()
         if not selected or not selected[0].param:
+            logger.debug("No valid selection in tree")
             self.state.set_active_model(None)
             self.selection_changed.emit("")
             return
         
         param = selected[0].param
-        # if not hasattr(param, 'model_id'):
-        #     self.state.set_active_model(None)
-        #     self.selection_changed.emit("")
-        #     return
+        logger.debug(f"Tree selection changed to parameter: {param}")
             
         # Get the model for this parameter
         model = self.state.get_model(param.model_id)
         if not model:
+            logger.warning(f"No model found for parameter {param}")
             return
             
-        # If it's a viewable type, set it as active
+        # If it's a viewable type, show it directly
         if isinstance(model, (Plot, TestScript, TestResult, TestGroup)):
-            self.state.set_active_model(model.id)
+            logger.debug(f"Showing viewable model: {model.id} ({type(model).__name__})")
+            model.show()  # This will handle activation and focus
             self.selection_changed.emit(model.id)
             return
             
-        # If not, find a viewable parent
+        # If not viewable, find and show a viewable parent
         parent_model = self._find_viewable_parent(model.id)
         if parent_model:
-            self.state.set_active_model(parent_model.id)
+            logger.debug(f"Showing parent model: {parent_model.id} ({type(parent_model).__name__})")
+            parent_model.show()  # Show the parent model instead
             self.selection_changed.emit(parent_model.id)
         else:
+            logger.debug("No viewable model found in hierarchy")
             self.state.set_active_model(None)
             self.selection_changed.emit("")
 
@@ -210,17 +210,17 @@ class ModelTestView(BaseWidget):
                 return
                 
             for param, change, data in changes:
-                if change == 'value':
-                    try:
-                        # Update the model property
-                        prop_name = param.name()
+                try:
+                    # Only update the model property if it's a valid property name
+                    prop_name = param.name()
+                    if prop_name != 'name':  # Prevent the "Unnamed" updates
                         if model.get_property(prop_name) != data:
                             logger.debug(f"Parameter change: {model_id}.{prop_name} = {data}")
                             model.set_property(prop_name, data)
-                    except Exception as e:
-                        logger.error(f"Error handling parameter change: {e}")
-        
-        return handle_param_change
+                except Exception as e:
+                    logger.error(f"Error handling parameter change: {e}")
+            
+            return handle_param_change
     
     def _create_test_script_item(self, model: TestScript) -> Parameter:
         """Create a test script parameter with run/stop functionality."""
@@ -243,29 +243,18 @@ class ModelTestView(BaseWidget):
         return param
 
     def _create_test_result_item(self, model: TestResult) -> Parameter:
-        """Create a test result parameter with status indicators."""
-        icon = self.MODEL_ICONS.get('TestResult', '🧪')
+        """Create a test result parameter."""
         name = model.get_property('name', 'Unnamed')
         status = model.get_property('status', 'Not Run')
-        status_icon = self.STATUS_ICONS.get(status, "⭕")
         
-        children = []
-        created_time = model.get_property('created_time', None)
-        if created_time:
-            children.append(dict(
-                name='created',
-                type='str',
-                value=created_time.strftime('%H:%M:%S'),
-                readonly=True
-            ))
-        
+        # Make sure we're using TestResultParameter
         param = Parameter.create(
+            type='testresult',  # This must match the registered type
             name=name,
-            type='group',
-            title=f"{icon} {name} [{status_icon}]",
-            children=children
+            status=status,
+            state=self.state,
+            model_id=model.id
         )
-        param.model_id = model.id
         return param
 
     def _create_test_group_item(self, model: TestGroup) -> Parameter:
@@ -515,8 +504,7 @@ class ModelTestView(BaseWidget):
                     icon = self.MODEL_ICONS.get('TestResult', '🧪')
                     status = model.get_property('status', 'Not Run')
                     name = model.get_property('name', 'Unnamed')
-                    status_icon = self.STATUS_ICONS.get(status, "⭕")
-                    item.setOpts(title=f"{icon} {name} [{status_icon}]")
+                    item.setOpts(title=f"{icon} {name}")
             
             elif isinstance(model, Plot):
                 if prop == 'title':

@@ -1,8 +1,9 @@
 # base.py
 from pyqtgraph.parametertree import Parameter, ParameterItem
-from PySide6.QtWidgets import QMenu, QInputDialog
-from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QMenu, QInputDialog, QFileDialog
 from pymetr.core.logging import logger
+from PySide6.QtGui import QIcon
+from pymetr.services.file_services import FileService
 
 class ModelParameterItem(ParameterItem):
     """Base class for all model parameter items"""
@@ -12,19 +13,22 @@ class ModelParameterItem(ParameterItem):
     def contextMenuEvent(self, ev):
         """Handle right-click context menu"""
         menu = QMenu()
+
+        # Add parameter-specific actions
+        self.add_context_menu_actions(menu)  # This is the item's own method
+        self.param.add_context_actions(menu) # This is the parameter's method
         
-        # Add rename action
-        rename_action = menu.addAction("Rename")
+        menu.addSeparator()
+
+        # Add rename action with edit icon
+        rename_action = menu.addAction(QIcon(":/icons/material/edit.svg"), "Rename")
         rename_action.triggered.connect(self._handle_rename)
         
         menu.addSeparator()
         
-        # Add remove action for all model parameters
-        remove_action = menu.addAction("Remove")
+        # Add remove action with delete icon
+        remove_action = menu.addAction(QIcon(":/icons/material/delete.svg"), "Remove")
         remove_action.triggered.connect(self.param.remove_model)
-        
-        # Let subclasses add their own menu items
-        self.add_context_menu_actions(menu)
         
         menu.exec_(ev.globalPos())
         
@@ -47,9 +51,24 @@ class ModelParameterItem(ParameterItem):
         
         if ok and new_name:
             model.set_property('name', new_name)
-        
+
+    def _handle_export(self):
+        """Handle export action."""
+        if not self.param.state or not self.param.model_id:
+            return
+            
+        path, _ = QFileDialog.getSaveFileName(
+            None, "Export Data", "", "YAML Files (*.yaml)"
+        )
+        if path:
+            FileService.export_model_data(
+                self.param.model_id,
+                self.param.state,
+                Path(path)
+            )
+
     def add_context_menu_actions(self, menu):
-        """Override in subclasses to add specific menu items"""
+        """Add item-specific menu actions. Override in subclasses."""
         pass
 
 class ModelParameter(Parameter):
@@ -78,3 +97,13 @@ class ModelParameter(Parameter):
                     self.state.unlink_models(parent.id, self.model_id)
                 # Then remove from state
                 self.state.remove_model(self.model_id)
+
+    def add_context_actions(self, menu: QMenu) -> None:
+        """
+        Abstract method to add parameter-specific context menu actions.
+        Must be implemented by subclasses.
+        
+        Args:
+            menu: QMenu to add actions to
+        """
+        raise NotImplementedError("Subclasses must implement add_context_actions")

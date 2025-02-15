@@ -1,15 +1,13 @@
-from pathlib import Path
-from typing import Optional, Any
+# views/widgets/script_view.py
+from typing import Optional
 from PySide6.QtWidgets import (
-    QVBoxLayout, QHBoxLayout, QPlainTextEdit,
-    QFontComboBox, QComboBox, QStatusBar, 
-    QWidget, QLabel, QTextEdit
+    QVBoxLayout, QPlainTextEdit, QWidget, QTextEdit
 )
 from PySide6.QtGui import (
     QSyntaxHighlighter, QTextCharFormat, QColor, 
     QFont, QTextCursor, QPainter, QTextFormat
 )
-from PySide6.QtCore import Qt, Signal, Slot, QRegularExpression, QRect, QSize
+from PySide6.QtCore import Qt, Signal, QRect, QSize, QRegularExpression
 
 from pymetr.views.widgets.base import BaseWidget
 from pymetr.core.logging import logger
@@ -93,10 +91,12 @@ class ScriptEditor(QPlainTextEdit):
     
     def __init__(self, parent=None):
         super().__init__(parent)
-        self._setup_editor()
         
         # Line number area
         self.line_number_area = LineNumberArea(self)
+        
+        # Setup editor appearance
+        self._setup_editor()
         
         # Connect signals
         self.blockCountChanged.connect(self.update_line_number_area_width)
@@ -109,9 +109,11 @@ class ScriptEditor(QPlainTextEdit):
 
     def _setup_editor(self):
         """Configure editor appearance and behavior."""
+        # Set default font
         font = QFont("Consolas", 11)
         self.setFont(font)
         
+        # Style the editor
         self.setStyleSheet("""
             QPlainTextEdit {
                 background-color: #1E1E1E;
@@ -122,6 +124,7 @@ class ScriptEditor(QPlainTextEdit):
             }
         """)
         
+        # Configure tab stops and wrapping
         self.setTabStopDistance(self.fontMetrics().horizontalAdvance(' ') * 4)
         self.setLineWrapMode(QPlainTextEdit.NoWrap)
 
@@ -183,137 +186,50 @@ class ScriptEditor(QPlainTextEdit):
         self.setExtraSelections(extra_selections)
 
 class ScriptView(BaseWidget):
-    """Widget for editing Python test scripts."""
+    """Core widget for editing Python scripts."""
+    
+    content_changed = Signal()  # Emitted when text content changes
     
     def __init__(self, state, model_id: str, parent=None):
         super().__init__(state, parent)
-        self.modified = False
-        
-        # Set up UI before setting model
+        self._original_content = ""  # Store original content for modification checking
         self._setup_ui()
-        
-        # Set model and connect to signals
         self.set_model(model_id)
 
     def _setup_ui(self):
-        """Initialize the UI components."""
+        """Initialize the core editor UI."""
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
-        # Editor settings panel
-        self.settings_panel = QWidget()
-        settings_layout = QHBoxLayout(self.settings_panel)
-        settings_layout.setContentsMargins(4, 4, 4, 4)
-        
-        # Font controls
-        self.font_combo = QFontComboBox()
-        self.font_combo.setCurrentFont(QFont("Consolas"))
-        self.font_combo.currentFontChanged.connect(self._change_font)
-        settings_layout.addWidget(self.font_combo)
-        
-        self.size_combo = QComboBox()
-        self.size_combo.addItems([str(s) for s in [8,9,10,11,12,14,16,18,20]])
-        self.size_combo.setCurrentText("11")
-        self.size_combo.currentTextChanged.connect(self._change_font_size)
-        settings_layout.addWidget(self.size_combo)
-        
-        settings_layout.addStretch()
-        layout.addWidget(self.settings_panel)
-
-        # Editor
+        # Core editor
         self.editor = ScriptEditor()
         self.highlighter = PythonHighlighter(self.editor.document())
         layout.addWidget(self.editor)
         
-        # Status bar
-        self.status_bar = QStatusBar()
-        self.status_bar.setStyleSheet("""
-            QStatusBar {
-                background: #007ACC;
-                color: white;
-            }
-        """)
-        layout.addWidget(self.status_bar)
-        
         # Connect editor signals
-        self.editor.textChanged.connect(self._handle_text_changed)
+        self.editor.textChanged.connect(self.content_changed)
 
-    def _handle_property_update(self, prop: str, value: Any):
-        """Handle model property updates."""
-        if prop == 'status':
-            self.status_bar.showMessage(f"Status: {value}")
-            self.editor.setReadOnly(value == "Running")
-        elif prop == 'progress':
-            if value is not None:
-                self.status_bar.showMessage(f"Progress: {value:.1f}%")
+    def set_font(self, font: QFont):
+        """Update editor font."""
+        self.editor.setFont(font)
 
-    def _handle_text_changed(self):
-        """Handle editor content changes."""
-        if not self.model:
-            return
-            
-        self.modified = True
-        self.status_bar.showMessage("Modified")
+    def get_content(self) -> str:
+        """Get current editor content."""
+        return self.editor.toPlainText()
 
-    def _change_font(self, font: QFont):
-        """Update editor font family."""
-        current_font = self.editor.font()
-        current_font.setFamily(font.family())
-        self.editor.setFont(current_font)
+    def set_content(self, content: str):
+        """Set editor content."""
+        self.editor.setPlainText(content)
 
-    def _change_font_size(self, size_str: str):
-        """Update editor font size."""
-        try:
-            size = int(size_str)
-            current_font = self.editor.font()
-            current_font.setPointSize(size)
-            self.editor.setFont(current_font)
-        except ValueError:
-            pass
-
-    def load_content(self):
-        """Load script content from model."""
-        if not self.model:
-            return
-            
-        path = self.model.get_property('script_path')
-        if path and Path(path).exists():
-            try:
-                content = Path(path).read_text(encoding='utf-8')
-                self.editor.setPlainText(content)
-                self.modified = False
-                self.status_bar.showMessage(f"Loaded {path}")
-            except Exception as e:
-                logger.error(f"Error loading script: {e}")
-                self.status_bar.showMessage(f"Error loading script: {str(e)}")
-
-    def save_content(self) -> bool:
-        """Save current content to file."""
-        if not self.model:
-            return False
-            
-        path = self.model.get_property('script_path')
-        if not path:
-            return False
-            
-        try:
-            content = self.editor.toPlainText()
-            Path(path).write_text(content, encoding='utf-8')
-            self.modified = False
-            self.status_bar.showMessage("Script saved successfully")
-            return True
-        except Exception as e:
-            logger.error(f"Error saving script: {e}")
-            self.status_bar.showMessage(f"Error saving script: {str(e)}")
-            return False
+    def set_original_content(self, content: str):
+        """Set the baseline content for modification checking."""
+        self._original_content = content
 
     def has_unsaved_changes(self) -> bool:
-        """Check if there are unsaved changes."""
-        return self.modified
-    
-    def set_model(self, model_id: str):
-        super().set_model(model_id)
-        # You want to do something like:
-        if self.model:
-            self.load_content()
+        """Check if current content differs from original."""
+        return self.get_content() != self._original_content
+
+    def set_read_only(self, read_only: bool):
+        """Set editor read-only state."""
+        self.editor.setReadOnly(read_only)

@@ -18,6 +18,7 @@ def run_test():
         time_plot.y_label = "Amplitude"
         time_plot.grid_enabled = True
         time_plot.legend_enabled = True
+        time_plot.x_lim = [0, 10]
         signal_result.add(time_plot)
         
         # Initialize data arrays
@@ -84,7 +85,7 @@ def run_test():
                     style="dash"
                 )
             
-            wait(50)
+            wait(100)
         
         signal_result.status = "Pass"
         

@@ -1,7 +1,7 @@
 # state.py
 
 from typing import Dict, Optional, Type, TypeVar, List, Any
-from PySide6.QtCore import QObject, Signal, Slot, QThread, Qt, QMetaObject, Q_ARG
+from PySide6.QtCore import QObject, Signal, Slot, QThread, Qt, QMetaObject, Q_ARG, QTimer
 from pymetr.models.base import BaseModel
 from pymetr.core.engine import Engine
 from pymetr.core.logging import logger
@@ -27,17 +27,31 @@ class ApplicationState(QObject):
     active_test_changed = Signal(str)        # model_id
     model_registration_requested = Signal(str, str)  # model_id, model_type_name
 
+    status_changed = Signal(str)  # Basic status message
+    status_progress = Signal(float, str)  # Progress updates (percent, message)
+    status_error = Signal(str)  # Error messages
+    status_warning = Signal(str)  # Warning messages
+    status_info = Signal(str)  # Info messages
+
+    model_removed = Signal(str)              # model_id
+
     def __init__(self):
         super().__init__()
         self._models: Dict[str, BaseModel] = {}
         self._pending_models: Dict[str, BaseModel] = {}
-        self._relationships: Dict[str, set[str]] = {}  # parent_id -> set of child_ids
+        self._relationships: Dict[str, set[str]] = {}
         self._active_model_id: Optional[str] = None
         self._active_test_id: Optional[str] = None
-        self._parent: Optional[QObject] = None 
-        self.engine = Engine(self)
+        self._parent: Optional[QObject] = None
         
-        # Connect the registration request signal
+        # Update throttling
+        self._pending_updates = []
+        self._update_timer = QTimer(self)  # Timer created in main thread
+        self._update_timer.setSingleShot(True)
+        self._update_timer.timeout.connect(self._process_pending_updates)
+        self._throttle_interval = 16  # About 60fps
+        
+        self.engine = Engine(self)
         self.model_registration_requested.connect(self._handle_registration_request)
         logger.debug("ApplicationState initialized with Engine.")
 
@@ -176,6 +190,13 @@ class ApplicationState(QObject):
             self.active_model_changed.emit(model_id)
             logger.debug(f"Active model changed to {model_id}")
 
+    def get_model_by_name(self, name: str) -> Optional[BaseModel]:
+        """Return the first model with the given human‑readable name."""
+        for model in self._models.values():
+            if model.get_property("name") == name:
+                return model
+        return None
+
     def get_active_model(self) -> Optional[BaseModel]:
         """Get the currently active model."""
         if self._active_model_id:
@@ -191,22 +212,89 @@ class ApplicationState(QObject):
         return model
     
     def remove_model(self, model_id: str) -> None:
-        """Remove a model and clean up its relationships."""
         if model_id in self._models:
             # Remove as child from any parent
             parent = self.get_parent(model_id)
             if parent:
                 self.unlink_models(parent.id, model_id)
-                
+                    
             # Remove any children it might have
             if model_id in self._relationships:
                 child_ids = list(self._relationships[model_id])
                 for child_id in child_ids:
                     self.remove_model(child_id)
                 del self._relationships[model_id]
-                
+                    
             # Remove the model itself
             model = self._models[model_id]
             model.deleteLater()
             del self._models[model_id]
             logger.debug(f"Removed model {model_id}")
+            
+            # Emit signal so that any views (like tab views or tree views) can update
+            self.model_removed.emit(model_id)
+
+    def clear_children(self, parent_id: str) -> None:
+        """Remove all child models of the given parent."""
+        children = self.get_children(parent_id)
+        for child in children:
+            self.remove_model(child.id)
+
+    def set_status(self, message: str):
+        """Set main status message."""
+        self.status_changed.emit(message)
+        logger.debug(f"Status: {message}")
+
+    def set_progress(self, percent: float, message: str = ""):
+        """Update progress status."""
+        self.status_progress.emit(percent, message)
+        logger.debug(f"Progress: {percent}% - {message}")
+
+    def set_error(self, message: str):
+        """Show error status."""
+        self.status_error.emit(message)
+        logger.error(f"Error: {message}")
+
+    def set_warning(self, message: str):
+        """Show warning status."""
+        self.status_warning.emit(message)
+        logger.warning(f"Warning: {message}")
+
+    def set_info(self, message: str):
+        """Show info status."""
+        self.status_info.emit(message)
+        logger.info(f"Info: {message}")
+
+    def queue_model_update(self, model_id: str, prop: str, value: Any):
+        """Queue a model update to be processed in the main thread."""
+        self._pending_updates.append((model_id, prop, value))
+        if not self._update_timer.isActive():
+            self._update_timer.start(self._throttle_interval)
+
+    def _process_pending_updates(self):
+        """Process all pending model updates and handle UI events."""
+        if not self._pending_updates:
+            return
+            
+        # Group updates by model
+        updates_by_model = {}
+        for model_id, prop, value in self._pending_updates:
+            if model_id not in updates_by_model:
+                updates_by_model[model_id] = []
+            updates_by_model[model_id].append((prop, value))
+            
+        # Process updates
+        for model_id, updates in updates_by_model.items():
+            model = self._models.get(model_id)
+            if model:
+                for prop, value in updates:
+                    self.model_changed.emit(model_id, prop, value)
+                    
+        self._pending_updates.clear()
+        
+        # Process any pending UI events
+        # QApplication.processEvents()
+        
+        # If there are still pending updates, restart the timer
+        if self._pending_updates:
+            self._update_timer.start(self._throttle_interval)

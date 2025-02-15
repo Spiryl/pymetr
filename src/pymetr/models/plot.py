@@ -10,7 +10,7 @@ class Plot(BaseModel):
     """
 
     def __init__(self, title: str, model_id: Optional[str] = None):
-        super().__init__(model_id=model_id)
+        super().__init__(model_id=model_id, name=title)
         self.set_property("title", title)
         self.set_property("x_label", "")
         self.set_property("y_label", "")

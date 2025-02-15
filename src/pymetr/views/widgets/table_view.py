@@ -1,20 +1,19 @@
+# views/widgets/table_view.py
 from typing import Optional, Any
 from PySide6.QtWidgets import (
     QVBoxLayout, QTableWidget, QTableWidgetItem, 
-    QHeaderView, QStatusBar
+    QHeaderView
 )
-from PySide6.QtCore import Qt, Slot
+from PySide6.QtCore import Qt, Signal
 import pandas as pd
-import numpy as np
 
 from pymetr.views.widgets.base import BaseWidget
 from pymetr.core.logging import logger
 
 class TableView(BaseWidget):
-    """
-    Widget for displaying data tables with filtering and sorting.
-    Handles large datasets efficiently and maintains column formatting.
-    """
+    """Core widget for displaying data tables with sorting."""
+    
+    selection_changed = Signal(pd.DataFrame)  # Emitted when selection changes
     
     def __init__(self, state, model_id: str, parent=None):
         super().__init__(state, parent)
@@ -64,24 +63,13 @@ class TableView(BaseWidget):
         
         layout.addWidget(self.table)
         
-        # Status bar
-        self.status_bar = QStatusBar()
-        self.status_bar.setStyleSheet("""
-            QStatusBar {
-                background: #007ACC;
-                color: white;
-            }
-        """)
-        layout.addWidget(self.status_bar)
-        
+        # Connect selection signal
+        self.table.itemSelectionChanged.connect(self._handle_selection_changed)
+            
     def _handle_property_update(self, prop: str, value: Any):
         """Handle model property updates."""
         if prop == 'data':
             self._update_table(value)
-        elif prop == 'filter':
-            self._apply_filter(value)
-        elif prop == 'sort':
-            self._apply_sort(value)
             
     def _update_table(self, data: pd.DataFrame):
         """Update table with new data."""
@@ -107,12 +95,8 @@ class TableView(BaseWidget):
                     item = self._create_item(value)
                     self.table.setItem(row_idx, col_idx, item)
                     
-            # Update status
-            self.status_bar.showMessage(f"Loaded {len(data)} rows, {len(data.columns)} columns")
-            
         except Exception as e:
             logger.error(f"Error updating table: {e}")
-            self.status_bar.showMessage(f"Error updating table: {str(e)}")
             
     def _create_item(self, value: Any) -> QTableWidgetItem:
         """Create properly formatted table item."""
@@ -142,15 +126,11 @@ class TableView(BaseWidget):
         item.setFlags(item.flags() & ~Qt.ItemIsEditable)  # Make read-only
         return item
         
-    def _apply_filter(self, filter_spec: dict):
-        """Apply filtering to the table."""
-        # Future: Implement filtering
-        pass
-        
-    def _apply_sort(self, sort_spec: dict):
-        """Apply sorting to the table."""
-        # Future: Implement sorting
-        pass
+    def _handle_selection_changed(self):
+        """Emit selected data when selection changes."""
+        if self.model:
+            data = self.get_selected_data()
+            self.selection_changed.emit(data)
         
     def get_selected_data(self) -> pd.DataFrame:
         """Get data from selected rows."""
@@ -163,28 +143,3 @@ class TableView(BaseWidget):
             
         selected_rows = sorted(set(item.row() for item in self.table.selectedItems()))
         return data.iloc[selected_rows].copy()
-        
-    def export_data(self, path: str, format: str = 'csv'):
-        """Export table data to file."""
-        if not self.model:
-            return
-            
-        data = self.model.get_property('data')
-        if not isinstance(data, pd.DataFrame):
-            return
-            
-        try:
-            if format.lower() == 'csv':
-                data.to_csv(path, index=False)
-            elif format.lower() == 'excel':
-                data.to_excel(path, index=False)
-            elif format.lower() == 'json':
-                data.to_json(path, orient='records')
-            else:
-                raise ValueError(f"Unsupported format: {format}")
-                
-            self.status_bar.showMessage(f"Data exported to {path}")
-            
-        except Exception as e:
-            logger.error(f"Error exporting data: {e}")
-            self.status_bar.showMessage(f"Error exporting data: {str(e)}")
