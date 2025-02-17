@@ -475,7 +475,7 @@ class ModelTestView(BaseWidget):
                     cleanup_parameter(child)
                 if hasattr(p, 'itemClass'):
                     if hasattr(p.itemClass, 'cleanup'):
-                        p.itemClass.cleanup()
+                        p.itemClass.cleanup(self)
             
             cleanup_parameter(param)
             param.remove()

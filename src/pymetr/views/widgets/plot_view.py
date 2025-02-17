@@ -173,9 +173,9 @@ class PlotView(BaseWidget):
         # Store range for potential updates
         self.latest_x_range = ranges[0]
         
-        # Update any axis limits in the model
-        if self.model:
-            self.model.set_property('x_lim', list(ranges[0]))
+        # # Update any axis limits in the model
+        # if self.model:
+        #     self.model.set_property('x_lim', list(ranges[0]))
             
     def _update_trace_data(self, trace_id: str, data: tuple):
         """Update trace data efficiently."""

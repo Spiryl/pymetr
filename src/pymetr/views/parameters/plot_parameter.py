@@ -20,14 +20,6 @@ class PlotStatusWidget(QWidget):
         layout.setSpacing(4)
         
         self.info_label = QLabel()
-        self.info_label.setStyleSheet("""
-            QLabel {
-                color: #3498DB;
-                padding: 2px 8px;
-                border: 1px solid #3498DB;
-                border-radius: 2px;
-            }
-        """)
         layout.addWidget(self.info_label)
         
     def update_info(self, trace_count: int):

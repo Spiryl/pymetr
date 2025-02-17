@@ -7,8 +7,8 @@ from datetime import datetime
 
 def setup_logging(log_to_file: bool = False):
     """Configure application-wide logging with detailed formatting."""
-    logger = logging.getLogger('scpi')
-    logger.setLevel(logging.DEBUG)
+    logger = logging.getLogger('pymetr')
+    logger.setLevel(logging.ERROR)
 
     # Detailed formatter
     formatter = logging.Formatter(
@@ -29,7 +29,7 @@ def setup_logging(log_to_file: bool = False):
             
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             file_handler = logging.FileHandler(
-                log_dir / f"scpi_{timestamp}.log",
+                log_dir / f"pymetr_{timestamp}.log",
                 encoding='utf-8'
             )
             file_handler.setLevel(logging.DEBUG)
