@@ -28,9 +28,9 @@ class Trace(BaseModel):
         **kwargs
     ):
         super().__init__(model_id=model_id)
-        # Store data arrays directly, not as set_property (less overhead)
-        self._x_data = x_data
-        self._y_data = y_data
+        # Store data arrays directly (converted to numpy arrays)
+        self._x_data = np.asarray(x_data)
+        self._y_data = np.asarray(y_data)
 
         # Basic trace properties
         self.set_property("name", name)
@@ -41,6 +41,8 @@ class Trace(BaseModel):
         self.set_property("mode", kwargs.get("mode", "Group"))  # or "Isolate"
         self.set_property("visible", kwargs.get("visible", True))
         self.set_property("opacity", kwargs.get("opacity", 1.0))  # 1.0 => fully opaque
+
+    # -- Pythonic Property Accessors --
 
     @property
     def name(self) -> str:
@@ -58,13 +60,79 @@ class Trace(BaseModel):
     def y_data(self) -> np.ndarray:
         return self._y_data
 
+    @property
+    def data(self):
+        """Return a tuple (x_data, y_data)."""
+        return (self._x_data, self._y_data)
+
+    @data.setter
+    def data(self, new_data):
+        x_data, y_data = new_data
+        self._x_data = np.asarray(x_data)
+        self._y_data = np.asarray(y_data)
+        # Emit a property change event for 'data'
+        self.property_changed.emit(self.id, "data", (self._x_data, self._y_data))
+
+    @property
+    def color(self) -> Optional[str]:
+        return self.get_property("color")
+
+    @color.setter
+    def color(self, value: str):
+        self.set_property("color", value)
+
+    @property
+    def style(self) -> str:
+        return self.get_property("style", "solid")
+
+    @style.setter
+    def style(self, value: str):
+        self.set_property("style", value)
+
+    @property
+    def width(self) -> int:
+        return self.get_property("width", 1)
+
+    @width.setter
+    def width(self, value: int):
+        self.set_property("width", value)
+
+    @property
+    def marker_style(self) -> str:
+        return self.get_property("marker_style", "")
+
+    @marker_style.setter
+    def marker_style(self, value: str):
+        self.set_property("marker_style", value)
+
+    @property
+    def mode(self) -> str:
+        return self.get_property("mode", "Group")
+
+    @mode.setter
+    def mode(self, value: str):
+        self.set_property("mode", value)
+
+    @property
+    def visible(self) -> bool:
+        return self.get_property("visible", True)
+
+    @visible.setter
+    def visible(self, value: bool):
+        self.set_property("visible", value)
+
+    @property
+    def opacity(self) -> float:
+        return self.get_property("opacity", 1.0)
+
+    @opacity.setter
+    def opacity(self, value: float):
+        self.set_property("opacity", value)
+
     def update_data(self, x_data: np.ndarray, y_data: np.ndarray):
         """Update the underlying arrays and emit a property change."""
-        # Convert inputs to numpy arrays if they aren't already
         x_data = np.asarray(x_data)
         y_data = np.asarray(y_data)
-        
-        # Don't try to compare data - just update and emit
         self._x_data = x_data
         self._y_data = y_data
         self.property_changed.emit(self.id, "data", (x_data, y_data))

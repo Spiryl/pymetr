@@ -1,5 +1,5 @@
 # trace_parameter.py
-
+from typing import Any
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QPushButton
 from PySide6.QtCore import Qt, Signal
 
@@ -145,3 +145,11 @@ class TraceParameter(ModelParameter):
         else:
             # For other properties, update directly
             model.set_property(param.name(), value)
+                    
+    def handle_property_update(self, name: str, value: Any):
+        """Handle model property updates."""
+        # Update the corresponding parameter if it exists
+        for child in self.children():
+            if child.name() == name:
+                child.setValue(value)
+                break

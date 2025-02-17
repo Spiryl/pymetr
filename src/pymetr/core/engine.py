@@ -64,8 +64,8 @@ class ScriptRunner(QThread):
 class Engine(QObject):
     # Signals for script running (active script) events
     script_started = Signal(str)               # Emits the running TestScript's ID
-    script_finished = Signal(str, bool, str)   # (script_id, success, error_msg)
-    progress_changed = Signal(str, float, str) # (script_id, percent, message)
+    script_finished = Signal(str, bool, str)     # (script_id, success, error_msg)
+    progress_changed = Signal(str, float, str)   # (script_id, percent, message)
     
     def __init__(self, state):
         super().__init__()
@@ -83,6 +83,7 @@ class Engine(QObject):
             "create_group": self.create_group,
             "create_result": self.create_result,
             "create_plot": self.create_plot,
+            "create_trace": self.create_trace,    # NEW: create_trace helper
             "create_table": self.create_table,
             "set_test_progress": self.set_test_progress,
             "wait": self.wait,
@@ -210,6 +211,18 @@ class Engine(QObject):
         if active_test:
             self.state.link_models(active_test.id, plot.id)
         return plot
+
+    def create_trace(self, name: str, x_data: np.ndarray, y_data: np.ndarray, **kwargs) -> Trace:
+        """
+        Create a Trace and link it under the active test script.
+        This helper allows scripts to create a trace and later modify it via
+        properties (e.g., color, data, etc.).
+        """
+        trace = self.state.create_model(Trace, x_data=x_data, y_data=y_data, name=name, **kwargs)
+        active_test = self.state.get_active_test()
+        if active_test:
+            self.state.link_models(active_test.id, trace.id)
+        return trace
 
     def create_table(self, title: str) -> DataTable:
         """

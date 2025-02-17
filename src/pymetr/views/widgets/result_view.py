@@ -21,16 +21,6 @@ class ResultHeader(QFrame):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setFrameStyle(QFrame.StyledPanel | QFrame.Raised)
-        self.setStyleSheet("""
-            QFrame {
-                background: #2D2D2D;
-                border: none;
-                border-bottom: 1px solid #3D3D3D;
-            }
-            QLabel {
-                color: #FFFFFF;
-            }
-        """)
         self._setup_ui()
         
     def _setup_ui(self):
@@ -39,14 +29,12 @@ class ResultHeader(QFrame):
         
         # Name label (left-aligned, bold)
         self.name_label = QLabel()
-        self.name_label.setStyleSheet("font-weight: bold; font-size: 14px;")
         layout.addWidget(self.name_label)
         
         layout.addStretch()
         
         # Status label (right-aligned)
         self.status_label = QLabel()
-        self.status_label.setStyleSheet("font-size: 12px;")
         layout.addWidget(self.status_label)
         
     def update_name(self, name: str):
@@ -123,6 +111,7 @@ class ResultView(BaseWidget):
     def __init__(self, state, model_id: str, parent=None):
         logger.debug(f"Initializing ResultView for model_id: {model_id}")
         super().__init__(state, parent)
+        self._signals_connected = False  # Track connection state
         
         self.child_views = {}
         self.layout_mode = LayoutMode.GridAuto
@@ -178,56 +167,57 @@ class ResultView(BaseWidget):
     
     def set_model(self, model_id: str):
         """Set up model and establish connections."""
-        logger.debug(f"Setting model for ResultView: {model_id}")
         super().set_model(model_id)
-        if self.model:
-            logger.debug(f"Model found. Name: {self.model.get_property('name')}")
-            name = self.model.get_property('name', 'Untitled Result')
-            status = self.model.get_property('status', 'Pending')
-            self.header.update_name(name)
-            self.header.update_status(status)
+        if not self.model:
+            return
             
+        # Update header
+        name = self.model.get_property('name', 'Untitled Result')
+        status = self.model.get_property('status', 'Pending')
+        self.header.update_name(name)
+        self.header.update_status(status)
+        
+        # Connect signals only once
+        if not self._signals_connected:
             self.state.model_changed.connect(self._handle_model_changed)
             self.state.models_linked.connect(self._handle_models_linked)
-            
-            children = self.model.get_children()
-            logger.debug(f"Found {len(children)} existing children")
-            for child in children:
-                logger.debug(f"Adding child view for {type(child).__name__} with id {child.id}")
-                self._add_child_view(child)
+            self._signals_connected = True
+        
+        # Add existing children
+        for child in self.model.get_children():
+            self._add_child_view(child, force_layout=False)
+        
+        # Update layout once after all children are added
+        self._update_layout()
     
-    def _add_child_view(self, model):
+    def _add_child_view(self, model, force_layout=True):
         """Add appropriate view for child model."""
-        logger.debug(f"Adding child view for model {model.id} of type {type(model).__name__}")
         if model.id in self.child_views:
-            logger.debug(f"View already exists for model {model.id}")
             return
             
         view = None
-        if isinstance(model, Plot):
-            logger.debug(f"Creating PlotView for {model.id}")
-            view = PlotView(self.state, model.id, self)
-            view.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-            view.setMinimumSize(300, 250)
-        elif isinstance(model, DataTable):
-            logger.debug(f"Creating TableView for {model.id}")
-            view = TableView(self.state, model.id, self)
-            view.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-            view.setMinimumHeight(200)
-        elif isinstance(model, Measurement):
-            logger.debug(f"Creating MeasurementWidget for {model.id}")
-            view = MeasurementWidget(self)
-            view.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-            view.setMinimumHeight(80)
-            view.update_measurement(model)
-            
-        if view:
-            logger.debug("Adding view to child_views dictionary")
-            self.child_views[model.id] = view
-            logger.debug(f"Current number of child views: {len(self.child_views)}")
-            self._update_layout()
-        else:
-            logger.warning(f"No view created for model {model.id} of type {type(model).__name__}")
+        try:
+            if isinstance(model, Plot):
+                view = PlotView(self.state, model.id, self)
+                view.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+                view.setMinimumSize(300, 250)
+            elif isinstance(model, DataTable):
+                view = TableView(self.state, model.id, self)
+                view.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+                view.setMinimumHeight(200)
+            elif isinstance(model, Measurement):
+                view = MeasurementWidget(self)
+                view.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+                view.setMinimumHeight(80)
+                view.update_measurement(model)
+                
+            if view:
+                self.child_views[model.id] = view
+                if force_layout:
+                    self._update_layout()
+                    
+        except Exception as e:
+            logger.error(f"Error creating view for {model.id}: {e}")
     
     def _update_layout(self):
         """Rearrange content based on current layout mode."""
@@ -327,43 +317,51 @@ class ResultView(BaseWidget):
     
     def _handle_models_linked(self, parent_id: str, child_id: str):
         """Handle new model relationships."""
-        logger.debug(f"Models linked: parent={parent_id}, child={child_id}")
         if not self.model or parent_id != self.model.id:
             return
-        
-        child = self.state.get_model(child_id)
-        if child:
-            logger.debug(f"Adding view for newly linked child {child_id}")
-            self._add_child_view(child)
+            
+        # Only add view if we don't already have it
+        if child_id not in self.child_views:
+            child = self.state.get_model(child_id)
+            if child:
+                self._add_child_view(child)
     
     def _handle_model_changed(self, model_id: str, prop: str, value: Any):
-        """Handle model property changes for both this model and children."""
+        """Handle model property changes."""
         if not self.model:
             return
             
+        # Handle parent model changes
         if model_id == self.model.id:
             if prop == 'name':
-                logger.debug(f"Updating header name to: {value}")
                 self.header.update_name(value)
             elif prop == 'status':
-                logger.debug(f"Updating header status to: {value}")
                 self.header.update_status(value)
-        elif model_id in self.child_views:
-            view = self.child_views[model_id]
-            if hasattr(view, 'handle_property_update'):
-                view.handle_property_update(prop, value)
-            elif isinstance(view, MeasurementWidget):
-                child_model = self.state.get_model(model_id)
-                if child_model:
-                    view.update_measurement(child_model)
+            return
+            
+        # Handle child model changes
+        view = self.child_views.get(model_id)
+        if not view:
+            return
+            
+        if hasattr(view, 'handle_property_update'):
+            view.handle_property_update(prop, value)
+        elif isinstance(view, MeasurementWidget):
+            child_model = self.state.get_model(model_id)
+            if child_model:
+                view.update_measurement(child_model)
     
     def cleanup(self):
         """Clean up signal connections and resources."""
-        logger.debug("Cleaning up ResultView")
-        if hasattr(self, 'state') and self.state:
-            self.state.model_changed.disconnect(self._handle_model_changed)
-            self.state.models_linked.disconnect(self._handle_models_linked)
+        if self._signals_connected and self.state:
+            try:
+                self.state.model_changed.disconnect(self._handle_model_changed)
+                self.state.models_linked.disconnect(self._handle_models_linked)
+            except:
+                pass  # Ignore if already disconnected
+            self._signals_connected = False
         
+        # Clean up child views
         for view in self.child_views.values():
             if hasattr(view, 'cleanup'):
                 view.cleanup()

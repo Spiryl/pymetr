@@ -17,51 +17,19 @@ class ToolBarButton(QToolButton):
         if icon:
             self.setIcon(icon)
         self.setText(text)
-        self.setStyleSheet("""
-            QToolButton {
-                background: transparent;
-                border: none;
-                padding: 4px 8px;
-                color: #D4D4D4;
-            }
-            QToolButton:hover {
-                background: rgba(255, 255, 255, 0.1);
-            }
-            QToolButton:pressed {
-                background: rgba(255, 255, 255, 0.2);
-            }
-            QToolButton::menu-indicator {
-                image: none;
-            }
-        """)
 
 class ToolBarSeparator(QFrame):
     """Vertical separator for toolbar."""
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setFrameStyle(QFrame.VLine)
-        self.setStyleSheet("""
-            QFrame {
-                color: #404040;
-                margin-top: 4px;
-                margin-bottom: 4px;
-            }
-        """)
 
 class ModernToolBar(QToolBar):
     """Enhanced toolbar with modern styling and better widget handling."""
     
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setStyleSheet("""
-            QToolBar {
-                background: #2D2D2D;
-                border: none;
-                border-bottom: 1px solid #1E1E1E;
-                spacing: 2px;
-                padding: 2px;
-            }
-        """)
+
         self.setFloatable(False)
         self.setMovable(False)
 
@@ -78,20 +46,7 @@ class ModernToolBar(QToolBar):
         button = ToolBarButton(icon, text, self)
         button.setPopupMode(QToolButton.InstantPopup)
         menu = QMenu(button)
-        menu.setStyleSheet("""
-            QMenu {
-                background: #2D2D2D;
-                border: 1px solid #404040;
-                padding: 4px;
-            }
-            QMenu::item {
-                padding: 4px 8px;
-                color: #D4D4D4;
-            }
-            QMenu::item:selected {
-                background: rgba(255, 255, 255, 0.1);
-            }
-        """)
+
         button.setMenu(menu)
         self.addWidget(button)
         return menu
@@ -101,7 +56,8 @@ class ModernToolBar(QToolBar):
         action = QWidgetAction(self)
         container = QWidget()
         layout = QHBoxLayout(container)
-        layout.setContentsMargins(2, 0, 2, 0)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
         layout.addWidget(widget)
         action.setDefaultWidget(container)
         super().addAction(action)

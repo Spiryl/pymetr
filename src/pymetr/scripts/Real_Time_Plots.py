@@ -20,20 +20,18 @@ def run_test():
     sine_plot = create_plot("Dynamic Sine Wave")
     sine_plot.set_property("x_label", "Sample")
     sine_plot.set_property("y_label", "Amplitude")
-    sine_plot.set_property("y_unit", "Volts")
-    sine_plot.set_property("x_unit", "Seconds")
+    sine_plot.y_unit = "Volts"
+    sine_plot.x_unit = "Seconds"
     result.add(sine_plot)
     
     noise_plot = create_plot("Modulated Noise")
     noise_plot.set_property("x_label", "Sample")
     noise_plot.set_property("y_label", "Amplitude")
-    sine_plot.set_property("y_unit", "Volts")
     result.add(noise_plot)
     
     walk_plot = create_plot("Random Walk")
     walk_plot.set_property("x_label", "Time")
     walk_plot.set_property("y_label", "Position")
-    sine_plot.set_property("x_unit", "Seconds")
     result.add(walk_plot)
     
     vector_plot = create_plot("Spinning Vector")

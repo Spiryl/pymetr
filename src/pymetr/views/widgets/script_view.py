@@ -1,4 +1,3 @@
-# views/widgets/script_view.py
 from typing import Optional
 from PySide6.QtWidgets import (
     QVBoxLayout, QPlainTextEdit, QWidget, QTextEdit
@@ -26,7 +25,10 @@ class LineNumberArea(QWidget):
         self.editor.line_number_area_paint_event(event)
 
 class PythonHighlighter(QSyntaxHighlighter):
-    """Syntax highlighter for Python code."""
+    """
+    Syntax highlighter for Python code with a bright, neon-inspired palette.
+    Adjust as you see fit!
+    """
     
     def __init__(self, document):
         super().__init__(document)
@@ -36,17 +38,25 @@ class PythonHighlighter(QSyntaxHighlighter):
 
     def _setup_formats(self):
         """Initialize text formats for different syntax elements."""
+        # A bright/neon palette example:
         self.formats = {
-            'keyword': self._create_format("#C586C0", True),     # Purple
-            'builtin': self._create_format("#4EC9B0", True),     # Teal
-            'function': self._create_format("#DCDCAA", False),   # Yellow
-            'comment': self._create_format("#6A9955", False, True), # Green
-            'string': self._create_format("#CE9178", False),     # Orange
-            'number': self._create_format("#B5CEA8", False),     # Light green
-            'decorator': self._create_format("#D7BA7D", False),  # Gold
+            # Purple neon for keywords
+            'keyword':   self._create_format("#9D00FF", bold=True),  
+            # Electric cyan for builtins
+            'builtin':   self._create_format("#00F0FF", bold=True),
+            # Bright orange for functions
+            'function':  self._create_format("#FFA900", bold=False),
+            # Slightly subdued green for comments (italic)
+            'comment':   self._create_format("#4FC366", italic=True),
+            # Neon yellow for strings
+            'string':    self._create_format("#FFFF82", bold=False),
+            # Gold for numbers
+            'number':    self._create_format("#FFD700", bold=False),
+            # Neon pink for decorators
+            'decorator': self._create_format("#E86BF0", bold=False),
         }
 
-    def _create_format(self, color: str, bold: bool = False, italic: bool = False) -> QTextCharFormat:
+    def _create_format(self, color: str, bold: bool=False, italic: bool=False) -> QTextCharFormat:
         fmt = QTextCharFormat()
         fmt.setForeground(QColor(color))
         if bold:
@@ -56,7 +66,7 @@ class PythonHighlighter(QSyntaxHighlighter):
         return fmt
 
     def _initialize_rules(self):
-        """Setup syntax highlighting rules."""
+        """Setup syntax highlighting rules using regular expressions."""
         keywords = [
             'and', 'as', 'assert', 'break', 'class', 'continue', 'def',
             'del', 'elif', 'else', 'except', 'False', 'finally', 'for',
@@ -65,26 +75,33 @@ class PythonHighlighter(QSyntaxHighlighter):
             'True', 'try', 'while', 'with', 'yield'
         ]
 
+        # Mark keywords
         for word in keywords:
             pattern = QRegularExpression(r'\b' + word + r'\b')
             self._rules.append((pattern, self.formats['keyword']))
 
+        # Additional patterns
         self._rules.extend([
+            # Functions (sequence of word chars followed by parentheses)
             (QRegularExpression(r'\b[A-Za-z0-9_]+(?=\s*\()'), self.formats['function']),
+            # Strings (double or single quoted)
             (QRegularExpression(r'"[^"\\]*(\\.[^"\\]*)*"'), self.formats['string']),
             (QRegularExpression(r'\'[^\'\\]*(\\.[^\'\\]*)*\''), self.formats['string']),
+            # Comments (#...)
             (QRegularExpression(r'#[^\n]*'), self.formats['comment']),
+            # Numbers (simple integer pattern)
             (QRegularExpression(r'\b\d+\b'), self.formats['number']),
+            # Decorators (@something)
             (QRegularExpression(r'@\w+'), self.formats['decorator']),
         ])
 
     def highlightBlock(self, text: str):
         """Apply highlighting to a block of text."""
-        for pattern, format in self._rules:
+        for pattern, fmt in self._rules:
             matches = pattern.globalMatch(text)
             while matches.hasNext():
                 match = matches.next()
-                self.setFormat(match.capturedStart(), match.capturedLength(), format)
+                self.setFormat(match.capturedStart(), match.capturedLength(), fmt)
 
 class ScriptEditor(QPlainTextEdit):
     """Enhanced text editor for Python scripts."""
@@ -112,17 +129,6 @@ class ScriptEditor(QPlainTextEdit):
         # Set default font
         font = QFont("Consolas", 11)
         self.setFont(font)
-        
-        # Style the editor
-        self.setStyleSheet("""
-            QPlainTextEdit {
-                background-color: #1E1E1E;
-                color: #D4D4D4;
-                padding: 8px;
-                selection-background-color: #264F78;
-                selection-color: #D4D4D4;
-            }
-        """)
         
         # Configure tab stops and wrapping
         self.setTabStopDistance(self.fontMetrics().horizontalAdvance(' ') * 4)
@@ -163,9 +169,12 @@ class ScriptEditor(QPlainTextEdit):
             if block.isVisible() and bottom >= event.rect().top():
                 number = str(block_number + 1)
                 painter.setPen(QColor("#858585"))
-                painter.drawText(0, int(top), self.line_number_area.width(), 
+                painter.drawText(
+                    0, int(top),
+                    self.line_number_area.width(),
                     self.fontMetrics().height(),
-                    Qt.AlignRight, number)
+                    Qt.AlignRight, number
+                )
 
             block = block.next()
             top = bottom
@@ -177,6 +186,7 @@ class ScriptEditor(QPlainTextEdit):
 
         if not self.isReadOnly():
             selection = QTextEdit.ExtraSelection()
+            # A slightly lighter background to show the active line
             selection.format.setBackground(QColor("#282828"))
             selection.format.setProperty(QTextFormat.FullWidthSelection, True)
             selection.cursor = self.textCursor()

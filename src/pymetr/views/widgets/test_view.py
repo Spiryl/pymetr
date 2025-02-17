@@ -1,22 +1,23 @@
-# views/widgets/test_view.py
-from typing import Dict, Any
-from PySide6.QtWidgets import QHeaderView, QSizePolicy, QVBoxLayout
-from PySide6.QtCore import Signal, Slot
-
+from typing import Dict, Any, Optional
+from pathlib import Path
+from PySide6.QtWidgets import QHeaderView, QSizePolicy, QVBoxLayout, QAbstractItemView
+from PySide6.QtCore import Signal, Slot, Qt
+from PySide6.QtGui import QIcon
 import pyqtgraph.parametertree as pt
-from pyqtgraph.parametertree import Parameter
+from pyqtgraph.parametertree import Parameter, ParameterTree
 from pyqtgraph.parametertree import registerParameterType
 
+# Import parameter types
 from ..parameters.trace_parameter import TraceParameter
-registerParameterType("trace", TraceParameter)
-
+from ..parameters.plot_parameter import PlotParameter
+from ..parameters.marker_parameter import MarkerParameter
+from ..parameters.cursor_parameter import CursorParameter
+from ..parameters.data_table_parameter import DataTableParameter
 from ..parameters.test_script_parameter import TestScriptParameter
-registerParameterType("testscript", TestScriptParameter)
-
 from ..parameters.test_result_parameter import TestResultParameter
-registerParameterType('testresult', TestResultParameter)
+from ..parameters.base import ModelParameter
 
-from pymetr.views.widgets.base import BaseWidget
+from ..widgets.base import BaseWidget
 from pymetr.core.logging import logger
 
 # Import model classes
@@ -35,29 +36,42 @@ from pymetr.models import (
 
 class ModelTestView(BaseWidget):
     """
-    A ParameterTree-based view that displays hierarchical models:
-      - TestScript/TestResult/TestGroup
-      - Plot/Trace
-      - Cursor/Marker
-      - DataTable
-      - Measurement
-    Each model is presented as a parameter node with properties that can be viewed/edited.
+    Tree view for displaying and managing hierarchical model data.
+    
+    Displays models like TestScript, TestResult, Plot, etc. as interactive
+    tree nodes with appropriate icons and custom parameter widgets.
+    
+    Key behaviors:
+    - Shows model hierarchy with type-specific icons and controls
+    - Synchronizes selection with active model/view
+    - Provides context menus for model operations
+    - Supports keyboard navigation
     """
     
-    selection_changed = Signal(str)  # Emits the selected model_id
+    # Register custom parameter types
+    registerParameterType('trace', TraceParameter)
+    registerParameterType('plot', PlotParameter)
+    registerParameterType('marker', MarkerParameter)
+    registerParameterType('cursor', CursorParameter)
+    registerParameterType('datatable', DataTableParameter)
+    registerParameterType('testscript', TestScriptParameter)
+    registerParameterType('testresult', TestResultParameter)
     
+    selection_changed = Signal(str)  # Emits selected model_id
+    
+    # Define icons for different model types with filenames
     MODEL_ICONS = {
-        'TestScript': '🖋️',
-        'TestResult': '🧪',
-        'TestGroup': '📂',
-        'Plot': '📈',
-        'Trace': '🌊',
-        'Cursor': '🔀',
-        'Marker': '📍',
-        'DataTable': '📋',
-        'Measurement': '📊',
-        'Device': '🔌',
-        'default': '📄'
+        'TestScript': 'script.png',        # Script icon 
+        'TestResult': 'result.png',        # Result checkmark
+        'TestGroup': 'folder.png',         # Folder icon
+        'Plot': 'chart.png',               # Chart/plot icon
+        'Trace': 'waves.png',              # Waveform icon
+        'Cursor': 'cursor.png',            # Cursor crosshair
+        'Marker': 'markers.png',           # Marker/pin icon
+        'DataTable': 'table.png',          # Table grid icon
+        'Measurement': 'measure.png',      # Measurement icon
+        'Device': 'instruments.png',       # Device/instrument icon
+        'default': 'file_open.png'         # Default file icon
     }
 
     def __init__(self, state, parent=None):
@@ -68,477 +82,431 @@ class ModelTestView(BaseWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
         
-        # Create ParameterTree
-        self.tree = pt.ParameterTree(self)
+        # Create and configure tree
+        self.tree = ParameterTree(self)
         self.tree.setAlternatingRowColors(False)
-        
+        self.tree.setSelectionMode(QAbstractItemView.SingleSelection) 
+        # self.tree.setStyleSheet("""
+        #     ParameterTree {
+        #         background: #1E1E1E;
+        #         border: none;
+        #     }
+        #     ParameterTree::item {
+        #         padding: 2px;
+        #     }
+        #     ParameterTree::item:selected {
+        #         background: #2D5579;
+        #     }
+        # """)
+
         # Configure header
         header = self.tree.header()
         header.setMinimumSectionSize(120)
         header.setDefaultSectionSize(150)
         header.setStretchLastSection(True)
-        header.setSectionResizeMode(0, QHeaderView.Interactive)
-        header.setSectionResizeMode(1, QHeaderView.Interactive)
-        header.setVisible(True)
+        # header.setSectionResizeMode(0, QHeaderView.Interactive)
+        # header.setSectionResizeMode(1, QHeaderView.Interactive)
+        header.setVisible(False)  # Was true
         
         # Set size policies
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.tree.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         
-        # Create a hidden root parameter
+        # Create root parameter
         self.root = Parameter.create(name='Session', type='group', children=[])
         self.tree.setParameters(self.root, showTop=False)
         
         layout.addWidget(self.tree)
         
-        # Track items in a dict: {model_id -> Parameter item}
+        # Track items and state
         self._items: Dict[str, Parameter] = {}
+        self._updating_from_tab = False
+        self._hide_passed = False
         
-        # Connect to tree selection
+        # Connect signals
+        self._connect_signals()
+        
+    def _connect_signals(self):
+        """Connect to state and tree signals."""
+        # Tree selection
         self.tree.itemSelectionChanged.connect(self._handle_selection_changed)
-   
-        # Connect to ApplicationState signals
+        
+        # State signals
+        self.state.active_model_changed.connect(self._handle_active_model)
         self.state.model_registered.connect(self._handle_model_registered)
         self.state.models_linked.connect(self._handle_models_linked)
         self.state.model_changed.connect(self._handle_model_changed)
         self.state.model_removed.connect(self._handle_model_removed)
+        self.state.model_viewed.connect(self.select_model)
 
+    def _get_icon(self, model_type: str) -> QIcon:
+        """Get the appropriate icon for a model type."""
+        icon_file = self.MODEL_ICONS.get(model_type, self.MODEL_ICONS['default'])
+        icon_path = str(Path(__file__).parent.parent / 'icons' / icon_file)
+        return QIcon(icon_path)
 
-    def _find_viewable_parent(self, model_id: str):
-        """Find the first parent that has a view (Plot, TestScript, etc.)"""
-        parent_model = self.state.get_parent(model_id)
-        while parent_model:
-            if isinstance(parent_model, (Plot, TestScript, TestResult, TestGroup)):
-                return parent_model
-            parent_model = self.state.get_parent(parent_model.id)
+    def _create_parameter_for_model(self, model: BaseModel) -> Parameter:
+        """Create appropriate parameter type for model."""
+        model_type = type(model).__name__
+        human_name = model.get_property('name', 'Unnamed')
+        icon = self._get_icon(model_type)
+        
+        # For consistency, use model.id as the internal name and model_id,
+        # and human_name as the title.
+        param_opts = {
+            'name': model.id,      # internal id
+            'title': human_name,   # human readable
+            'state': self.state,
+            'model_id': model.id,
+            'expanded': False,
+            'removable': False,  # removal via context menu
+            'renamable': False,   # renaming via context menu
+            'icon': icon
+        }
+        
+        if isinstance(model, TestScript):
+            param_opts['expanded'] = True
+            return TestScriptParameter(**param_opts)
+        elif isinstance(model, TestResult):
+            return TestResultParameter(**param_opts)
+        elif isinstance(model, DataTable):
+            return DataTableParameter(**param_opts)
+        elif isinstance(model, Plot):
+            return PlotParameter(**param_opts)
+        elif isinstance(model, Trace):
+            return TraceParameter(**param_opts)
+        elif isinstance(model, Cursor):
+            children = [
+                {'name': 'Position', 'type': 'float', 'value': model.get_property('position', 0)},
+                {'name': 'Color', 'type': 'color', 'value': model.get_property('color', '#FFFF00')},
+                {'name': 'Width', 'type': 'int', 'value': model.get_property('width', 1), 'limits': (1, 10)},
+                {'name': 'Style', 'type': 'list', 'values': ['solid', 'dash', 'dot'], 'value': model.get_property('style', 'solid')},
+                {'name': 'Visible', 'type': 'bool', 'value': model.get_property('visible', True)}
+            ]
+            param_opts['children'] = children
+            p = Parameter.create(type='group', **param_opts)
+            p.model_id = model.id  # ensure the group has a model_id
+            return p
+        elif isinstance(model, Marker):
+            children = [
+                {'name': 'X', 'type': 'float', 'value': model.get_property('x', 0)},
+                {'name': 'Y', 'type': 'float', 'value': model.get_property('y', 0)},
+                {'name': 'Label', 'type': 'str', 'value': model.get_property('label', '')},
+                {'name': 'Color', 'type': 'color', 'value': model.get_property('color', '#FFFF00')},
+                {'name': 'Size', 'type': 'int', 'value': model.get_property('size', 8), 'limits': (1, 20)},
+                {'name': 'Symbol', 'type': 'list', 'values': ['o', 't', 's', 'd'], 'value': model.get_property('symbol', 'o')},
+                {'name': 'Visible', 'type': 'bool', 'value': model.get_property('visible', True)}
+            ]
+            param_opts['children'] = children
+            p = Parameter.create(type='group', **param_opts)
+            p.model_id = model.id
+            return p
+
+        # For any other model type, create a group parameter and set its model_id.
+        p = Parameter.create(type='group', **param_opts)
+        p.model_id = model.id
+        return p
+
+    def _create_parameter_change_handler(self, model_id: str):
+        """Create handler for parameter value changes."""
+        def handle_changes(param, changes):
+            model = self.state.get_model(model_id)
+            if not model:
+                return
+                
+            for param, change, data in changes:
+                if change == 'value':
+                    prop_name = param.name()
+                    if prop_name != 'name':  # Prevent "Unnamed" updates
+                        if model.get_property(prop_name) != data:
+                            logger.debug(f"Parameter change: {model_id}.{prop_name} = {data}")
+                            model.set_property(prop_name, data)
+                            
+        return handle_changes
+
+    def _find_viewable_parent(self, model_id: str) -> Optional[BaseModel]:
+        """Find first parent that has a view."""
+        parent = self.state.get_parent(model_id)
+        while parent:
+            if isinstance(parent, (Plot, TestScript, TestResult, TestGroup)):
+                return parent
+            parent = self.state.get_parent(parent.id)
         return None
 
+    def _find_param_item(self, tree_item, model_id):
+        """Recursively find the tree item for a parameter by model_id."""
+        if hasattr(tree_item, 'param'):
+            param = tree_item.param
+            # Use model_id attribute if available, otherwise fall back to parameter name.
+            if hasattr(param, 'model_id'):
+                if param.model_id == model_id:
+                    return tree_item
+            else:
+                if param.name() == model_id:
+                    return tree_item
+
+        for i in range(tree_item.childCount()):
+            child = tree_item.child(i)
+            result = self._find_param_item(child, model_id)
+            if result:
+                return result
+        return None
+
+    def _update_item_visibility(self, item: Parameter):
+        """Update item visibility based on status."""
+        if not isinstance(item, TestResultParameter):
+            return
+            
+        should_hide = (
+            self._hide_passed and 
+            item.status() == 'Pass' and 
+            not any(isinstance(child, TestResultParameter) for child in item.children())
+        )
+        
+        if hasattr(item, 'setVisible'):
+            item.setVisible(not should_hide)
+
+
     def _handle_selection_changed(self):
-        """When the user clicks a parameter item, show the appropriate view."""
+        """Handle tree selection changes."""
+        if self._updating_from_tab:
+            return
+
         selected = self.tree.selectedItems()
         if not selected or not selected[0].param:
-            logger.debug("No valid selection in tree")
-            self.state.set_active_model(None)
-            self.selection_changed.emit("")
             return
-        
-        param = selected[0].param
-        logger.debug(f"Tree selection changed to parameter: {param}")
-            
-        # Get the model for this parameter
-        model = self.state.get_model(param.model_id)
-        if not model:
-            logger.warning(f"No model found for parameter {param}")
-            return
-            
-        # If it's a viewable type, show it directly
-        if isinstance(model, (Plot, TestScript, TestResult, TestGroup)):
-            logger.debug(f"Showing viewable model: {model.id} ({type(model).__name__})")
-            model.show()  # This will handle activation and focus
+
+        try:
+            self._updating_from_tab = True
+            param = selected[0].param
+            model = self.state.get_model(param.model_id)
+            if not model:
+                return
+
+            # For parameter nodes, find closest parent with a view
+            if not isinstance(model, (Plot, DataTable, TestScript, TestResult, TestGroup)):
+                model = self._find_viewable_parent(model.id)
+                if not model:
+                    return
+
+            # Show the view without affecting tree focus
+            model.show()
             self.selection_changed.emit(model.id)
-            return
-            
-        # If not viewable, find and show a viewable parent
-        parent_model = self._find_viewable_parent(model.id)
-        if parent_model:
-            logger.debug(f"Showing parent model: {parent_model.id} ({type(parent_model).__name__})")
-            parent_model.show()  # Show the parent model instead
-            self.selection_changed.emit(parent_model.id)
-        else:
-            logger.debug("No viewable model found in hierarchy")
-            self.state.set_active_model(None)
-            self.selection_changed.emit("")
+        finally:
+            self._updating_from_tab = False
+
+    def _handle_active_model(self, model_id: str):
+        """
+        Sync tree selection with active model.
+        Ensures proper highlighting without stealing focus.
+        """
+        self.select_model(model_id)
 
     @Slot(str)
     def _handle_model_registered(self, model_id: str):
-        """Handle new model registration -> create a Parameter item."""
+        """Create appropriate parameter item for newly registered model."""
         logger.debug(f"ModelTestView: Registering model {model_id}")
         model = self.state.get_model(model_id)
         if not model:
             return
         
         try:
-            # Create appropriate parameter node based on model type
-            if isinstance(model, TestScript):
-                item = self._create_test_script_item(model)
-            elif isinstance(model, TestResult):
-                item = self._create_test_result_item(model)
-            elif isinstance(model, TestGroup):
-                item = self._create_test_group_item(model)
-            elif isinstance(model, Plot):
-                item = self._create_plot_item(model)
-            elif isinstance(model, Trace):
-                item = self._create_trace_item(model)
-            elif isinstance(model, Cursor):
-                item = self._create_cursor_item(model)
-            elif isinstance(model, Marker):
-                item = self._create_marker_item(model)
-            elif isinstance(model, DataTable):
-                item = self._create_table_item(model)
-            elif isinstance(model, Measurement):
-                item = self._create_measurement_item(model)
-            else:
-                item = self._create_default_item(model)
-            
-            if item:
-                self._items[model_id] = item
-                self.root.addChild(item)
+            # Create parameter
+            param = self._create_parameter_for_model(model)
+            if param:
+                self._items[model_id] = param
+                self.root.addChild(param)
                 logger.debug(f"Added tree item for {model_id}")
                 
+                # Connect parameter change handler
+                if isinstance(param, ModelParameter):
+                    param.sigTreeStateChanged.connect(
+                        self._create_parameter_change_handler(model_id)
+                    )
+                
+                # Update visibility if it's a test result
+                if isinstance(param, TestResultParameter):
+                    self._update_item_visibility(param)
+                    
         except Exception as e:
             logger.error(f"Error creating tree item for {model_id}: {e}")
 
     @Slot(str, str)
     def _handle_models_linked(self, parent_id: str, child_id: str):
-        """Handle model relationship changes in the tree structure."""
+        """Update tree structure when models are linked."""
         if parent_id in self._items and child_id in self._items:
-            parent_item = self._items[parent_id]
-            child_item = self._items[child_id]
+            parent_param = self._items[parent_id]
+            child_param = self._items[child_id]
             
-            # If the child already has a parent, remove it first
-            if child_item.parent():
-                child_item.remove()
+            # Remove from current parent if any
+            if child_param.parent():
+                child_param.remove()
             
-            parent_item.addChild(child_item)
+            # Add to new parent
+            parent_param.addChild(child_param)
             logger.debug(f"Linked tree items {child_id} -> {parent_id}")
 
-    def _create_parameter_change_handler(self, model_id: str):
-        """Create a handler function for parameter changes."""
-        def handle_param_change(param, changes):
-            model = self.state.get_model(model_id)
-            if not model:
-                return
-                
-            for param, change, data in changes:
-                try:
-                    # Only update the model property if it's a valid property name
-                    prop_name = param.name()
-                    if prop_name != 'name':  # Prevent the "Unnamed" updates
-                        if model.get_property(prop_name) != data:
-                            logger.debug(f"Parameter change: {model_id}.{prop_name} = {data}")
-                            model.set_property(prop_name, data)
-                except Exception as e:
-                    logger.error(f"Error handling parameter change: {e}")
-            
-            return handle_param_change
-    
-    def _create_test_script_item(self, model: TestScript) -> Parameter:
-        """Create a test script parameter with run/stop functionality."""
-        icon = self.MODEL_ICONS.get('TestScript', '🖋️')
-        name = model.get_property('name', 'Unnamed')
-        progress = model.get_property('progress', 0)
-        status = model.get_property('status', 'Not Run')
-        
-        param = TestScriptParameter(
-            name=name,
-            title=f"{icon} {name}",
-            value=progress,
-            status=status,
-            state=self.state,  # Make sure this is passed
-            model_id=model.id  # And this
-        )
-        
-        # Connect parameter changes to model updates
-        param.sigTreeStateChanged.connect(self._create_parameter_change_handler(model.id))
-        return param
-
-    def _create_test_result_item(self, model: TestResult) -> Parameter:
-        """Create a test result parameter."""
-        name = model.get_property('name', 'Unnamed')
-        status = model.get_property('status', 'Not Run')
-        
-        # Make sure we're using TestResultParameter
-        param = Parameter.create(
-            type='testresult',  # This must match the registered type
-            name=name,
-            status=status,
-            state=self.state,
-            model_id=model.id
-        )
-        return param
-
-    def _create_test_group_item(self, model: TestGroup) -> Parameter:
-        """Create a test group parameter."""
-        icon = self.MODEL_ICONS.get('TestGroup', '📂')
-        name = model.get_property('name', 'Unnamed')
-        
-        param = Parameter.create(
-            name=name,
-            type='group',
-            title=f"{icon} {name}",
-            children=[],
-            expanded=True
-        )
-        param.model_id = model.id
-        return param
-
-    def _create_plot_item(self, model: Plot) -> Parameter:
-        """Create a plot parameter with its properties."""
-        icon = self.MODEL_ICONS.get('Plot', '📈')
-        title = model.get_property('title', 'Untitled')
-        
-        param = Parameter.create(
-            name=title,
-            type='group',
-            title=f"{icon} {title}",
-            expanded=False,
-            children=[
-                dict(
-                    name='grid_enabled',
-                    type='bool',
-                    value=model.get_property('grid_enabled', True)
-                ),
-                dict(
-                    name='legend_enabled',
-                    type='bool',
-                    value=model.get_property('legend_enabled', True)
-                ),
-                dict(
-                    name='x_label',
-                    type='str',
-                    value=model.get_property('x_label', '')
-                ),
-                dict(
-                    name='y_label',
-                    type='str',
-                    value=model.get_property('y_label', '')
-                ),
-                dict(
-                    name='x_unit',
-                    type='str',
-                    value=model.get_property('x_unit', '')
-                ),
-                dict(
-                    name='y_unit',
-                    type='str',
-                    value=model.get_property('y_unit', '')
-                )
-            ]
-        )
-        param.model_id = model.id
-        
-        # Connect parameter changes to model updates
-        param.sigTreeStateChanged.connect(self._create_parameter_change_handler(model.id))
-        return param
-    
-    def _create_trace_item(self, model: Trace) -> Parameter:
-        """Create a trace parameter with styling properties."""
-        icon = self.MODEL_ICONS.get('Trace', '🌊')
-        name = model.get_property('name', 'Trace')
-        
-        param = TraceParameter(
-            name=name,
-            title=f"{icon} {name}",
-            expanded=False,
-            state=self.state,
-            model_id=model.id
-        )
-        
-        # Connect parameter changes to model updates
-        param.sigTreeStateChanged.connect(self._create_parameter_change_handler(model.id))
-        return param
-
-    def _create_cursor_item(self, model: Cursor) -> Parameter:
-        """Create a cursor parameter."""
-        icon = self.MODEL_ICONS.get('Cursor', '🔀')
-        axis = model.get_property('axis', 'x')
-        pos = model.get_property('position', 0.0)
-        
-        param = Parameter.create(
-            name='Cursor',
-            type='group',
-            title=f"{icon} {axis.upper()}-Cursor @ {pos}",
-            expanded=False,
-            children=[
-                dict(
-                    name='axis',
-                    type='list',
-                    values=['x', 'y'],
-                    value=axis
-                ),
-                dict(
-                    name='position',
-                    type='float',
-                    value=pos,
-                    step=0.1
-                ),
-                dict(
-                    name='color',
-                    type='color',
-                    value=model.get_property('color', '#ffff00')
-                ),
-                dict(
-                    name='style',
-                    type='list',
-                    values=['solid', 'dash', 'dot', 'dash-dot'],
-                    value=model.get_property('style', 'solid')
-                ),
-                dict(
-                    name='width',
-                    type='int',
-                    value=model.get_property('width', 1),
-                    limits=(1, 10)
-                ),
-                dict(
-                    name='visible',
-                    type='bool',
-                    value=model.get_property('visible', True)
-                )
-            ]
-        )
-        param.model_id = model.id
-        param.sigTreeStateChanged.connect(self._create_parameter_change_handler(model.id))
-        return param
-
-    def _create_marker_item(self, model: Marker) -> Parameter:
-        """Create a marker parameter."""
-        icon = self.MODEL_ICONS.get('Marker', '📍')
-        x = model.get_property('x', 0.0)
-        y = model.get_property('y', 0.0)
-        label = model.get_property('label', '')
-        
-        param = Parameter.create(
-            name='Marker',
-            type='group',
-            title=f"{icon} {label or 'Marker'} ({x:.3f}, {y:.3f})",
-            expanded=False,
-            children=[
-                dict(
-                    name='x',
-                    type='float',
-                    value=x,
-                    step=0.1
-                ),
-                dict(
-                    name='y',
-                    type='float',
-                    value=y,
-                    step=0.1
-                ),
-                dict(
-                    name='label',
-                    type='str',
-                    value=label
-                ),
-                dict(
-                    name='color',
-                    type='color',
-                    value=model.get_property('color', '#ffff00')
-                ),
-                dict(
-                    name='size',
-                    type='int',
-                    value=model.get_property('size', 8),
-                    limits=(1, 20)
-                ),
-                dict(
-                    name='symbol',
-                    type='list',
-                    values=['o', 't', 's', 'd'],
-                    value=model.get_property('symbol', 'o')
-                ),
-                dict(
-                    name='visible',
-                    type='bool',
-                    value=model.get_property('visible', True)
-                )
-            ]
-        )
-        param.model_id = model.id
-        param.sigTreeStateChanged.connect(self._create_parameter_change_handler(model.id))
-        return param
-
-    def _create_table_item(self, model: DataTable) -> Parameter:
-        """Create a table parameter."""
-        icon = self.MODEL_ICONS.get('DataTable', '📋')
-        title = model.get_property('title', 'Untitled')
-        
-        children = [
-            dict(
-                name='columns',
-                type='str',
-                value=str(model.get_columns()),
-                readonly=True
-            ),
-            dict(
-                name='rows',
-                type='str',
-                value=str(len(model.get_data())),
-                readonly=True
-            )
-        ]
-        
-        param = Parameter.create(
-            name=title,
-            type='group',
-            title=f"{icon} {title}",
-            children=children
-        )
-        param.model_id = model.id
-        return param
-    
-    @Slot(str, str, object)
     def _handle_model_changed(self, model_id: str, prop: str, value: Any):
         """Handle model property changes."""
         if model_id not in self._items:
+            logger.debug(f"Model {model_id} not found in items")
             return
-            
-        item = self._items[model_id]
+                
+        param = self._items[model_id]
         model = self.state.get_model(model_id)
         if not model:
+            logger.debug(f"Could not get model for {model_id}")
+            return
+        
+        # logger.debug(f"Handling model change: {model_id}, prop={prop}, value={value}, param_type={type(param).__name__}")
+        
+        try:
+            # Handle test parameters
+            if isinstance(param, (TestScriptParameter, TestResultParameter)):
+                try:
+                    if prop == 'status':
+                        param.setStatus(value)
+                        self._update_item_visibility(param)
+                        logger.debug(f"Updated status for {model_id} to {value}")
+                    elif prop == 'progress' and isinstance(param, TestScriptParameter):
+                        logger.debug(f"Setting progress for TestScript {model_id}: {value} (type: {type(value)})")
+                        param.setValue(value)
+                except Exception as e:
+                    logger.error(f"Error updating test parameter {model_id}.{prop}: {e}")
+                return
+            
+            # Handle plot parameters            
+            elif isinstance(param, PlotParameter):
+                try:
+                    if prop in ['title', 'grid_enabled', 'legend_enabled', 'x_label', 'y_label', 'x_unit', 'y_unit']:
+                        settings = param.child('Settings')
+                        if settings:
+                            settings.child(prop).setValue(value)
+                            logger.debug(f"Updated plot setting {prop} for {model_id}")
+                    
+                    if param.items and param.items[0]:
+                        param_item = param.items[0]
+                        param_item.update_trace_count()
+                        logger.debug(f"Updated trace count for plot {model_id}")
+                except Exception as e:
+                    logger.error(f"Error updating plot parameter {model_id}.{prop}: {e}")
+                return
+            
+            # Handle trace parameters
+            elif isinstance(param, TraceParameter):
+                param.handle_property_update(prop, value)
+                # Update any dependent plots that might be showing this trace
+                parent_id = self.state.get_parent(model_id)
+                if parent_id in self._items:
+                    parent_param = self._items[parent_id]
+                    if isinstance(parent_param, PlotParameter) and parent_param.items:
+                        parent_param.items[0].update_trace_count()
+                # logger.debug(f"Updated trace property {prop} for {model_id}")
+            
+            # Handle marker parameters
+            elif isinstance(param, MarkerParameter):
+                # Position group
+                position_group = param.child('Position')
+                if position_group and prop in ['x', 'y']:
+                    position_group.child(prop).setValue(value)
+                
+                # Label group
+                label_group = param.child('Label')
+                if label_group and prop == 'label':
+                    label_group.child(prop).setValue(value)
+                
+                # Style group
+                style_group = param.child('Style')
+                if style_group and prop in ['color', 'size', 'symbol']:
+                    style_group.child(prop).setValue(value)
+                
+                # Display group
+                display_group = param.child('Display')
+                if display_group and prop == 'visible':
+                    display_group.child(prop).setValue(value)
+                
+                # Update status widget
+                if param.items and param.items[0]:
+                    param.items[0].update_status()
+                # logger.debug(f"Updated marker property {prop} for {model_id}")
+            
+            # Handle cursor parameters
+            elif isinstance(param, CursorParameter):
+                # Position group
+                position_group = param.child('Position')
+                if position_group and prop in ['axis', 'position']:
+                    position_group.child(prop).setValue(value)
+                
+                # Style group
+                style_group = param.child('Style')
+                if style_group and prop in ['color', 'width', 'style']:
+                    style_group.child(prop).setValue(value)
+                
+                # Display group
+                display_group = param.child('Display')
+                if display_group and prop == 'visible':
+                    display_group.child(prop).setValue(value)
+                
+                # Update status widget
+                if param.items and param.items[0]:
+                    param.items[0].update_status()
+                # logger.debug(f"Updated cursor property {prop} for {model_id}")
+            
+            # Handle any other model parameters
+            elif isinstance(param, ModelParameter):
+                for child in param.children():
+                    if child.name() == prop:
+                        child.setValue(value)
+                        # logger.debug(f"Updated general model property {prop} for {model_id}")
+                        break
+        
+        except Exception as e:
+            logger.error(f"Error updating parameter {model_id}.{prop}: {e}")
+            logger.exception(e)  # Log full traceback for debugging
+
+    def _handle_model_removed(self, model_id: str):
+        """Clean up when a model is removed."""
+        if model_id in self._items:
+            param = self._items[model_id]
+            
+            # Recursively cleanup child parameters
+            def cleanup_parameter(p):
+                for child in p.children():
+                    cleanup_parameter(child)
+                if hasattr(p, 'itemClass'):
+                    if hasattr(p.itemClass, 'cleanup'):
+                        p.itemClass.cleanup()
+            
+            cleanup_parameter(param)
+            param.remove()
+            del self._items[model_id]
+            logger.debug(f"Removed tree item for {model_id}")
+
+    def select_model(self, model_id: str):
+        """
+        Select a model in the tree without triggering signals.
+        Used for external selection requests.
+        """
+        if model_id not in self._items:
+            return
+            
+        param = self._items[model_id]
+        
+        # Safely check for valid items
+        if not param.items:
             return
             
         try:
-            # Handle special cases first
-            if isinstance(model, TestScript):
-                if prop == 'progress' and hasattr(item, 'setValue'):
-                    item.setValue(float(value))
-                elif prop == 'status' and hasattr(item, 'setOpts'):
-                    item.setOpts(status=value)
-                elif prop == 'name':
-                    icon = self.MODEL_ICONS.get('TestScript', '📄')
-                    item.setOpts(title=f"{icon} {value}")
-            
-            elif isinstance(model, TestResult):
-                if prop == 'status' or prop == 'name':
-                    icon = self.MODEL_ICONS.get('TestResult', '🧪')
-                    status = model.get_property('status', 'Not Run')
-                    name = model.get_property('name', 'Unnamed')
-                    item.setOpts(title=f"{icon} {name}")
-            
-            elif isinstance(model, Plot):
-                if prop == 'title':
-                    icon = self.MODEL_ICONS.get('Plot', '📈')
-                    item.setOpts(title=f"{icon} {value}")
-                    
-            elif isinstance(model, Trace):
-                if prop == 'name':
-                    icon = self.MODEL_ICONS.get('Trace', '🌊')
-                    item.setOpts(title=f"{icon} {value}")
-            
-            # Update parameter value if it exists
-            for child in item.children():
-                if child.name() == prop:
-                    with item.treeChangeBlocker():
-                        child.setValue(value)
-                    break
-                        
-        except Exception as e:
-            logger.error(f"Error handling model change: {e}")
-
-    def cleanup_parameter(self, param):
-        """Properly clean up a parameter and its children"""
-        if hasattr(param, 'children'):
-            for child in param.children():
-                self.cleanup_parameter(child)
-        if hasattr(param, 'widget') and param.widget:
-            param.widget.deleteLater()
-            param.widget = None
-
-    def _handle_model_removed(self, model_id: str):
-        """Handle model removal"""
-        if model_id in self._items:
-            param = self._items[model_id]
-            self.cleanup_parameter(param)
-            param.remove()
-            del self._items[model_id]
+            item = param.items[0]
+            if item is None:
+                return
+                
+            self.tree.blockSignals(True)
+            try:
+                self.tree.clearSelection()
+                item.setSelected(True)
+                self.tree.scrollToItem(item)
+            finally:
+                self.tree.blockSignals(False)
+        except (RuntimeError, TypeError) as e:
+            logger.debug(f"Could not select model {model_id}: {e}")

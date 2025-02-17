@@ -174,14 +174,14 @@ class PlotTab(BaseTab):
 
     def _handle_roi_changed(self):
         """Handle ROI region changes."""
-        logger.debug("ROI region changed")
+        # logger.debug("ROI region changed")
         try:
             if not self.model or self._suppress_roi_updates:
                 logger.debug("Either no model or ROI updates suppressed; returning")
                 return
             region = self.roi.getRegion()
             region_list = [float(x) for x in region]
-            logger.debug(f"ROI region: {region_list}")
+            # logger.debug(f"ROI region: {region_list}")
             
             if region_list != self.model.get_property('roi'):
                 logger.debug("New ROI region differs from model property; updating model")

@@ -4,6 +4,7 @@ from PySide6.QtWidgets import QMenu, QInputDialog, QFileDialog
 from pymetr.core.logging import logger
 from PySide6.QtGui import QIcon
 from pymetr.services.file_services import FileService
+from pathlib import Path
 
 class ModelParameterItem(ParameterItem):
     """Base class for all model parameter items"""
@@ -21,13 +22,20 @@ class ModelParameterItem(ParameterItem):
         menu.addSeparator()
 
         # Add rename action with edit icon
-        rename_action = menu.addAction(QIcon(":/icons/material/edit.svg"), "Rename")
+        icons_path = Path(__file__).parent.parent / 'icons'
+        rename_action = menu.addAction(
+            QIcon(str(icons_path / 'edit.png')), 
+            "Rename"
+        )
         rename_action.triggered.connect(self._handle_rename)
         
         menu.addSeparator()
         
         # Add remove action with delete icon
-        remove_action = menu.addAction(QIcon(":/icons/material/delete.svg"), "Remove")
+        remove_action = menu.addAction(
+            QIcon(str(icons_path / 'delete.png')), 
+            "Remove"
+        )
         remove_action.triggered.connect(self.param.remove_model)
         
         menu.exec_(ev.globalPos())
@@ -70,6 +78,13 @@ class ModelParameterItem(ParameterItem):
     def add_context_menu_actions(self, menu):
         """Add item-specific menu actions. Override in subclasses."""
         pass
+
+    def treeWidgetChanged(self):
+        super().treeWidgetChanged()
+        # Once this item is part of a tree, set its icon in column 0:
+        icon = self.param.opts.get('icon', None)
+        if icon is not None:
+            self.setIcon(0, icon)
 
 class ModelParameter(Parameter):
     """Base class for all model parameters"""

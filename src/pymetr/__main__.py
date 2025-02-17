@@ -25,8 +25,8 @@ def main():
     # Set application style
     app.setStyle("Fusion")
 
-    # Load and apply the stylesheet file
-    styleSheetFile = QFile("pymetr/core/styles.qss") 
+    style_path = Path(__file__).parent / "core" / "styles.qss"
+    styleSheetFile = QFile(str(style_path))
     if styleSheetFile.open(QFile.ReadOnly | QFile.Text):
         textStream = QTextStream(styleSheetFile)
         app.setStyleSheet(textStream.readAll())

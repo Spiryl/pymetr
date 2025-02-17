@@ -66,7 +66,7 @@ class ScriptTab(BaseTab):
         """Set up font controls."""
         # Add font controls to toolbar
         font_label = QLabel("Font:")
-        font_label.setStyleSheet("color: #D4D4D4;")
+        # font_label.setStyleSheet("color: #D4D4D4;")
         self.add_toolbar_widget(font_label)
         
         self.font_combo = QFontComboBox()

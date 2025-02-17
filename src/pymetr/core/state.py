@@ -33,7 +33,8 @@ class ApplicationState(QObject):
     status_warning = Signal(str)  # Warning messages
     status_info = Signal(str)  # Info messages
 
-    model_removed = Signal(str)              # model_id
+    model_removed = Signal(str)   # model_id
+    model_viewed = Signal(str)  # Emits model_id
 
     def __init__(self):
         super().__init__()
@@ -298,3 +299,7 @@ class ApplicationState(QObject):
         # If there are still pending updates, restart the timer
         if self._pending_updates:
             self._update_timer.start(self._throttle_interval)
+
+    def update_active_view(self, model_id: str):
+        """Called when a dock is done activating."""
+        self.model_viewed.emit(model_id)

@@ -13,7 +13,8 @@ from pymetr.core.logging import logger
 class TableView(BaseWidget):
     """Core widget for displaying data tables with sorting."""
     
-    selection_changed = Signal(pd.DataFrame)  # Emitted when selection changes
+    # Signal: emits a DataFrame containing the data from the selected rows.
+    selection_changed = Signal(pd.DataFrame)
     
     def __init__(self, state, model_id: str, parent=None):
         super().__init__(state, parent)
@@ -26,7 +27,7 @@ class TableView(BaseWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
         
-        # Table widget
+        # Create the QTableWidget.
         self.table = QTableWidget()
         self.table.setAlternatingRowColors(True)
         self.table.setSortingEnabled(True)
@@ -42,7 +43,7 @@ class TableView(BaseWidget):
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
         self.table.setSelectionMode(QTableWidget.ExtendedSelection)
         
-        # Style
+        # Apply a custom stylesheet
         self.table.setStyleSheet("""
             QTableWidget {
                 background-color: #1E1E1E;
@@ -63,77 +64,73 @@ class TableView(BaseWidget):
         
         layout.addWidget(self.table)
         
-        # Connect selection signal
+        # Connect the selection change signal
         self.table.itemSelectionChanged.connect(self._handle_selection_changed)
             
-    def _handle_property_update(self, prop: str, value: Any):
-        """Handle model property updates."""
+    def handle_property_update(self, prop: str, value: Any):
+        """Handle model property changes. (Overriding BaseWidget's method)"""
         if prop == 'data':
             self._update_table(value)
             
     def _update_table(self, data: pd.DataFrame):
-        """Update table with new data."""
+        """Update the QTableWidget with new data."""
         if not isinstance(data, pd.DataFrame):
             logger.error(f"Expected DataFrame, got {type(data)}")
             return
             
         try:
-            # Clear table
+            # Clear the current table contents.
             self.table.setRowCount(0)
             self.table.setColumnCount(0)
             
-            # Set dimensions
+            # Set dimensions based on the DataFrame.
             self.table.setRowCount(len(data))
             self.table.setColumnCount(len(data.columns))
             
-            # Set headers
+            # Set the header labels.
             self.table.setHorizontalHeaderLabels(data.columns.tolist())
             
-            # Populate data
+            # Populate the table with data.
             for row_idx, (_, row) in enumerate(data.iterrows()):
-                for col_idx, value in enumerate(row):
-                    item = self._create_item(value)
+                for col_idx, cell_value in enumerate(row):
+                    item = self._create_item(cell_value)
                     self.table.setItem(row_idx, col_idx, item)
                     
         except Exception as e:
             logger.error(f"Error updating table: {e}")
             
     def _create_item(self, value: Any) -> QTableWidgetItem:
-        """Create properly formatted table item."""
+        """Create a properly formatted QTableWidgetItem for a given value."""
         item = QTableWidgetItem()
         
         if pd.isna(value):
             item.setText("")
             item.setData(Qt.DisplayRole, None)
         elif isinstance(value, (int, float)):
-            if isinstance(value, float):
-                # Format floats nicely
-                text = f"{value:.6g}"
-            else:
-                text = str(value)
+            text = f"{value:.6g}" if isinstance(value, float) else str(value)
             item.setText(text)
-            item.setData(Qt.DisplayRole, value)  # For proper sorting
+            item.setData(Qt.DisplayRole, value)
             item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
         elif isinstance(value, bool):
             item.setText(str(value))
-            item.setData(Qt.DisplayRole, int(value))  # For sorting
+            item.setData(Qt.DisplayRole, int(value))
             item.setTextAlignment(Qt.AlignCenter | Qt.AlignVCenter)
         else:
             item.setText(str(value))
             item.setData(Qt.DisplayRole, str(value))
             item.setTextAlignment(Qt.AlignLeft | Qt.AlignVCenter)
             
-        item.setFlags(item.flags() & ~Qt.ItemIsEditable)  # Make read-only
+        item.setFlags(item.flags() & ~Qt.ItemIsEditable)  # Make the cell read-only.
         return item
         
     def _handle_selection_changed(self):
-        """Emit selected data when selection changes."""
+        """Emit the data from selected rows as a DataFrame."""
         if self.model:
             data = self.get_selected_data()
             self.selection_changed.emit(data)
         
     def get_selected_data(self) -> pd.DataFrame:
-        """Get data from selected rows."""
+        """Retrieve data from the currently selected rows."""
         if not self.model:
             return pd.DataFrame()
             

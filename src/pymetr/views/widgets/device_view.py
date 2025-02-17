@@ -69,38 +69,6 @@ class DeviceView(BaseWidget):
         self._parameter_tree.setColumnWidth(0, 120)  # Initial width for first column
         self._parameter_tree.setColumnWidth(1, 120)  # Initial width for second column
         layout.addWidget(self._parameter_tree)
-        
-        # Apply styling
-        self.setStyleSheet("""
-            QTreeWidget {
-                background-color: #1E1E1E;
-                alternate-background-color: #252525;
-                color: #D4D4D4;
-            }
-            QTreeWidget::item:selected {
-                background-color: #264F78;
-            }
-            QPushButton {
-                padding: 4px 12px;
-                background-color: #0E639C;
-                border: none;
-                border-radius: 2px;
-                color: white;
-            }
-            QPushButton:hover {
-                background-color: #1177BB;
-            }
-            QPushButton:pressed {
-                background-color: #0D5789;
-            }
-            QPushButton:disabled {
-                background-color: #2D2D2D;
-                color: #666666;
-            }
-            QLabel {
-                color: #D4D4D4;
-            }
-        """)
 
     def _handle_property_update(self, prop: str, value: Any):
         """Handle model property updates."""

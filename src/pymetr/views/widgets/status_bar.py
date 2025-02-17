@@ -76,17 +76,6 @@ class StatusBar(QStatusBar):
         self.info_status = StatusIndicator()
         self.addPermanentWidget(self.info_status)
         
-        # Style the status bar
-        self.setStyleSheet("""
-            QStatusBar {
-                background: #007ACC;
-                border-top: 1px solid #1E1E1E;
-            }
-            QStatusBar::item {
-                border: none;
-            }
-        """)
-        
     def _connect_signals(self):
         """Connect to state signals."""
         self.state.status_changed.connect(self._handle_status)

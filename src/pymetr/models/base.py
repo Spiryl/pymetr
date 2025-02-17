@@ -2,6 +2,7 @@
 from PySide6.QtCore import QObject, Signal, QThread, Qt, QMetaObject, Q_ARG
 from typing import Optional, Any
 import uuid
+import pandas as pd
 from pymetr.core.logging import logger
 
 class BaseModel(QObject):
@@ -63,14 +64,18 @@ class BaseModel(QObject):
         # self.batch_update_finished.emit(self.id)
 
     def set_property(self, name: str, value: object) -> None:
-        """Set a property value with batch update support."""
-        if self._properties.get(name) != value:
+        current_value = self._properties.get(name)
+        # Special handling for DataFrames
+        if isinstance(value, pd.DataFrame):
+            if isinstance(current_value, pd.DataFrame):
+                if current_value.equals(value):
+                    return
+            self._properties[name] = value.copy()  # Store a copy
+        else:
+            if current_value == value:
+                return
             self._properties[name] = value
-            if self._batch_mode:
-                self._pending_updates[name] = value
-            else:
-                self.property_changed.emit(self.id, name, value)
-            # logger.debug(f"Property '{name}' set to '{value}' for {self._id}")
+        self.property_changed.emit(self.id, name, value)
 
     def get_property(self, name: str, default: object = None) -> object:
         return self._properties.get(name, default)

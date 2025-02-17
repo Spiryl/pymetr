@@ -8,7 +8,7 @@ from datetime import datetime
 def setup_logging(log_to_file: bool = False):
     """Configure application-wide logging with detailed formatting."""
     logger = logging.getLogger('scpi')
-    logger.setLevel(logging.ERROR)
+    logger.setLevel(logging.DEBUG)
 
     # Detailed formatter
     formatter = logging.Formatter(

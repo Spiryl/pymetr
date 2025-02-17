@@ -96,21 +96,6 @@ class TitleBar(QWidget):
         self.close_button.clicked.connect(self.on_close_clicked)
         self.layout.addWidget(self.close_button)
 
-        # Style your title bar as you wish
-        self.setStyleSheet("""
-            QWidget#TitleBar {
-                background-color: #2D2D2D;
-            }
-            QToolButton {
-                color: #FFFFFF;
-                background: transparent;
-                border: none;
-            }
-            QToolButton:hover {
-                background-color: rgba(255,255,255,0.1);
-            }
-        """)
-
     # ----------------------------------------------------------------------
     # EXAMPLE: "File" button -> QMenu -> standard actions
     # ----------------------------------------------------------------------
