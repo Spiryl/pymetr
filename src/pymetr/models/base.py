@@ -1,5 +1,5 @@
 # pymetr/models/base.py
-from PySide6.QtCore import QObject, Signal, QThread, Qt, QMetaObject, Q_ARG
+from PySide6.QtCore import QObject, Signal
 from typing import Optional, Any
 import uuid
 import pandas as pd
@@ -8,25 +8,31 @@ from pymetr.core.logging import logger
 class BaseModel(QObject):
     property_changed = Signal(str, str, object)  # model_id, property, value
     child_added = Signal(str, str)              # parent_id, child_id
-    # If needed, you can add:
-    # batch_update_finished = Signal(str)  # model_id
 
     def __init__(self, state=None, model_id: Optional[str] = None, name: Optional[str] = None):
         super().__init__()
         self._id = model_id or str(uuid.uuid4())
         # Set the human-readable name; default to "Untitled" if not provided.
         self._name = name if name is not None else "Untitled"
+        
+        # Create a valid Qt objectName from the model name/id
+        # Replace spaces and special chars with underscores
+        safe_name = self._name.replace(' ', '_').replace(';', '').replace(':', '')
+        object_name = f"{safe_name}_{self._id}"
+        self.setObjectName(object_name)  # Set QObject name
+        
         self._properties = {}
         self._children = {}
-        self._connections = []  # Track signal connections
+        self._connections = []
         self._batch_mode = False
         self._pending_updates = {}
         self.state = state
         if self.state is not None:
             self.state.register_model(self)
-        logger.debug(f"BaseModel created with ID: {self._id} and name: {self._name}")
-        # Also store the name as a property for UI synchronization.
+        logger.debug(f"BaseModel created with ID: {self._id}, name: {self._name}, objectName: {object_name}")
+        # Store both name and objectName as properties
         self.set_property('name', self._name)
+        self.set_property('objectName', object_name)
 
     @property
     def id(self) -> str:
@@ -38,11 +44,17 @@ class BaseModel(QObject):
         return self._name
 
     def rename(self, new_name: str) -> None:
-        """Rename the model and update its 'name' property."""
+        """Rename the model and update its 'name' and 'objectName' properties."""
         if self._name != new_name:
             logger.debug(f"Renaming model {self._id} from '{self._name}' to '{new_name}'")
             self._name = new_name
+            # Update objectName to match new name
+            safe_name = new_name.replace(' ', '_').replace(';', '').replace(':', '')
+            object_name = f"{safe_name}_{self._id}"
+            self.setObjectName(object_name)
+            # Update properties
             self.set_property('name', new_name)
+            self.set_property('objectName', object_name)
 
     def get_name(self) -> str:
         """Return the human-readable name of the model."""
@@ -85,9 +97,9 @@ class BaseModel(QObject):
         if child.id in self._children:
             return
         self._children[child.id] = child
-        if self.state:
-            self.state.register_model(child)
-            self.state.link_models(self.id, child.id)
+        # if self.state:
+        #     self.state.register_model(child)
+        #     self.state.link_models(self.id, child.id)
         self.child_added.emit(self.id, child.id)
         logger.debug(f"Added child {child.id} to {self._id}")
 

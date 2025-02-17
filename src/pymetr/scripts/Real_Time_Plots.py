@@ -15,31 +15,30 @@ def run_test():
     
     # Show the result view which will display all plots in a grid
     result.show()
-
+    
     # Create 4 plots with basic setup
     sine_plot = create_plot("Dynamic Sine Wave")
-    sine_plot.set_property("x_label", "Sample")
-    sine_plot.set_property("y_label", "Amplitude")
+    sine_plot.x_label = "Sample"
+    sine_plot.y_label = "Amplitude"
     sine_plot.y_unit = "Volts"
     sine_plot.x_unit = "Seconds"
     result.add(sine_plot)
     
     noise_plot = create_plot("Modulated Noise")
-    noise_plot.set_property("x_label", "Sample")
-    noise_plot.set_property("y_label", "Amplitude")
+    noise_plot.x_label = "Sample"
+    noise_plot.y_label = "Amplitude"
     result.add(noise_plot)
     
     walk_plot = create_plot("Random Walk")
-    walk_plot.set_property("x_label", "Time")
-    walk_plot.set_property("y_label", "Position")
+    walk_plot.x_label = "Time"
+    walk_plot.y_label = "Position"
     result.add(walk_plot)
     
     vector_plot = create_plot("Spinning Vector")
-    vector_plot.set_property("x_label", "X Position")
-    vector_plot.set_property("y_label", "Y Position")
+    vector_plot.x_label = "X Position"
+    vector_plot.y_label = "Y Position"
     result.add(vector_plot)
     
-
     # Generate x points for different plots
     x_points = np.arange(1000)
     walk_points = np.zeros(200)  # Shorter for random walk
@@ -70,13 +69,13 @@ def run_test():
         y_vec = radius * np.sin(np.linspace(0, angle, vector_length))
         vector_plot.set_trace("Vector", x_vec, y_vec, color="#FF5722")
         
-        # Update progress every 10 frames
+        # Update progress every 20 frames
         if frame % 20 == 0:
             progress = (frame / 1000) * 100
             set_test_progress(progress, f"Frame {frame}/1000")
-        
+            
         # Small wait to prevent overwhelming the UI
-        wait(35)  # 10ms wait
+        wait(35)  # 20ms wait
     
     set_test_progress(100, "Test complete!")
     result.status = "Pass"

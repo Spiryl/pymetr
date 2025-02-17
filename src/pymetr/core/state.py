@@ -122,6 +122,11 @@ class ApplicationState(QObject):
     @Slot(str, str)
     def _link_models_internal(self, parent_id: str, child_id: str) -> None:
         """Internal linking in main thread."""
+        # Check if relationship already exists
+        if parent_id in self._relationships and child_id in self._relationships[parent_id]:
+            logger.debug(f"Relationship already exists between {parent_id} and {child_id}")
+            return
+            
         if parent_id not in self._relationships:
             self._relationships[parent_id] = set()
         self._relationships[parent_id].add(child_id)

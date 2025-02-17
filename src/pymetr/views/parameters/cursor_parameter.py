@@ -1,12 +1,11 @@
 from typing import Any
-from PySide6.QtWidgets import QWidget, QHBoxLayout, QLabel
-from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QWidget, QHBoxLayout, QLabel, QMenu
 
+from pyqtgraph.parametertree import Parameter
 from .base import ModelParameter, ModelParameterItem
-from pymetr.core.logging import logger
 
 class CursorStatusWidget(QWidget):
-    """Simple widget showing cursor axis and position."""
+    """Widget showing cursor axis and position."""
     def __init__(self, parent=None):
         super().__init__(parent)
         self._setup_ui()
@@ -21,7 +20,8 @@ class CursorStatusWidget(QWidget):
         
     def update_status(self, axis: str, position: float):
         """Update cursor status display."""
-        self.status_label.setText(f"{axis}-cursor at {position:.3f}")
+        orientation = "Vertical" if axis == 'x' else "Horizontal"
+        self.status_label.setText(f"{orientation} at {position:.3f}")
 
 class CursorParameterItem(ModelParameterItem):
     def __init__(self, param, depth):
@@ -35,7 +35,7 @@ class CursorParameterItem(ModelParameterItem):
         return self.widget
         
     def update_status(self):
-        if self.widget and self.param.state and self.param.model_id:
+        if hasattr(self, 'widget') and self.widget and hasattr(self.param, 'state') and hasattr(self.param, 'model_id'):
             model = self.param.state.get_model(self.param.model_id)
             if model:
                 axis = model.get_property('axis', 'x')
@@ -43,74 +43,115 @@ class CursorParameterItem(ModelParameterItem):
                 self.widget.update_status(axis, position)
                 
     def treeWidgetChanged(self):
-        """Called when this item is added or removed from a tree."""
         super().treeWidgetChanged()
-        if self.widget is None:
+        if not hasattr(self, 'widget') or not self.widget:
             self.widget = self.makeWidget()
         tree = self.treeWidget()
         if tree is not None:
             tree.setItemWidget(self, 1, self.widget)
 
 class CursorParameter(ModelParameter):
-    """Parameter tree item for Cursor models."""
+    """
+    Parameter tree item for Cursor models.
+    
+    Structure:
+    - Cursor Parameter
+      └─ Settings (group)
+         ├─ Position Settings (direct parameters)
+         ├─ Style (group)
+         └─ Display (group)
+    """
     
     itemClass = CursorParameterItem
     
     def __init__(self, **opts):
-        # Get model properties from opts
         model = None
         if opts.get('state') and opts.get('model_id'):
             model = opts['state'].get_model(opts['model_id'])
 
         opts['type'] = 'cursor'
+        super().__init__(**opts)
         
-        # Create parameter groups
-        opts['children'] = [
-            {
-                'name': 'Position',
-                'type': 'group',
-                'children': [
-                    {'name': 'axis', 'type': 'list', 
-                     'value': model.get_property('axis', 'x') if model else 'x',
-                     'limits': ['x', 'y']},
-                    {'name': 'position', 'type': 'float', 
-                     'value': model.get_property('position', 0.0) if model else 0.0}
+        settings_children = [
+            # Position settings at top level
+            dict(name='axis', type='list', 
+                 value=model.get_property('axis', 'x') if model else 'x',
+                 limits=['x', 'y']),
+            dict(name='position', type='float', 
+                 value=model.get_property('position', 0.0) if model else 0.0),
+                 
+            # Style settings subgroup
+            dict(
+                name='Style',
+                type='group',
+                children=[
+                    dict(name='color', type='color',
+                         value=model.get_property('color', '#FFFF00') if model else '#FFFF00'),
+                    dict(name='width', type='int',
+                         value=model.get_property('width', 1) if model else 1,
+                         limits=(1, 10)),
+                    dict(name='style', type='list',
+                         value=model.get_property('style', 'solid') if model else 'solid',
+                         limits=['solid', 'dash', 'dot'])
                 ]
-            },
-            {
-                'name': 'Style',
-                'type': 'group',
-                'children': [
-                    {'name': 'color', 'type': 'color',
-                     'value': model.get_property('color', '#FFFF00') if model else '#FFFF00'},
-                    {'name': 'width', 'type': 'int',
-                     'value': model.get_property('width', 1) if model else 1,
-                     'limits': (1, 10)},
-                    {'name': 'style', 'type': 'list',
-                     'value': model.get_property('style', 'solid') if model else 'solid',
-                     'limits': ['solid', 'dash', 'dot']}
+            ),
+            
+            # Display settings subgroup
+            dict(
+                name='Display',
+                type='group',
+                children=[
+                    dict(name='visible', type='bool',
+                         value=model.get_property('visible', True) if model else True)
                 ]
-            },
-            {
-                'name': 'Display',
-                'type': 'group',
-                'children': [
-                    {'name': 'visible', 'type': 'bool',
-                     'value': model.get_property('visible', True) if model else True}
-                ]
-            }
+            )
         ]
         
-        super().__init__(**opts)
+        # Create settings group and add children
+        settings = Parameter.create(name='Settings', type='group', children=settings_children)
+        self.addChild(settings)
+        
+        # Connect signal handlers recursively
+        def connect_handlers(param):
+            param.sigValueChanged.connect(self._handle_child_change)
+            for child in param.children():
+                connect_handlers(child)
+                
+        connect_handlers(settings)
 
+    def _handle_child_change(self, param, value):
+        if not self.state or not self.model_id:
+            return
+            
+        model = self.state.get_model(self.model_id)
+        if not model:
+            return
+            
+        model.set_property(param.name(), value)
+                    
     def handle_property_update(self, name: str, value: Any):
-        """Handle model property updates."""
-        for group in self.children():
+        settings = self.child('Settings')
+        if not settings:
+            return
+            
+        def update_param(group, name, value):
             for param in group.children():
                 if param.name() == name:
                     param.setValue(value)
-                    # Update the status widget if position related properties change
-                    if name in ['axis', 'position']:
-                        if self.items and self.items[0]:
-                            self.items[0].update_status()
-                    return
+                    return True
+                if param.type() == 'group':
+                    if update_param(param, name, value):
+                        return True
+            return False
+            
+        update_param(settings, name, value)
+
+    def add_context_actions(self, menu: QMenu) -> None:
+        """
+        Abstract method to add parameter-specific context menu actions.
+        Must be implemented by subclasses.
+        
+        Args:
+            menu: QMenu to add actions to
+        """
+        pass
