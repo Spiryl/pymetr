@@ -98,6 +98,7 @@ class PlotParameter(ModelParameter):
             dict(
                 name='Display',
                 type='group',
+                expanded=False,
                 children=[
                     dict(name='grid_enabled', type='bool', value=model.get_property('grid_enabled', True) if model else True),
                     dict(name='legend_enabled', type='bool', value=model.get_property('legend_enabled', True) if model else True),
@@ -115,6 +116,7 @@ class PlotParameter(ModelParameter):
             dict(
                 name='Axis',
                 type='group',
+                expanded=False,
                 children=[
                     dict(name='x_log', type='bool', value=model.get_property('x_log', False) if model else False),
                     dict(name='y_log', type='bool', value=model.get_property('y_log', False) if model else False),
@@ -127,6 +129,7 @@ class PlotParameter(ModelParameter):
             dict(
                 name='Range',
                 type='group',
+                expanded=False,
                 children=[
                     dict(name='x_min', type='float', value=model.get_property('x_min', 0.0) if model else 0.0),
                     dict(name='x_max', type='float', value=model.get_property('x_max', 1.0) if model else 1.0),
@@ -143,7 +146,7 @@ class PlotParameter(ModelParameter):
         ]
         
         # Create the Settings group and add all children
-        settings = Parameter.create(name='Settings', type='group', children=settings_children)
+        settings = Parameter.create(name='Settings', type='group',expanded=False, children=settings_children)
         self.addChild(settings)
         
         # Connect signal handlers for all parameters recursively
@@ -187,3 +190,7 @@ class PlotParameter(ModelParameter):
             return False
             
         update_param(settings, name, value)
+
+    def add_context_actions(self, menu: QMenu) -> None:
+        """Add parameter-specific menu actions."""
+        pass

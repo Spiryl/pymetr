@@ -238,43 +238,6 @@ class ModelTestView(BaseWidget):
         if hasattr(item, 'setVisible'):
             item.setVisible(not should_hide)
 
-    def _handle_selection_changed(self):
-        """Handle tree selection changes."""
-        if self._updating_from_tab:
-            return
-
-        selected = self.tree.selectedItems()
-        if not selected or not selected[0].param:
-            return
-
-        try:
-            self._updating_from_tab = True
-            param = selected[0].param
-            
-            # Get model_id either from param attribute or param name
-            model_id = None
-            if hasattr(param, 'model_id'):
-                model_id = param.model_id
-            else:
-                # For group/simple parameters, the name stores the model_id
-                model_id = param.name()
-                
-            model = self.state.get_model(model_id)
-            if not model:
-                return
-
-            # For non-viewable models or parameters, find closest parent with a view
-            if not isinstance(model, (Plot, DataTable, TestScript, TestResult, TestGroup)):
-                model = self._find_viewable_parent(model_id)
-                if not model:
-                    return
-
-            # Show the view without affecting tree focus
-            model.show()
-            self.selection_changed.emit(model.id)
-        finally:
-            self._updating_from_tab = False
-
     @Slot(str)
     def _handle_model_registered(self, model_id: str):
         """Create appropriate parameter item for newly registered model."""
@@ -319,92 +282,6 @@ class ModelTestView(BaseWidget):
             parent_param.addChild(child_param)
             logger.debug(f"Linked tree items {child_id} -> {parent_id}")
 
-    def _handle_model_changed(self, model_id: str, prop: str, value: Any):
-        """Handle model property changes."""
-        if model_id not in self._items:
-            logger.debug(f"Model {model_id} not found in items")
-            return
-                
-        param = self._items[model_id]
-        model = self.state.get_model(model_id)
-        if not model:
-            logger.debug(f"Could not get model for {model_id}")
-            return
-        
-        try:
-            # Handle test parameters
-            if isinstance(param, (TestScriptParameter, TestResultParameter)):
-                try:
-                    if prop == 'status':
-                        param.setStatus(value)
-                        self._update_item_visibility(param)
-                    elif prop == 'progress' and isinstance(param, TestScriptParameter):
-                        param.setValue(value)
-                except Exception as e:
-                    logger.error(f"Error updating test parameter {model_id}.{prop}: {e}")
-                return
-            
-            # Handle plot parameters            
-            elif isinstance(param, PlotParameter):
-                try:
-                    param.handle_property_update(prop, value)
-                    # Update trace count if needed
-                    if param.items and param.items[0]:
-                        param.items[0].update_trace_count()
-                except Exception as e:
-                    logger.error(f"Error updating plot parameter {model_id}.{prop}: {e}")
-                return
-            
-            # Handle trace parameters
-            elif isinstance(param, TraceParameter):
-                try:
-                    param.handle_property_update(prop, value)
-                    # Update any dependent plots
-                    parent_id = self.state.get_parent(model_id)
-                    if parent_id in self._items:
-                        parent_param = self._items[parent_id]
-                        if isinstance(parent_param, PlotParameter) and parent_param.items:
-                            parent_param.items[0].update_trace_count()
-                except Exception as e:
-                    logger.error(f"Error updating trace parameter {model_id}.{prop}: {e}")
-                return
-            
-            # Handle marker parameters
-            elif isinstance(param, MarkerParameter):
-                try:
-                    param.handle_property_update(prop, value)
-                    # Update status widget if needed
-                    if param.items and param.items[0]:
-                        param.items[0].update_status()
-                except Exception as e:
-                    logger.error(f"Error updating marker parameter {model_id}.{prop}: {e}")
-                return
-            
-            # Handle cursor parameters
-            elif isinstance(param, CursorParameter):
-                try:
-                    param.handle_property_update(prop, value)
-                    # Update status widget if needed
-                    if param.items and param.items[0]:
-                        param.items[0].update_status()
-                except Exception as e:
-                    logger.error(f"Error updating cursor parameter {model_id}.{prop}: {e}")
-                return
-            
-            # Handle any other model parameters
-            elif isinstance(param, ModelParameter):
-                try:
-                    for child in param.children():
-                        if child.name() == prop:
-                            child.setValue(value)
-                            break
-                except Exception as e:
-                    logger.error(f"Error updating general parameter {model_id}.{prop}: {e}")
-        
-        except Exception as e:
-            logger.error(f"Error updating parameter {model_id}.{prop}: {e}")
-            logger.exception(e)  # Log full traceback for debugging
-
     def _handle_model_removed(self, model_id: str):
         """Clean up when a model is removed."""
         if model_id in self._items:
@@ -440,3 +317,168 @@ class ModelTestView(BaseWidget):
                 
             except Exception as e:
                 logger.error(f"Error removing tree item for {model_id}: {e}")
+
+    def _handle_selection_changed(self):
+        """Handle tree selection changes."""
+        if self._updating_from_tab:
+            return
+
+        selected = self.tree.selectedItems()
+        if not selected or not selected[0].param:
+            return
+
+        try:
+            self._updating_from_tab = True
+            param = selected[0].param
+            
+            # Get model_id either from param attribute or param name
+            model_id = None
+            if hasattr(param, 'model_id'):
+                model_id = param.model_id
+            else:
+                # For group/simple parameters, the name stores the model_id
+                model_id = param.name()
+                
+            model = self.state.get_model(model_id)
+            if not model:
+                return
+
+            # For non-viewable models or parameters, find closest parent with a view
+            if not isinstance(model, (Plot, DataTable, TestScript, TestResult, TestGroup)):
+                model = self._find_viewable_parent(model_id)
+                if not model:
+                    return
+
+            # Show the view without affecting tree focus
+            model.show()
+            self.selection_changed.emit(model.id)
+        finally:
+            self._updating_from_tab = False
+
+    def _update_parameter_value(self, param, prop_name: str, value: Any) -> bool:
+        """
+        Helper method to update a parameter value, handling type conversions.
+        Returns True if the parameter was found and updated.
+        
+        Args:
+            param: The parameter or parameter group to search
+            prop_name: Name of the property to update
+            value: New value to set
+            
+        Returns:
+            bool: True if parameter was found and updated, False otherwise
+        """
+        # Direct match at this level
+        if param.name() == prop_name:
+            try:
+                # Handle different parameter types
+                if param.type() == 'bool':
+                    param.setValue(bool(value))
+                elif param.type() == 'int':
+                    param.setValue(int(value))
+                elif param.type() == 'float':
+                    param.setValue(float(value))
+                elif param.type() == 'str':
+                    param.setValue(str(value))
+                else:
+                    # For other types, set directly
+                    param.setValue(value)
+                logger.debug(f"Updated parameter {prop_name} to {value}")
+                return True
+            except Exception as e:
+                logger.error(f"Error updating parameter {prop_name}: {e}")
+                return False
+
+        # For group parameters, search children recursively
+        if param.type() == 'group':
+            for child in param.children():
+                if self._update_parameter_value(child, prop_name, value):
+                    return True
+
+        return False
+
+    def _update_model_parameter(self, param, model_id: str, prop: str, value: Any) -> bool:
+        """
+        Helper method to update a model parameter, handling different parameter types.
+        Returns True if the parameter was successfully updated.
+        
+        Args:
+            param: The model parameter to update
+            model_id: ID of the model
+            prop: Property name being updated
+            value: New value to set
+            
+        Returns:
+            bool: True if update was successful, False otherwise
+        """
+        try:
+            # Handle different parameter types
+            if isinstance(param, (TestScriptParameter, TestResultParameter)):
+                if prop == 'status':
+                    param.setStatus(value)
+                    self._update_item_visibility(param)
+                    return True
+                elif prop == 'progress' and isinstance(param, TestScriptParameter):
+                    param.setValue(value)
+                    return True
+                    
+            elif isinstance(param, PlotParameter):
+                # For plot parameters, look in the Settings group
+                settings = param.child('Settings')
+                if settings:
+                    return self._update_parameter_value(settings, prop, value)
+                    
+            elif isinstance(param, TraceParameter):
+                return self._update_parameter_value(param, prop, value)
+                
+            elif isinstance(param, MarkerParameter):
+                return self._update_parameter_value(param, prop, value)
+                
+            elif isinstance(param, CursorParameter):
+                return self._update_parameter_value(param, prop, value)
+                
+            elif isinstance(param, ModelParameter):
+                # For general model parameters, try direct update
+                return self._update_parameter_value(param, prop, value)
+                
+        except Exception as e:
+            logger.error(f"Error in _update_model_parameter for {model_id}.{prop}: {e}")
+            
+        return False
+
+    def _handle_model_changed(self, model_id: str, prop: str, value: Any):
+        """Handle model property changes."""
+        if model_id not in self._items:
+            logger.debug(f"Model {model_id} not found in items")
+            return
+                
+        param = self._items[model_id]
+        model = self.state.get_model(model_id)
+        if not model:
+            logger.debug(f"Could not get model for {model_id}")
+            return
+        
+        try:
+            # Attempt to update the parameter
+            if not self._update_model_parameter(param, model_id, prop, value):
+                logger.warning(f"Failed to update parameter {model_id}.{prop}")
+                
+            # # Special handling for parameters that affect the UI
+            # if isinstance(param, PlotParameter):
+            #     # Update trace count if needed
+            #     if param.items and param.items[0]:
+            #         param.items[0].update_trace_count()
+                    
+            # elif isinstance(param, TraceParameter):
+            #     # Update any parent plot's trace count
+            #     parent_id = self.state.get_parent(model_id)
+            #     if parent_id in self._items:
+            #         parent_param = self._items[parent_id]
+            #         if isinstance(parent_param, PlotParameter) and parent_param.items:
+            #             parent_param.items[0].update_trace_count()
+                        
+        except Exception as e:
+            logger.error(f"Error handling model change for {model_id}.{prop}: {e}")
+            logger.exception(e)  # Log full traceback for debugging
+
+

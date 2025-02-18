@@ -18,10 +18,8 @@ class BaseTab(BaseWidget):
         self.content_widget: Optional[QWidget] = None
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)        
         self._setup_container()
-        self._setup_ui()
-        
-        # Set model after UI is ready
-        self.set_model(model_id)
+        self._setup_ui()  # Setup UI first
+        self.set_model(model_id)  # Then set model
 
     def _setup_container(self):
         """Set up main container and layout."""

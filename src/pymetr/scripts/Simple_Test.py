@@ -50,6 +50,9 @@ def run_test():
         # Small delay
         wait(500)  # 500ms delay
     
+
+    plot.x_label = "Time (s)"
+    plot.y_label = "Signal"
     print("Test complete")
     result.status = "Pass"
     return True

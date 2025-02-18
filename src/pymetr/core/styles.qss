@@ -276,28 +276,45 @@ QPushButton:checked {
    ------------------------------------------------- */
 QCheckBox, QRadioButton {
     spacing: 6px;
+    color: white;
 }
 
 QCheckBox::indicator,
 QRadioButton::indicator {
     width: 14px;
     height: 14px;
+    background-color: white;
+    border: 1px solid #666666;
 }
 
 QCheckBox::indicator:checked {
-    image: url(":/icons/checkbox_checked.png"); 
+    background-color: #3D7AAF;  /* A nice blue when checked */
+    border: 1px solid #3D7AAF;
 }
 
 QCheckBox::indicator:unchecked {
-    image: url(":/icons/checkbox_unchecked.png");
+    background-color: #FFFFFF;
+}
+
+QCheckBox::indicator:hover {
+    border: 1px solid #3D7AAF;
+}
+
+QRadioButton::indicator {
+    border-radius: 7px;  /* Make it round */
 }
 
 QRadioButton::indicator:checked {
-    image: url(":/icons/radio_checked.png");
+    background-color: #3D7AAF;
+    border: 1px solid #3D7AAF;
 }
 
 QRadioButton::indicator:unchecked {
-    image: url(":/icons/radio_unchecked.png");
+    background-color: #FFFFFF;
+}
+
+QRadioButton::indicator:hover {
+    border: 1px solid #3D7AAF;
 }
 
 /* -------------------------------------------------

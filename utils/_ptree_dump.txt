@@ -33,48 +33,7 @@ pymetr/
 │   │   ├── src/
 │   │   │   │   ├── signals.wsd
 ├── logs/
-│   │   ├── scpi_20250201_115957.log
-│   │   ├── scpi_20250201_121233.log
-│   │   ├── scpi_20250201_121848.log
-│   │   ├── scpi_20250201_122433.log
-│   │   ├── scpi_20250201_122457.log
-│   │   ├── scpi_20250201_123309.log
-│   │   ├── scpi_20250201_123647.log
-│   │   ├── scpi_20250201_123827.log
-│   │   ├── scpi_20250201_123930.log
-│   │   ├── scpi_20250201_124042.log
-│   │   ├── scpi_20250201_124745.log
-│   │   ├── scpi_20250201_125214.log
-│   │   ├── scpi_20250201_125249.log
-│   │   ├── scpi_20250201_125510.log
-│   │   ├── scpi_20250201_125547.log
-│   │   ├── scpi_20250201_125839.log
-│   │   ├── scpi_20250201_130020.log
-│   │   ├── scpi_20250201_130350.log
-│   │   ├── scpi_20250201_130412.log
-│   │   ├── scpi_20250201_130453.log
-│   │   ├── scpi_20250201_131140.log
-│   │   ├── scpi_20250201_131226.log
-│   │   ├── scpi_20250201_131348.log
-│   │   ├── scpi_20250201_131409.log
-│   │   ├── scpi_20250201_131641.log
-│   │   ├── scpi_20250201_132054.log
-│   │   ├── scpi_20250201_132206.log
-│   │   ├── scpi_20250201_132357.log
-│   │   ├── scpi_20250201_132936.log
-│   │   ├── scpi_20250201_133530.log
-│   │   ├── scpi_20250201_133606.log
-│   │   ├── scpi_20250201_133621.log
-│   │   ├── scpi_20250201_133651.log
-│   │   ├── scpi_20250201_133854.log
-│   │   ├── scpi_20250201_134455.log
-│   │   ├── scpi_20250201_135417.log
-│   │   ├── scpi_20250201_135529.log
-│   │   ├── scpi_20250201_135542.log
-│   │   ├── scpi_20250201_135555.log
-│   │   ├── scpi_20250201_135650.log
-│   │   ├── scpi_20250201_135811.log
-│   │   ├── scpi_20250201_135849.log
+│   │   ├── scpi_20250205_145858.log
 ├── PyMetr.egg-info/
 │   │   ├── dependency_links.txt
 │   │   ├── PKG-INFO
@@ -82,13 +41,16 @@ pymetr/
 │   │   ├── top_level.txt
 ├── src/
 │   ├── pymetr/
-│   │   │   ├── logging.py
-│   │   │   ├── registry.py
-│   │   │   ├── state.py
-│   │   ├── actions/
-│   │   │   │   ├── commands.py
-│   │   │   │   ├── history.py
-│   │   │   │   ├── manager.py
+│   │   ├── core/
+│   │   │   │   ├── actions.py
+│   │   │   │   ├── connections.py
+│   │   │   │   ├── engine.py
+│   │   │   │   ├── factory.py
+│   │   │   │   ├── logging.py
+│   │   │   │   ├── registry.py
+│   │   │   │   ├── state.py
+│   │   │   │   ├── styles.qss
+│   │   │   │   ├── visitor.py
 │   │   ├── drivers/
 │   │   │   │   ├── base.py
 │   │   │   │   ├── connections.py
@@ -96,112 +58,145 @@ pymetr/
 │   │   │   │   ├── hp8563a.py
 │   │   │   │   ├── hs9000.py
 │   │   │   │   ├── registry.py
-│   │   ├── example_scripts/
-│   │   │   │   ├── current_test.py
-│   │   │   │   ├── voltage_test.py
-│   │   ├── factories/
-│   │   │   │   ├── instrument_factory.py
 │   │   ├── models/
 │   │   │   │   ├── base.py
 │   │   │   │   ├── cursor.py
-│   │   │   │   ├── data_table.py
-│   │   │   │   ├── dut.py
-│   │   │   │   ├── instrument.py
+│   │   │   │   ├── device.py
 │   │   │   │   ├── marker.py
 │   │   │   │   ├── measurement.py
 │   │   │   │   ├── plot.py
-│   │   │   │   ├── test_result.py
-│   │   │   │   ├── test_script.py
-│   │   │   │   ├── test_suite.py
+│   │   │   │   ├── table.py
+│   │   │   │   ├── test.py
 │   │   │   │   ├── trace.py
+│   │   ├── scripts/
+│   │   │   │   ├── Frame_Rate.py
+│   │   │   │   ├── Model_Link_Analysis.py
+│   │   │   │   ├── Plot_Test_Script.py
+│   │   │   │   ├── Power_Meter_Check.py
+│   │   │   │   ├── Real_Time_Plots.py
+│   │   │   │   ├── Simple_Test.py
+│   │   │   │   ├── Test1.py
+│   │   │   │   ├── Test10.py
+│   │   │   │   ├── Test11.py
+│   │   │   │   ├── Test12.py
+│   │   │   │   ├── Test2.py
+│   │   │   │   ├── Test3.py
+│   │   │   │   ├── Test4.py
+│   │   │   │   ├── Test5.py
+│   │   │   │   ├── Test6.py
+│   │   │   │   ├── Test7.py
+│   │   ├── services/
+│   │   │   │   ├── file_services.py
+│   │   │   │   ├── script.py
 │   │   ├── views/
+│   │   │   │   ├── main_window.py
 │   │   │   │   ├── manager.py
+│   │   │   │   ├── tab_manager.py
+│   │   │   │   ├── title_bar.py
+│   │   │   ├── icons/
+│   │   │   │   │   ├── analytics.png
+│   │   │   │   │   ├── analytics_g.png
+│   │   │   │   │   ├── arrow_drop_down.png
+│   │   │   │   │   ├── calculations.png
+│   │   │   │   │   ├── camera.png
+│   │   │   │   │   ├── capture.png
+│   │   │   │   │   ├── capture_g.png
+│   │   │   │   │   ├── chart.png
+│   │   │   │   │   ├── checked.png
+│   │   │   │   │   ├── clear.png
+│   │   │   │   │   ├── close.png
+│   │   │   │   │   ├── console.png
+│   │   │   │   │   ├── console_g.png
+│   │   │   │   │   ├── cursor.png
+│   │   │   │   │   ├── cursors.png
+│   │   │   │   │   ├── cursors_g.png
+│   │   │   │   │   ├── delete.png
+│   │   │   │   │   ├── delete_sweep.png
+│   │   │   │   │   ├── display.png
+│   │   │   │   │   ├── display_g.png
+│   │   │   │   │   ├── file_open.png
+│   │   │   │   │   ├── folder.png
+│   │   │   │   │   ├── grid_settings.png
+│   │   │   │   │   ├── group.png
+│   │   │   │   │   ├── help.png
+│   │   │   │   │   ├── insights.png
+│   │   │   │   │   ├── insights_g.png
+│   │   │   │   │   ├── instruments.png
+│   │   │   │   │   ├── instruments_g.png
+│   │   │   │   │   ├── isolate.png
+│   │   │   │   │   ├── lab.png
+│   │   │   │   │   ├── label.png
+│   │   │   │   │   ├── lab_g.png
+│   │   │   │   │   ├── library_add.png
+│   │   │   │   │   ├── line_style.png
+│   │   │   │   │   ├── markers.png
+│   │   │   │   │   ├── markers_g.png
+│   │   │   │   │   ├── maximize.png
+│   │   │   │   │   ├── measure.png
+│   │   │   │   │   ├── measurements.png
+│   │   │   │   │   ├── measure_g.png
+│   │   │   │   │   ├── minimize.png
+│   │   │   │   │   ├── new.png
+│   │   │   │   │   ├── new_script.png
+│   │   │   │   │   ├── new_suite.png
+│   │   │   │   │   ├── open.png
+│   │   │   │   │   ├── open_script.png
+│   │   │   │   │   ├── options.png
+│   │   │   │   │   ├── plot.png
+│   │   │   │   │   ├── prompt.png
+│   │   │   │   │   ├── publish.png
+│   │   │   │   │   ├── region.png
+│   │   │   │   │   ├── region_g.png
+│   │   │   │   │   ├── report.png
+│   │   │   │   │   ├── result.png
+│   │   │   │   │   ├── run.png
+│   │   │   │   │   ├── save.png
+│   │   │   │   │   ├── script.png
+│   │   │   │   │   ├── settings.png
+│   │   │   │   │   ├── settings_g.png
+│   │   │   │   │   ├── stack.png
+│   │   │   │   │   ├── stop.png
+│   │   │   │   │   ├── table.png
+│   │   │   │   │   ├── test_suite.png
+│   │   │   │   │   ├── toggle_off.png
+│   │   │   │   │   ├── toggle_on.png
+│   │   │   │   │   ├── traces.png
+│   │   │   │   │   ├── traces_g.png
+│   │   │   │   │   ├── unchecked.png
+│   │   │   │   │   ├── visibility_off.png
+│   │   │   │   │   ├── visibility_on.png
+│   │   │   │   │   ├── waves.png
+│   │   │   │   │   ├── zoom_in.png
+│   │   │   │   │   ├── zoom_in_g.png
+│   │   │   ├── parameters/
+│   │   │   │   │   ├── base.py
+│   │   │   │   │   ├── cursor_parameter.py
+│   │   │   │   │   ├── data_table_parameter.py
+│   │   │   │   │   ├── marker_parameter.py
+│   │   │   │   │   ├── plot_parameter.py
+│   │   │   │   │   ├── test_result_parameter.py
+│   │   │   │   │   ├── test_script_parameter.py
+│   │   │   │   │   ├── trace_parameter.py
 │   │   │   ├── ribbon/
-│   │   │   │   │   ├── context.py
+│   │   │   │   │   ├── components.py
 │   │   │   │   │   ├── manager.py
-│   │   │   │   ├── icons/
-│   │   │   │   │   │   ├── analytics.png
-│   │   │   │   │   │   ├── analytics_g.png
-│   │   │   │   │   │   ├── arrow_drop_down.png
-│   │   │   │   │   │   ├── calculations.png
-│   │   │   │   │   │   ├── camera.png
-│   │   │   │   │   │   ├── capture.png
-│   │   │   │   │   │   ├── capture_g.png
-│   │   │   │   │   │   ├── checked.png
-│   │   │   │   │   │   ├── clear.png
-│   │   │   │   │   │   ├── close.png
-│   │   │   │   │   │   ├── console.png
-│   │   │   │   │   │   ├── console_g.png
-│   │   │   │   │   │   ├── cursors.png
-│   │   │   │   │   │   ├── cursors_g.png
-│   │   │   │   │   │   ├── delete.png
-│   │   │   │   │   │   ├── delete_sweep.png
-│   │   │   │   │   │   ├── device_hub.png
-│   │   │   │   │   │   ├── display.png
-│   │   │   │   │   │   ├── display_g.png
-│   │   │   │   │   │   ├── edit_note.png
-│   │   │   │   │   │   ├── file_open.png
-│   │   │   │   │   │   ├── grid_settings.png
-│   │   │   │   │   │   ├── group.png
-│   │   │   │   │   │   ├── insights.png
-│   │   │   │   │   │   ├── insights_g.png
-│   │   │   │   │   │   ├── instruments.png
-│   │   │   │   │   │   ├── instruments_g.png
-│   │   │   │   │   │   ├── isolate.png
-│   │   │   │   │   │   ├── lab.png
-│   │   │   │   │   │   ├── label.png
-│   │   │   │   │   │   ├── lab_g.png
-│   │   │   │   │   │   ├── line_style.png
-│   │   │   │   │   │   ├── markers.png
-│   │   │   │   │   │   ├── markers_g.png
-│   │   │   │   │   │   ├── maximize.png
-│   │   │   │   │   │   ├── measure.png
-│   │   │   │   │   │   ├── measurements.png
-│   │   │   │   │   │   ├── measure_g.png
-│   │   │   │   │   │   ├── minimize.png
-│   │   │   │   │   │   ├── new.png
-│   │   │   │   │   │   ├── new_script.png
-│   │   │   │   │   │   ├── new_suite.png
-│   │   │   │   │   │   ├── open.png
-│   │   │   │   │   │   ├── open_script.png
-│   │   │   │   │   │   ├── open_suite.png
-│   │   │   │   │   │   ├── options.png
-│   │   │   │   │   │   ├── plot.png
-│   │   │   │   │   │   ├── prompt.png
-│   │   │   │   │   │   ├── publish.png
-│   │   │   │   │   │   ├── region.png
-│   │   │   │   │   │   ├── region_g.png
-│   │   │   │   │   │   ├── run.png
-│   │   │   │   │   │   ├── save.png
-│   │   │   │   │   │   ├── save_as.png
-│   │   │   │   │   │   ├── settings.png
-│   │   │   │   │   │   ├── settings_g.png
-│   │   │   │   │   │   ├── stack.png
-│   │   │   │   │   │   ├── stop.png
-│   │   │   │   │   │   ├── test_script.png
-│   │   │   │   │   │   ├── test_suite.png
-│   │   │   │   │   │   ├── toggle_off.png
-│   │   │   │   │   │   ├── toggle_on.png
-│   │   │   │   │   │   ├── traces.png
-│   │   │   │   │   │   ├── traces_g.png
-│   │   │   │   │   │   ├── unchecked.png
-│   │   │   │   │   │   ├── visibility_off.png
-│   │   │   │   │   │   ├── visibility_on.png
-│   │   │   │   │   │   ├── zoom_in.png
-│   │   │   │   │   │   ├── zoom_in_g.png
+│   │   │   ├── tabs/
+│   │   │   │   │   ├── base.py
+│   │   │   │   │   ├── plot_tab.py
+│   │   │   │   │   ├── result_tab.py
+│   │   │   │   │   ├── script_tab.py
+│   │   │   │   │   ├── table_tab.py
 │   │   │   ├── widgets/
-│   │   │   │   │   ├── html_view.py
+│   │   │   │   │   ├── base.py
+│   │   │   │   │   ├── device_view.py
+│   │   │   │   │   ├── discovery_view.py
 │   │   │   │   │   ├── plot_view.py
 │   │   │   │   │   ├── result_view.py
 │   │   │   │   │   ├── script_view.py
+│   │   │   │   │   ├── status_bar.py
 │   │   │   │   │   ├── table_view.py
-│   │   │   │   │   ├── tab_manager.py
-│   │   │   │   │   ├── tree_view.py
-│   │   │   ├── windows/
-│   │   │   │   │   ├── instrument_discovery.py
-│   │   │   │   │   ├── main_window.py
-│   │   ├── visitors/
-│   │   │   │   ├── instrument_visitor.py
+│   │   │   │   │   ├── test_view.py
+│   │   │   │   │   ├── toolbar.py
 ├── tests/
 │   │   ├── conftest.py
 │   │   ├── test_actions.py
@@ -216,4 +211,7 @@ pymetr/
 ├── utils/
 │   │   ├── decorators.py
 │   │   ├── dumper.py
+│   │   ├── hack.py
+│   │   ├── hack2.py
+│   │   ├── unicode.txt
 │   │   ├── utils.py

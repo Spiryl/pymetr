@@ -8,7 +8,7 @@ from datetime import datetime
 def setup_logging(log_to_file: bool = False):
     """Configure application-wide logging with detailed formatting."""
     logger = logging.getLogger('pymetr')
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.ERROR)
 
     # Detailed formatter
     formatter = logging.Formatter(
