@@ -92,19 +92,27 @@ class FileActions:
                 from pymetr.models.test import TestScript
                 logger.debug("FileActions: Creating script model")
                 
+                # Add more detailed logging
+                logger.debug(f"FileActions: Attempting to create model with path: {path}")
+                
                 # Create script model in state
-                script = state.create_model(TestScript, script_path=path)
+                try:
+                    script = state.create_model(TestScript, script_path=path)
+                    logger.debug(f"FileActions: Script model created successfully")
+                except Exception as e:
+                    logger.error(f"FileActions: IMMEDIATE create_model error: {type(e).__name__} - {e}")
+                    raise
+                
                 script_name = path.stem
                 script.set_property('name', script_name)
                 state.set_active_model(script.id)
                 logger.debug(f"FileActions: Script model created with ID: {script.id}, name: {script_name}")
             except Exception as e:
-                logger.error(f"FileActions: Error creating script model: {e}")
+                logger.error(f"FileActions: FULL Error creating script model: {type(e).__name__} - {e}")
+                import traceback
+                logger.error(traceback.format_exc())
                 if parent:
                     QMessageBox.critical(parent, "Error", f"Failed to create script model: {e}")
-        elif error and parent:
-            logger.error(f"FileActions: Failed to open script: {error}")
-            QMessageBox.critical(parent, "Error", f"Failed to open script: {error}")
             
     @staticmethod
     def save_script(state) -> None:

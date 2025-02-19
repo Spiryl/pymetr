@@ -1,18 +1,27 @@
-# app/logging.py
+# core/logging.py
 
 import logging
 import sys
+import os
 from pathlib import Path
 from datetime import datetime
+
+class CustomFormatter(logging.Formatter):
+    def format(self, record):
+        # Extract the parent folder name from the full path
+        parent_folder = os.path.basename(os.path.dirname(record.pathname))
+        # Prepend the parent folder to the filename
+        record.filename = f"{parent_folder}/{record.filename}"
+        return super().format(record)
 
 def setup_logging(log_to_file: bool = False):
     """Configure application-wide logging with detailed formatting."""
     logger = logging.getLogger('pymetr')
-    logger.setLevel(logging.ERROR)
+    logger.setLevel(logging.DEBUG)
 
-    # Detailed formatter
-    formatter = logging.Formatter(
-        '%(levelname)s - %(filename)s:%(lineno)d:%(funcName)s - %(message)s'
+    # Create custom formatter
+    formatter = CustomFormatter(
+        '%(levelname)-6s:%(lineno)-4d\t%(filename)-28s\t%(funcName)-20s - %(message)s'
     )
 
     # Console handler

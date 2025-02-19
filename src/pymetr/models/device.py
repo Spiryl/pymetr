@@ -23,7 +23,7 @@ class Device(BaseModel):
                  firmware: Optional[str] = None,
                  resource: Optional[str] = None,
                  id: Optional[str] = None):
-        super().__init__(id)
+        super().__init__(id, model_type='Device')
         self._driver_instance = None
         self._connection = None
         

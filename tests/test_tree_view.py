@@ -1,10 +1,10 @@
 # tests/test_tree_view.py
 import pytest
-from pymetr.views.widgets.test_view import ModelTestView
+from pymetr.views.widgets.test_view import ModelTreeView
 from .conftest import TestScript, TestResult
 
 def test_model_creation(state, qapp, test_script):
-    tree_view = ModelTestView(state)
+    tree_view = ModelTreeView(state)
     
     # Emit model created signal
     state.signals.emit('model_created', test_script.id, type(test_script).__name__)
@@ -16,7 +16,7 @@ def test_model_creation(state, qapp, test_script):
     assert "Test Script" in item.text(0)
 
 def test_model_hierarchy(state, qapp, test_script, test_result):
-    tree_view = ModelTestView(state)
+    tree_view = ModelTreeView(state)
     
     # Emit creation signals
     state.signals.emit('model_created', test_script.id, type(test_script).__name__)
@@ -31,7 +31,7 @@ def test_model_hierarchy(state, qapp, test_script, test_result):
     assert result_item.parent() == script_item
 
 def test_selection_signal(state, qapp, test_script, qtbot):
-    tree_view = ModelTestView(state)
+    tree_view = ModelTreeView(state)
     state.signals.emit('model_created', test_script.id, type(test_script).__name__)
     
     # Track selection signal
@@ -43,7 +43,7 @@ def test_selection_signal(state, qapp, test_script, qtbot):
 
 def test_selection_triggers_tab_and_context(state, qapp, test_script, qtbot):
     """Test that selecting an item updates tabs and context"""
-    tree_view = ModelTestView(state)
+    tree_view = ModelTreeView(state)
     qtbot.addWidget(tree_view)
     
     # Track selection signal

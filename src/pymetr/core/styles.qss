@@ -288,8 +288,8 @@ QRadioButton::indicator {
 }
 
 QCheckBox::indicator:checked {
-    background-color: #3D7AAF;  /* A nice blue when checked */
-    border: 1px solid #3D7AAF;
+    background-color: #ff8400;  /* A nice blue when checked */
+    border: 1px solid #FFFFFF;
 }
 
 QCheckBox::indicator:unchecked {
@@ -297,7 +297,7 @@ QCheckBox::indicator:unchecked {
 }
 
 QCheckBox::indicator:hover {
-    border: 1px solid #3D7AAF;
+    border: 1px solid #ff8400;
 }
 
 QRadioButton::indicator {
@@ -305,8 +305,8 @@ QRadioButton::indicator {
 }
 
 QRadioButton::indicator:checked {
-    background-color: #3D7AAF;
-    border: 1px solid #3D7AAF;
+    background-color: #ff8400;
+    border: 1px solid #FFFFFF;
 }
 
 QRadioButton::indicator:unchecked {
@@ -314,7 +314,7 @@ QRadioButton::indicator:unchecked {
 }
 
 QRadioButton::indicator:hover {
-    border: 1px solid #3D7AAF;
+    border: 1px solid #ff8400;
 }
 
 /* -------------------------------------------------

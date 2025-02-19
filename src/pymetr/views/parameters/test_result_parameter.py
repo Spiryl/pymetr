@@ -1,44 +1,18 @@
-from PySide6.QtWidgets import QWidget, QHBoxLayout, QLabel, QMenu
-from PySide6.QtGui import QIcon
-from .base import ModelParameter, ModelParameterItem
+from typing import Optional, Any
+from PySide6.QtWidgets import QWidget, QHBoxLayout, QLabel, QMenu, QProgressBar
+from PySide6.QtCore import Qt
+
+from .base import ModelParameter, ModelParameterItem, ParameterWidget
 from pymetr.core.logging import logger
+from pymetr.models import TestResult, ResultStatus
 
-class ResultStatus:
-    """Status constants for test results."""
-    NOT_REPORTED = "Not Reported"
-    PASS = "Pass"
-    FAIL = "Fail"
-    ERROR = "Error"
-    
-    STYLES = {
-        NOT_REPORTED: {
-            "color": "#dddddd",
-            "background": "#1e1e1e",
-            "border": "#95A5A6"
-        },
-        PASS: {
-            "color": "#dddddd",
-            "background": "#1e1e1e",
-            "border": "#2ECC71"
-        },
-        FAIL: {
-            "color": "#dddddd",
-            "background": "#1e1e1e",
-            "border": "#E74C3C"
-        },
-        ERROR: {
-            "color": "#dddddd",
-            "background": "#1e1e1e",
-            "border": "#F1C40F"
-        }
-    }
 
-class TestResultStatusWidget(QWidget):
-    """Widget displaying test result status."""
-    
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self._status = ResultStatus.NOT_REPORTED
+class ResultStatusWidget(ParameterWidget):
+    """
+    Enhanced widget displaying result status and progress.
+    """
+    def __init__(self, param, parent=None):
+        super().__init__(param, parent)
         self._setup_ui()
         
     def _setup_ui(self):
@@ -46,127 +20,198 @@ class TestResultStatusWidget(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(4)
         
+        # Progress Bar
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setMaximumHeight(18)
+        self.progress_bar.setRange(0, 100)
+        self.progress_bar.setTextVisible(True)
+        layout.addWidget(self.progress_bar, 1)  # Give progress bar most of the space
+        
+        # Status Label
         self.status_label = QLabel()
-        self.status_label.setStyleSheet("""
-            QLabel {
-                padding: 2px 8px;
-                border-radius: 2px;
-                font-weight: 500;
-                text-align: center;
-            }
-        """)
+        self.status_label.setAlignment(Qt.AlignCenter)
+        self.status_label.setMinimumWidth(60)  # Ensure status is always visible
         layout.addWidget(self.status_label)
         
-        self.update_status(self._status)
+        # Status styles with progress bar colors
+        self.status_styles = {
+            ResultStatus.PASS: {
+                'text': '#dddddd',
+                'background': '#1e1e1e',
+                'border': '#2ECC71',
+                'chunk': '#2ECC71'
+            },
+            ResultStatus.FAIL: {
+                'text': '#dddddd',
+                'background': '#1e1e1e',
+                'border': '#E74C3C',
+                'chunk': '#E74C3C'
+            },
+            ResultStatus.ERROR: {
+                'text': '#dddddd',
+                'background': '#1e1e1e',
+                'border': '#F1C40F',
+                'chunk': '#F1C40F'
+            }
+        }
         
-    def update_status(self, status: str):
-        """Update the status display with appropriate styling."""
-        try:
-            # First check if our label still exists
-            if not hasattr(self, 'status_label') or not self.status_label:
-                return
+        # Apply initial style
+        self._apply_style(ResultStatus.PASS, 0)
+    
+    def _process_pending_update(self):
+        """Process status and progress updates."""
+        updates = self._pending_updates
+        self._pending_updates = {}
+        
+        status = None
+        progress = None
+        
+        if 'status' in updates:
+            status_val = updates['status']
+            if isinstance(status_val, str):
+                try:
+                    status = ResultStatus[status_val.upper()]
+                except KeyError:
+                    logger.error(f"Invalid status value: {status_val}")
+                    return
+            else:
+                status = status_val
                 
-            # Store the status even if we can't display it
-            self._status = status
-            style = ResultStatus.STYLES.get(status, ResultStatus.STYLES[ResultStatus.NOT_REPORTED])
-            
+        if 'progress' in updates:
             try:
-                # Attempt to update the label - this will fail if widget is destroyed
-                self.status_label.setStyleSheet(f"""
-                    QLabel {{
-                        color: {style['color']};
-                        background: {style['background']};
-                        border: 1px solid {style['border']};
-                        padding: 2px 8px;
-                        border-radius: 2px;
-                        text-align: center;
-                        font-weight: 500;
-                    }}
-                """)
-                self.status_label.setText(status)
-            except RuntimeError:
-                # Widget was destroyed, we'll just ignore it
-                pass
-                
+                progress = float(updates['progress'])
+                progress = max(0, min(100, progress))  # Clamp to 0-100
+            except (TypeError, ValueError) as e:
+                logger.error(f"Invalid progress value: {updates['progress']}")
+                return
+        
+        # Apply updates
+        current_status = status or ResultStatus[self.status_label.text()]
+        current_progress = progress if progress is not None else self.progress_bar.value()
+        
+        self._apply_style(current_status, current_progress)
+    
+    def _apply_style(self, status: ResultStatus, progress: float):
+        """Apply status-specific styling with progress."""
+        style = self.status_styles.get(status, self.status_styles[ResultStatus.ERROR])
+        
+        # Style progress bar
+        self.progress_bar.setStyleSheet(f"""
+            QProgressBar {{
+                border: 1px solid {style['border']};
+                border-radius: 2px;
+                background: {style['background']};
+                text-align: center;
+                padding: 1px;
+            }}
+            QProgressBar::chunk {{
+                background-color: {style['chunk']};
+            }}
+        """)
+        
+        # Style status label
+        self.status_label.setStyleSheet(f"""
+            QLabel {{
+                color: {style['text']};
+                background: {style['background']};
+                border: 1px solid {style['border']};
+                border-radius: 2px;
+                padding: 2px 8px;
+                font-weight: 500;
+            }}
+        """)
+        
+        # Update values
+        self.progress_bar.setValue(int(progress))
+        if progress > 0:
+            self.progress_bar.setFormat(f"{progress:.1f}%")
+        else:
+            self.progress_bar.setFormat("")
+        self.status_label.setText(status.name)
+    
+    def contextMenuEvent(self, event):
+        """Handle context menu."""
+        try:
+            menu = QMenu(self)
+            current_status = ResultStatus[self.status_label.text()]
+            
+            # Progress presets submenu
+            progress_menu = menu.addMenu("Set Progress")
+            for value in [0, 25, 50, 75, 100]:
+                action = progress_menu.addAction(f"{value}%")
+                action.triggered.connect(lambda checked, v=value: self._handle_progress_change(v))
+            
+            menu.addSeparator()
+            
+            # Status options
+            for status in ResultStatus:
+                if status != current_status:
+                    action = menu.addAction(f"Set {status.name}")
+                    action.triggered.connect(lambda checked, s=status: self._handle_status_change(s))
+            
+            menu.exec_(event.globalPos())
         except Exception as e:
-            logger.error(f"Error updating status widget: {e}")
+            logger.error(f"Error showing context menu: {e}")
+    
+    def _handle_status_change(self, status: ResultStatus):
+        """Handle status change from context menu."""
+        if hasattr(self.param, 'state') and hasattr(self.param, 'model_id'):
+            model = self.param.state.get_model(self.param.model_id)
+            if model:
+                model.set_property('status', status.name)
+    
+    def _handle_progress_change(self, value: float):
+        """Handle progress change from context menu."""
+        if hasattr(self.param, 'state') and hasattr(self.param, 'model_id'):
+            model = self.param.state.get_model(self.param.model_id)
+            if model:
+                model.set_property('progress', value)
 
 class TestResultParameterItem(ModelParameterItem):
-    """Parameter item for test results in tree."""
+    """Parameter item for test results."""
     
-    def __init__(self, param, depth):
-        super().__init__(param, depth)
-        self.hideWidget = False
-        self.widget = None
-        
-    def makeWidget(self):
+    def makeWidget(self) -> Optional[QWidget]:
         """Create the status widget."""
-        self.widget = TestResultStatusWidget()
-        return self.widget
-        
-    def valueChanged(self, param, val):
-        """Handle value updates."""
-        if hasattr(self, 'widget') and self.widget:
-            self.widget.update_status(param.status())
-            
-    def optsChanged(self, param, opts):
-        """Handle status updates."""
-        super().optsChanged(param, opts)
-        if 'status' in opts and hasattr(self, 'widget') and self.widget:
-            self.widget.update_status(opts['status'])
-            
-    def treeWidgetChanged(self):
-        """Called when this item is added or removed from a tree."""
-        super().treeWidgetChanged()
-        
-        if not hasattr(self, 'widget') or not self.widget:
-            self.widget = self.makeWidget()
-            
-        tree = self.treeWidget()
-        if tree is not None:
-            tree.setItemWidget(self, 1, self.widget)
-
-    def cleanup(self):
-        """Clean up widget resources."""
         try:
-            if hasattr(self, 'widget') and self.widget:
-                self.widget.deleteLater()
-                self.widget = None
+            self.widget = ResultStatusWidget(self.param)
+            return self.widget
         except Exception as e:
-            logger.error(f"Error cleaning up TestResultParameterItem: {e}")
+            logger.error(f"Error creating result widget: {e}")
+            return None
+    
+    def updateWidget(self, **kwargs):
+        """Update the widget with new values."""
+        if self.widget:
+            self.widget.queue_update(**kwargs)
+    
+    def addCustomContextActions(self, menu: QMenu):
+        """Add result-specific context actions."""
+        pass  # Status changes handled by widget context menu
 
 class TestResultParameter(ModelParameter):
-    """Parameter for test result display."""
+    """
+    Parameter for test results. Shows status and contains child models
+    (plots, tables, etc.) representing the actual test data.
+    """
+    
     itemClass = TestResultParameterItem
     
     def __init__(self, **opts):
         opts['type'] = 'testresult'
-        opts.setdefault('status', ResultStatus.NOT_REPORTED)
-        
-        # Ensure model_id is stored in the parameter name
-        if 'model_id' in opts:
-            opts['name'] = opts['model_id']
-            
         super().__init__(**opts)
-        self._status = opts['status']
+        self.can_export = True  # Results can be exported
         
-    def status(self) -> str:
-        """Get current status."""
-        if self.state and hasattr(self, 'model_id'):
-            model = self.state.get_model(self.model_id)
-            if model:
-                self._status = model.get_property('status', ResultStatus.NOT_REPORTED)
-        return self._status
-        
-    def setStatus(self, status: str):
-        """Update test status."""
-        if status not in ResultStatus.STYLES:
-            logger.warning(f"Invalid status '{status}' - must be one of: {', '.join(ResultStatus.STYLES.keys())}")
-            return
-            
-        self._status = status
-        self.setOpts(status=status)
-
-    def add_context_actions(self, menu: QMenu) -> None:
-        """Add parameter-specific menu actions."""
+        # Set up initial parameter structure
+        model = self.state.get_model(self.model_id) if self.state and self.model_id else None
+        self.setupParameters(model)
+    
+    def setupParameters(self, model: Optional[TestResult]):
+        """Set up any child parameters needed."""
+        # Currently no child parameters needed - results show their status
+        # through the widget and contain data models as children in the tree
         pass
+    
+    def handle_property_update(self, prop: str, value: Any):
+        """Handle model property updates."""
+        if hasattr(self, 'widget'):
+            self.widget.queue_update(**{prop: value})

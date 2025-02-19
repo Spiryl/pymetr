@@ -9,13 +9,9 @@ import traceback
 import numpy as np
 import pandas as pd
 
+from .context import TestContext
+from pymetr.models import *
 from pymetr.core.logging import logger
-from pymetr.models.test import TestScript, TestGroup, TestResult
-from pymetr.models.plot import Plot
-from pymetr.models.trace import Trace
-from pymetr.models.measurement import Measurement
-from pymetr.models.table import DataTable
-
 
 class ScriptRunner(QThread):
     # Signal: finished(success, error_message)
@@ -40,8 +36,12 @@ class ScriptRunner(QThread):
             if not hasattr(module, "run_test"):
                 raise AttributeError("Script must contain a run_test() function")
                 
+            # Update the module's globals with our globals_dict
             module.__dict__.update(self.globals_dict)
-            result = module.run_test()
+            
+            # Pass the 'test' context to run_test()
+            result = module.run_test(self.globals_dict['test'])
+            
             # If run_test() does not return a bool, treat it as success
             if not isinstance(result, bool):
                 result = True
@@ -78,17 +78,12 @@ class Engine(QObject):
         self.elapsed_timer.setInterval(1000)
         self.elapsed_timer.timeout.connect(self._update_elapsed_time)
         
-        # Inject only helper functions (and libraries like np, pd) for scripts
+        # Include numpy and pandas in globals
         self.globals = {
-            "create_group": self.create_group,
-            "create_result": self.create_result,
-            "create_plot": self.create_plot,
-            "create_trace": self.create_trace,    # NEW: create_trace helper
-            "create_table": self.create_table,
-            "set_test_progress": self.set_test_progress,
-            "wait": self.wait,
-            "np": np,
-            "pd": pd,
+            'np': np,
+            'pd': pd,
+            'TestStatus': TestStatus,
+            'ResultStatus': ResultStatus
         }
         
         logger.info("Engine initialized.")
@@ -100,64 +95,55 @@ class Engine(QObject):
     def run_test_script(self, script_id: str) -> None:
         """
         Run a test script using the specified TestScript model ID.
-        
-        - Retrieves the TestScript model from the state
-        - Sets it as the active test in the ApplicationState
-        - Calls on_started() on the model
-        - Launches a ScriptRunner thread to execute the script
+        Now uses TestContext to manage script state and operations.
         """
         script = self.state.get_model(script_id)
         if not script or not isinstance(script, TestScript):
-            logger.error(f"Engine.run_test_script: No TestScript found with id '{script_id}'.")
+            logger.error(f"Engine.run_test_script: No TestScript found with id '{script_id}'")
             return
 
-        # Clear previous child models to avoid name collisions and stale views.
+        # Clear previous child models
         self.state.clear_children(script.id)
         
+        # Create context for this script
+        context = TestContext(script, self)
+        
+        # Set as active test
         self.state.set_active_test(script_id)
-        script.on_started()
+        
+        # Start execution
+        context.on_script_start()
         self.script_started.emit(script.id)
 
-        self.start_time = datetime.now()
-        self.elapsed_timer.start()
-
-        self.script_runner = ScriptRunner(script.script_path, self.globals)
-        self.script_runner.finished.connect(self._on_script_finished)
+        self.script_runner = ScriptRunner(script.script_path, {'test': context})
+        self.script_runner.finished.connect(
+            lambda success, error: self._on_script_finished(context, success, error)
+        )
+        self.script_runner.error.connect(
+            lambda type_, msg, tb: self._on_script_error(context, type_, msg, tb)
+        )
         self.script_runner.start()
     
-    def _on_script_finished(self, success: bool, error_msg: str) -> None:
-        # Stop timing
-        self.elapsed_timer.stop()
-        
-        # Retrieve whatever is currently active as the test
-        test_script = self.state.get_active_test()
-        if not test_script or not isinstance(test_script, TestScript):
-            logger.error("Engine._on_script_finished: Active test is not a TestScript or not found.")
+    def _on_script_finished(self, context: TestContext, success: bool, error_msg: str) -> None:
+        """Handle script completion using context."""
+        if success:
+            context.on_script_complete()
         else:
-            # Let the script model know it has finished
-            test_script.on_finished(success, error_msg)
-            self.script_finished.emit(test_script.id, success, error_msg)
-            logger.debug(f"Engine: TestScript '{test_script.id}' finished with success={success}")
-        
-        self.script_runner = None
-        self.start_time = None
-
-    # ---------------------------------------------------
-    # Progress + Wait
-    # ---------------------------------------------------
-
-    def set_test_progress(self, percent: float, message: str = "") -> None:
-        """
-        Called by the running script to indicate progress.
-        Now uses type-safe progress updates.
-        """
-        test_script = self.state.get_active_test()
-        if test_script and isinstance(test_script, TestScript):
-            # Progress will now use the float signal
-            test_script.set_property('progress', float(percent))
+            context.on_script_error(error_msg)
             
-            # We still want to emit our progress signal for the UI
-            self.progress_changed.emit(test_script.id, float(percent), message)
+        self.script_finished.emit(context.script.id, success, error_msg)
+        self.script_runner = None
+    
+    def _on_script_error(self, context: TestContext, error_type: str, 
+                        error_msg: str, traceback: str) -> None:
+        """Handle script errors using context."""
+        context.on_script_error(f"{error_type}: {error_msg}")
+        logger.error(f"Script error: {traceback}")
+
+    # ---------------------------------------------------
+    # Helpers
+    # ---------------------------------------------------
+
     
     def wait(self, milliseconds: int) -> None:
         """
@@ -178,58 +164,3 @@ class Engine(QObject):
             elapsed = (datetime.now() - self.start_time).total_seconds()
             test_script.elapsed_time = int(elapsed)
 
-    # ---------------------------------------------------
-    # Create + Link Models to Active Test
-    # ---------------------------------------------------
-
-    def create_result(self, name: str) -> TestResult:
-        """
-        Create a TestResult and link it under the active test script
-        """
-        result = self.state.create_model(TestResult, name=name)
-        active_test = self.state.get_active_test()
-        if active_test:
-            self.state.link_models(active_test.id, result.id)
-        return result
-
-    def create_group(self, name: str) -> TestGroup:
-        """
-        Create a TestGroup and link it under the active test script
-        """
-        group = self.state.create_model(TestGroup, name=name)
-        active_test = self.state.get_active_test()
-        if active_test:
-            self.state.link_models(active_test.id, group.id)
-        return group
-
-    def create_plot(self, title: str) -> Plot:
-        """
-        Create a Plot and link it under the active test script
-        """
-        plot = self.state.create_model(Plot, title=title)
-        active_test = self.state.get_active_test()
-        if active_test:
-            self.state.link_models(active_test.id, plot.id)
-        return plot
-
-    def create_trace(self, name: str, x_data: np.ndarray, y_data: np.ndarray, **kwargs) -> Trace:
-        """
-        Create a Trace and link it under the active test script.
-        This helper allows scripts to create a trace and later modify it via
-        properties (e.g., color, data, etc.).
-        """
-        trace = self.state.create_model(Trace, x_data=x_data, y_data=y_data, name=name, **kwargs)
-        active_test = self.state.get_active_test()
-        if active_test:
-            self.state.link_models(active_test.id, trace.id)
-        return trace
-
-    def create_table(self, title: str) -> DataTable:
-        """
-        Create a DataTable and link it under the active test script
-        """
-        table = self.state.create_model(DataTable, title=title)
-        active_test = self.state.get_active_test()
-        if active_test:
-            self.state.link_models(active_test.id, table.id)
-        return table

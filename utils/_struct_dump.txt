@@ -934,7 +934,7 @@ class TableView(BaseWidget):
 
 
 # src\pymetr\views\widgets\test_view.py
-class ModelTestView(BaseWidget):
+class ModelTreeView(BaseWidget):
     def __init__(state, parent)
     def select_model(model_id: str)
 
@@ -946,7 +946,7 @@ class ToolBarButton(QToolButton):
 class ToolBarSeparator(QFrame):
     def __init__(parent)
 
-class ModernToolBar(QToolBar):
+class TabToolbar(QToolBar):
     def __init__(parent)
     def addButton(text, icon, callback)
     def addDropdown(text, icon)

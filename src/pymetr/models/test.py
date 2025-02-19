@@ -7,7 +7,46 @@ from PySide6.QtCore import Slot
 from pymetr.models.base import BaseModel
 from pymetr.core.logging import logger
 
+from enum import Enum, auto
 
+class TestStatus(Enum):
+    """
+    Test script status states.
+    
+    Flow:
+    READY -> RUNNING -> (PASS | FAIL | ERROR | COMPLETE)
+    
+    READY: Initial state, script can be run
+    RUNNING: Script is currently executing
+    PASS: All test results passed
+    FAIL: At least one test result failed
+    ERROR: Script execution error
+    COMPLETE: Script completed without any test results
+    """
+    READY = auto()      # Initial state
+    RUNNING = auto()    # Currently executing
+    PASS = auto()       # All results passed
+    FAIL = auto()       # At least one result failed
+    ERROR = auto()      # Script error
+    COMPLETE = auto()   # Completed without results
+
+class ResultStatus(Enum):
+    """
+    Test result status states.
+    
+    PASS: Test passed its criteria
+    FAIL: Test failed its criteria
+    ERROR: Error during test execution
+    """
+    PASS = auto()
+    FAIL = auto()
+    ERROR = auto()
+
+    @classmethod
+    def from_bool(cls, success: bool) -> 'ResultStatus':
+        """Convert a boolean success value to ResultStatus."""
+        return cls.PASS if success else cls.FAIL
+    
 class TestScript(BaseModel):
     """
     Represents a test script and its execution state.
@@ -17,7 +56,9 @@ class TestScript(BaseModel):
         # If no name is provided, default to the stem of the script file.
         if name is None:
             name = script_path.stem
-        super().__init__(model_id=model_id, name=name)
+
+        super().__init__(model_type='TestScript', model_id=model_id, name=name)
+        
         self.set_property('script_path', script_path)
         self.set_property('status', 'Not Run')
         self.set_property('start_time', None)
@@ -91,7 +132,11 @@ class TestGroup(BaseModel):
         # Generate a unique name if necessary.
         if state:
             name = self._get_unique_name(state, name)
-        super().__init__(state=state, name=name, **kwargs)
+        
+        # Pass model_type explicitly and remove it from kwargs if present
+        kwargs.pop('model_type', None)
+        super().__init__(model_type='TestGroup', state=state, name=name, **kwargs)
+        
         logger.debug(f"TestGroup '{self.name}' created with id {self.id}.")
 
     def _get_unique_name(self, state, base_name: str) -> str:
@@ -129,30 +174,53 @@ class TestResult(TestGroup):
     can contain child models and adds status, timestamps, and error handling.
     """
     def __init__(self, state=None, name="", **kwargs):
+        # Remove model_type from kwargs if present
+        kwargs.pop('model_type', None)
         super().__init__(state=state, name=name, **kwargs)
-        self.set_property("status", "Not Run")
+        
+        # Specify model type as 'TestResult' 
+        self.model_type = 'TestResult'
+        
         self.set_property("created_time", datetime.now())
         self.set_property("completed_time", None)
-        self.set_property("error", None)
+        
         logger.debug(f"TestResult '{self.name}' created with id {self.id}.")
 
     @property
-    def status(self) -> str:
-        return self.get_property("status")
+    def progress(self) -> float:
+        """Get result progress."""
+        return self.get_property('progress', 0.0)
+    
+    @progress.setter 
+    def progress(self, value: float):
+        """Set result progress."""
+        value = max(0.0, min(100.0, float(value)))
+        self.set_property('progress', value)
+    
+    @property
+    def status(self) -> ResultStatus:
+        """Get result status."""
+        status_str = self.get_property('status', ResultStatus.PASS.name)
+        return ResultStatus[status_str]
     
     @status.setter
-    def status(self, value: str):
-        allowed = ["Not Run", "Running", "Pass", "Fail", "Error"]
-        if value not in allowed:
-            raise ValueError(f"Invalid status: {value}")
-        prev_status = self.status
-        self.set_property("status", value)
+    def status(self, value: ResultStatus):
+        """Set result status."""
+        if isinstance(value, str):
+            value = ResultStatus[value.upper()]
+        self.set_property('status', value.name)
 
-        # Update completion time if moving from "Not Run"/"Running" to a final state.
-        if prev_status in ["Not Run", "Running"] and value in ["Pass", "Fail", "Error"]:
-            self.set_property("completed_time", datetime.now())
-
-    def set_error(self, error_msg: str):
-        """Set the error message and update status."""
-        self.set_property("error", error_msg)
-        self.status = "Error"
+    def add(self, child_or_children):
+        """
+        Add one or more child models to this group.
+        If a child is already linked to another parent, it is re-parented here.
+        """
+        if not isinstance(child_or_children, list):
+            child_or_children = [child_or_children]
+        for child in child_or_children:
+            # If child has another parent, unlink it first.
+            if self.state:
+                current_parent = self.state.get_parent(child.id)
+                if current_parent and current_parent.id != self.id:
+                    self.state.unlink_models(current_parent.id, child.id)
+            self.add_child(child)

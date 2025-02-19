@@ -24,7 +24,7 @@ class ToolBarSeparator(QFrame):
         super().__init__(parent)
         self.setFrameStyle(QFrame.VLine)
 
-class ModernToolBar(QToolBar):
+class TabToolbar(QToolBar):
     """Enhanced toolbar with modern styling and better widget handling."""
     
     def __init__(self, parent=None):
@@ -38,6 +38,29 @@ class ModernToolBar(QToolBar):
         button = ToolBarButton(icon, text, self)
         if callback:
             button.clicked.connect(callback)
+        self.addWidget(button)
+        return button
+
+    def addToggleButton(self, text, icon=None, checked=False, callback=None):
+        """
+        Add a toggle button with optional icon, initial state, and callback.
+        
+        Args:
+            text (str): Text to display on the button
+            icon (QIcon, optional): Icon for the button
+            checked (bool, optional): Initial checked state of the button
+            callback (Callable, optional): Function to call when button state changes
+        
+        Returns:
+            QToolButton: The created toggle button
+        """
+        button = ToolBarButton(icon, text, self)
+        button.setCheckable(True)
+        button.setChecked(checked)
+        
+        if callback:
+            button.toggled.connect(callback)
+        
         self.addWidget(button)
         return button
 

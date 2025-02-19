@@ -7,7 +7,7 @@ class Measurement(BaseModel):
     A single measurement value with optional limits for validation.
     """
     def __init__(self, name: str, value: float, units: str = "", model_id: Optional[str] = None):
-        super().__init__(model_id=model_id)
+        super().__init__(model_type='Measurement', model_id=model_id)
         self.set_property("name", name)
         self.set_property("value", value)
         self.set_property("units", units)

@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (
 )
 
 from pymetr.views.title_bar import TitleBar
-from pymetr.views.widgets.test_view import ModelTestView
+from pymetr.views.widgets.test_view import ModelTreeView
 from pymetr.views.widgets.device_view import DeviceView
 from pymetr.views.widgets.base import BaseWidget
 from pymetr.views.widgets.status_bar import StatusBar
@@ -152,7 +152,7 @@ class MainWindow(QMainWindow):
             QDockWidget.DockWidgetMovable | 
             QDockWidget.DockWidgetFloatable
         )
-        self.test_tree_view = ModelTestView(self.state, parent=self.test_dock)
+        self.test_tree_view = ModelTreeView(self.state, parent=self.test_dock)
         self.test_dock.setWidget(self.test_tree_view)
         self.addDockWidget(Qt.LeftDockWidgetArea, self.test_dock)
         

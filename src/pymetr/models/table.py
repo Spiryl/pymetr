@@ -14,7 +14,7 @@ class DataTable(BaseModel):
         columns: Optional[List[str]] = None,
         model_id: Optional[str] = None
     ):
-        super().__init__(model_id=model_id, name=title)
+        super().__init__(model_type='DataTable', model_id=model_id, name=title)
         self.set_property("title", title)
         # Store column names and create an empty DataFrame with those columns.
         columns = columns or []

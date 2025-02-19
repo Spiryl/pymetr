@@ -1,4 +1,4 @@
-from typing import Optional, List, Dict, Any, Tuple, TYPE_CHECKING
+from typing import Optional, List, Dict, Any, Tuple, TYPE_CHECKING, Union
 import numpy as np
 from pymetr.models.base import BaseModel
 from pymetr.core.logging import logger
@@ -47,7 +47,7 @@ class Plot(BaseModel):
     """
 
     def __init__(self, title: str, model_id: Optional[str] = None):
-        super().__init__(model_id=model_id, name=title)
+        super().__init__(model_type='Plot', model_id=model_id, name=title)
         self._init_properties(title)
 
     def _init_properties(self, title: str):
@@ -85,7 +85,7 @@ class Plot(BaseModel):
 
         # ROI properties
         self.set_property("roi", None)  # Will be set when ROI is first shown
-        self.set_property("roi_visible", True)
+        self.set_property("roi_visible", False)
 
     # --- Basic Property Accessors ---
 
@@ -345,31 +345,36 @@ class Plot(BaseModel):
         self.add(trace)
         return trace
 
-    def add(self, item: BaseModel) -> None:
+    def add(self, item: Union['BaseModel', List['BaseModel']]) -> None:
         """
         Add an existing Trace, Marker, or Cursor to the plot.
-        If the item already has a parent, it will be moved to this plot.
+        Accepts a single model or a list of models.
+        If a model already has a parent, it will be moved to this plot.
         
         Args:
-            item: A Trace, Marker, or Cursor instance
+            item: A Trace, Marker, or Cursor instance or a list of such instances
             
         Raises:
-            TypeError: If item is not a valid plot item type
+            TypeError: If any item is not a valid plot item type.
         """
         from pymetr.models import Trace, Marker, Cursor
+
+        # Wrap single model into a list for uniform processing
+        items = item if isinstance(item, list) else [item]
         
-        if not isinstance(item, (Trace, Marker, Cursor)):
-            raise TypeError(f"Can only add Trace, Marker, or Cursor objects, got {type(item).__name__}")
-        
-        # Check if item already has a parent
-        current_parent = self.state.get_parent(item.id)
-        if current_parent:
-            # Remove from current parent
-            self.state.unlink_models(current_parent.id, item.id)
-            
-        # Add to this plot
-        self.add_child(item)
-        logger.debug(f"Added {type(item).__name__} {item.id} to Plot {self.id}")
+        for model in items:
+            if not isinstance(model, (Trace, Marker, Cursor)):
+                raise TypeError(
+                    f"Can only add Trace, Marker, or Cursor objects, got {type(model).__name__}"
+                )
+            # Unlink from the current parent if it exists
+            current_parent = self.state.get_parent(model.id)
+            if current_parent:
+                self.state.unlink_models(current_parent.id, model.id)
+                
+            # Add the model as a child of this plot
+            self.add_child(model)
+            logger.debug(f"Added {type(model).__name__} {model.id} to Plot {self.id}")
 
     def set_trace(
         self,
@@ -431,7 +436,7 @@ class Plot(BaseModel):
             return new_trace
         else:
             # Update existing trace
-            existing_trace.update_data(x_data, y_data)
+            existing_trace.data = (x_data, y_data)
 
             # Update style properties if they changed
             props = {
@@ -509,6 +514,70 @@ class Plot(BaseModel):
         self.add_child(marker)
         return marker
 
+    def set_marker(
+        self,
+        name: str,
+        x: float,
+        y: float,
+        color: str = "yellow",
+        size: int = 8,
+        symbol: str = "o",
+        visible: bool = True
+    ) -> 'Marker':
+        """
+        Create or update a marker by name.
+        
+        If a marker with the given name exists, its position and properties are updated.
+        Otherwise, a new marker is created.
+        
+        Args:
+            marker_name: Unique name to identify the marker.
+            x: X-coordinate.
+            y: Y-coordinate.
+            color: Marker color.
+            size: Marker size in pixels.
+            symbol: Marker symbol.
+            visible: Visibility flag.
+            
+        Returns:
+            Marker: The created or updated marker object.
+        """
+        from pymetr.models import Marker
+
+        existing_marker = None
+        for marker in self.get_markers():
+            if marker.name == name:
+                existing_marker = marker
+                break
+
+        if existing_marker is None:
+            # Create new marker with the given marker_name as label
+            new_marker = self.create_marker(
+                x=x,
+                y=y,
+                label=name,
+                color=color,
+                size=size,
+                symbol=symbol,
+                visible=visible
+            )
+            return new_marker
+        else:
+            # Update existing marker's properties
+            existing_marker.x = x
+            existing_marker.y = y
+            
+            if existing_marker.color != color:
+                existing_marker.color = color
+            if existing_marker.size != size:
+                existing_marker.size = size
+            if existing_marker.symbol != symbol:
+                existing_marker.symbol = symbol
+            if existing_marker.visible != visible:
+                existing_marker.visible = visible
+            
+            return existing_marker
+
     def create_cursor(
         self,
         name: str = "",
@@ -555,6 +624,72 @@ class Plot(BaseModel):
         self.add_child(cursor)
         return cursor
 
+    def set_cursor(
+        self,
+        cursor_name: str,
+        axis: str = "x",
+        position: float = 0.0,
+        color: str = "yellow",
+        style: str = "solid",
+        width: int = 1,
+        visible: bool = True,
+        **kwargs
+    ) -> 'Cursor':
+        """
+        Create or update a cursor by name.
+        
+        If a cursor with the given name exists, its properties are updated.
+        Otherwise, a new cursor is created.
+        
+        Args:
+            cursor_name: Unique name to identify the cursor.
+            axis: 'x' for vertical or 'y' for horizontal.
+            position: Position along the axis.
+            color: Cursor color.
+            style: Line style.
+            width: Line width.
+            visible: Visibility flag.
+            **kwargs: Additional cursor properties.
+            
+        Returns:
+            Cursor: The created or updated cursor object.
+        """
+        from pymetr.models import Cursor
+
+        existing_cursor = None
+        for cursor in self.get_cursors():
+            if cursor.name == cursor_name:
+                existing_cursor = cursor
+                break
+
+        if existing_cursor is None:
+            new_cursor = self.create_cursor(
+                name=cursor_name,
+                axis=axis,
+                position=position,
+                color=color,
+                style=style,
+                width=width,
+                visible=visible,
+                **kwargs
+            )
+            return new_cursor
+        else:
+            if existing_cursor.axis != axis:
+                existing_cursor.axis = axis
+            if existing_cursor.position != position:
+                existing_cursor.position = position
+            if existing_cursor.color != color:
+                existing_cursor.color = color
+            if existing_cursor.style != style:
+                existing_cursor.style = style
+            if existing_cursor.width != width:
+                existing_cursor.width = width
+            if existing_cursor.visible != visible:
+                existing_cursor.visible = visible
+            
+            return existing_cursor
+    
     def clear(self):
         """Remove all child items (traces, markers, cursors)."""
         children = self.get_children()

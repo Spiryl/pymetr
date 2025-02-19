@@ -27,7 +27,7 @@ class Cursor(BaseModel):
         visible: bool = True,
         model_id: Optional[str] = None,
     ):
-        super().__init__(model_id=model_id, name=name)
+        super().__init__(model_type='Cursor', model_id=model_id, name=name)
         
         # Validate axis
         if axis not in ("x", "y"):

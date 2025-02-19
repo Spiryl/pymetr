@@ -62,7 +62,7 @@ def run_test():
         t,
         signal + noise,
         mode="Group",
-        color="#FF0000",
+        color="#ff8400",
         style="dash",
         width=1,
         marker_style="",

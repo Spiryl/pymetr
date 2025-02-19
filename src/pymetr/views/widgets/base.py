@@ -33,11 +33,11 @@ class BaseWidget(QWidget):
     def set_model(self, model_id: str):
         """Set the model for this widget."""
         if model_id != self._model_id:
-            # Disconnect from old model if exists
-            if self._model_id:
-                old_model = self.state.get_model(self._model_id)
-                if old_model:
-                    old_model.property_changed.disconnect(self._handle_property_change)
+            # # Disconnect from old model if exists
+            # if self._model_id:
+            #     old_model = self.state.get_model(self._model_id)
+            #     if old_model:
+            #         old_model.property_changed.disconnect(self._handle_property_change)
             
             # Connect to new model
             self._model_id = model_id
@@ -69,8 +69,8 @@ class BaseWidget(QWidget):
             for name, value in properties.items():
                 model.set_property(name, value)
                 
-    @Slot(str, str, object)
-    def _handle_property_change(self, model_id: str, prop: str, value: object):
+    @Slot(str, str, str, object)  # NEW signature: model_id, model_type, prop, value
+    def _handle_property_change(self, model_id: str, model_type: str, prop: str, value: object):
         """Handle model property changes."""
         if model_id != self._model_id or self._updating:
             return

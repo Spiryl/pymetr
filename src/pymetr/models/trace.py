@@ -27,7 +27,7 @@ class Trace(BaseModel):
         model_id: Optional[str] = None,
         **kwargs
     ):
-        super().__init__(model_id=model_id)
+        super().__init__(model_type='Trace', model_id=model_id)
         # Store data arrays directly (converted to numpy arrays)
         self._x_data = np.asarray(x_data)
         self._y_data = np.asarray(y_data)
@@ -71,7 +71,7 @@ class Trace(BaseModel):
         self._x_data = np.asarray(x_data)
         self._y_data = np.asarray(y_data)
         # Emit a property change event for 'data'
-        self.property_changed.emit(self.id, "data", (self._x_data, self._y_data))
+        self.set_property("data", (x_data, y_data))  # Will emit for you
 
     @property
     def color(self) -> Optional[str]:
@@ -135,4 +135,4 @@ class Trace(BaseModel):
         y_data = np.asarray(y_data)
         self._x_data = x_data
         self._y_data = y_data
-        self.property_changed.emit(self.id, "data", (x_data, y_data))
+        self.set_property("data", (x_data, y_data))  # Will emit for you

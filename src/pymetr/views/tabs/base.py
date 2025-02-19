@@ -5,7 +5,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt
 from pymetr.views.widgets.base import BaseWidget
-from pymetr.views.widgets.toolbar import ModernToolBar
+from pymetr.views.widgets.toolbar import TabToolbar
 from pymetr.core.logging import logger
 
 class BaseTab(BaseWidget):
@@ -14,7 +14,7 @@ class BaseTab(BaseWidget):
     def __init__(self, state, model_id: str, parent=None):
         super().__init__(state, parent)
         self._model_id = model_id
-        self.toolbar: Optional[ModernToolBar] = None
+        self.toolbar: Optional[TabToolbar] = None
         self.content_widget: Optional[QWidget] = None
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)        
         self._setup_container()
@@ -28,7 +28,7 @@ class BaseTab(BaseWidget):
         layout.setSpacing(0)
         
         # Create toolbar
-        self.toolbar = ModernToolBar()
+        self.toolbar = TabToolbar()
         layout.addWidget(self.toolbar)
         
         # Create content widget container

@@ -5,7 +5,7 @@ from PySide6.QtWidgets import QApplication
 from PySide6.QtCore import Qt, QCoreApplication, QFile, QTextStream
 
 from pymetr.views.main_window import MainWindow
-from pymetr.core.state import ApplicationState, set_global_state
+from pymetr.core.state import ApplicationState
 from pymetr.core.logging import setup_logging
 
 def main():
@@ -34,7 +34,6 @@ def main():
     try:
         # Create state and set it as the global state.
         state = ApplicationState()
-        set_global_state(state)
         
         # Create and show main window
         window = MainWindow(state)
