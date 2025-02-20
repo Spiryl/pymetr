@@ -16,12 +16,12 @@ def run_test(test):
     x_points = np.arange(5000)
     
     # Run for 1000 frames
-    for frame in range(5000):
+    for frame in range(1000):
         # Generate new noise data
         y_points = np.random.normal(0, 1, 5000)
         
         # Update the trace
-        plot.set_trace("Noise", x_points, y_points)
+        plot.set_trace("Noise", x_points, y_points, color="#FF9535")
         
         # Small wait to prevent overwhelming the UI
         test.wait(1)  # 1ms wait

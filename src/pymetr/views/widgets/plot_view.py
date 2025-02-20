@@ -1,6 +1,7 @@
 from typing import Dict, Any
 from PySide6.QtWidgets import QVBoxLayout, QSplitter, QSizePolicy
-from PySide6.QtCore import Qt, Slot, QTimer
+from PySide6.QtCore import Qt, Slot, QTimer, QEvent
+from PySide6.QtGui import QTransform
 import pyqtgraph as pg
 import numpy as np
 
@@ -73,6 +74,7 @@ class PlotView(BaseWidget):
             self.legend = None
 
         # Connect main plot range change to update ROI
+        self.main_plot_item.scene().sigMouseClicked.connect(self.handle_mouse_clicked)
         self.main_plot_item.sigRangeChanged.connect(self._handle_main_plot_range_changed)
 
         # --- ROI Plot Setup ---
@@ -100,6 +102,23 @@ class PlotView(BaseWidget):
 
         # Add ROI plot area to the container
         self.plot_container.addWidget(self.roi_plot_area)
+
+    def handle_mouse_clicked(self, event):
+        """Handle mouse clicks for autoscaling."""
+        if event.double():
+            # scene_point = event.scenePos()
+            # # transform = QTransform()
+            # # clicked_item = self.main_plot_itemplot_item.scene().itemAt(scene_point, transform)
+            
+            # # Check if clicked on an isolated axis
+            # for trace_id, axis in self.trace_axes.items():
+            #     if axis.boundingRect().contains(axis.mapFromScene(scene_point)):
+            #         if trace_id in self.trace_view_boxes:
+            #             self.trace_view_boxes[trace_id].autoRange(padding=0)
+            #         return
+                    
+            # If not on an axis, autoscale main plot
+            self.main_plot_item.autoRange()
 
     def set_model(self, model_id: str) -> None:
         """

@@ -277,9 +277,13 @@ class TraceParameter(ModelParameter):
             }
         ]
 
-        # Add each parameter as a child
+        # Add each parameter as a child with signal connections
         for param_opts in params:
             param = Parameter.create(**param_opts)
+            if param.type() == 'pen':
+                param.sigValueChanged.connect(self._handle_pen_change)
+            else:
+                param.sigValueChanged.connect(self._handle_parameter_change)
             self.addChild(param)
     
     def _handle_pen_change(self, param, value):
