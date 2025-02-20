@@ -68,10 +68,9 @@ class TestContext:
         self._state.link_models(self.script.id, result.id)
         
         # Initialize result properties
-        result.set_property('status', ResultStatus.PASS.name)
+        result.set_property('status', None)  # Not reported yet
         result.set_property('progress', 0.0)
         
-        # Update script progress
         self._update_aggregate_progress()
         
         return result

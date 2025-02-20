@@ -24,54 +24,50 @@ class TestProgressWidget(ParameterWidget):
         self.progress_bar.setTextVisible(True)
         layout.addWidget(self.progress_bar, 1)
         
-        # Define status styles
+        # Define styles for test statuses.
         self.status_styles = {
-            TestStatus.READY: {
-                'color': '#aaaaaa',
-                'background': '#1e1e1e',
-                'chunk': '#1e1e1e',
-                'border': '#95A5A6'
-            },
-            TestStatus.RUNNING: {
-                'color': '#aaaaaa',
-                'background': '#1e1e1e',
-                'chunk': '#3498DB',
-                'border': '#3498DB'
-            },
-            TestStatus.PASS: {
-                'color': '#aaaaaa',
-                'background': '#1e1e1e',
-                'chunk': '#1e1e1e',
-                'border': '#2ECC71'
-            },
-            TestStatus.FAIL: {
-                'color': '#aaaaaa',
-                'background': '#1e1e1e',
-                'chunk': '#1e1e1e',
-                'border': '#E74C3C'
-            },
-            TestStatus.ERROR: {
-                'color': '#aaaaaa',
-                'background': '#1e1e1e',
-                'chunk': '#1e1e1e',
-                'border': '#F1C40F'
-            },
-            TestStatus.COMPLETE: {
-                'color': '#aaaaaa',
-                'background': '#1e1e1e',
-                'chunk': '#1e1e1e',
-                'border': '#2ECC71'
-            }
+            TestStatus.READY: {'border': '#95A5A6', 'chunk': '#95A5A6', 'background': '#1e1e1e'},
+            TestStatus.RUNNING: {'border': '#3498DB', 'chunk': '#3498DB', 'background': '#1e1e1e'},
+            TestStatus.PASS: {'border': '#2ECC71', 'chunk': '#2ECC71', 'background': '#1e1e1e'},
+            TestStatus.FAIL: {'border': '#E74C3C', 'chunk': '#E74C3C', 'background': '#1e1e1e'},
+            TestStatus.ERROR: {'border': '#F1C40F', 'chunk': '#F1C40F', 'background': '#1e1e1e'},
+            TestStatus.COMPLETE: {'border': '#2ECC71', 'chunk': '#2ECC71', 'background': '#1e1e1e'},
         }
         
-        # Set initial style to READY with 0 progress
+        # Initially show "Not Reported" if no progress is set.
         self._apply_style(TestStatus.READY, 0)
     
-    def _apply_style(self, status: TestStatus, progress: float):
-        """Apply status-specific styling with progress."""
-        style = self.status_styles.get(status, self.status_styles[TestStatus.READY])
+    def _process_pending_update(self):
+        logger.debug(f"TestProgressWidget._process_pending_update: {self._pending_updates}")
+        self._pending_updates.clear()
         
-        # Apply style to progress bar
+        status_val = self.param.get_model_property("status", "READY")
+        progress_val = self.param.get_model_property("progress", 0)
+        
+        # Handle status value being either a TestStatus enum or a string.
+        if isinstance(status_val, TestStatus):
+            status = status_val
+        elif isinstance(status_val, str):
+            try:
+                status = TestStatus[status_val.upper()]
+            except KeyError:
+                logger.error(f"TestProgressWidget: Invalid status string '{status_val}'. Defaulting to ERROR.")
+                status = TestStatus.ERROR
+        else:
+            status = TestStatus.ERROR
+
+        try:
+            progress = float(progress_val)
+            progress = max(0, min(100, progress))
+        except Exception as e:
+            logger.error(f"TestProgressWidget: Invalid progress value: {progress_val} - {e}")
+            progress = 0
+        
+        logger.debug(f"TestProgressWidget updating: status={status.name}, progress={progress}")
+        self._apply_style(status, progress)
+    
+    def _apply_style(self, status: TestStatus, progress: float):
+        style = self.status_styles.get(status, self.status_styles[TestStatus.ERROR])
         self.progress_bar.setStyleSheet(f"""
             QProgressBar {{
                 border: 1px solid {style['border']};
@@ -84,41 +80,8 @@ class TestProgressWidget(ParameterWidget):
                 background-color: {style['chunk']};
             }}
         """)
-        
         self.progress_bar.setValue(int(progress))
-        if status == TestStatus.RUNNING and progress is not None:
-            self.progress_bar.setFormat(f"{progress:.1f}%")
-        else:
-            value = 100 if status in [TestStatus.PASS, TestStatus.COMPLETE] else 0
-            self.progress_bar.setValue(value)
-            self.progress_bar.setFormat(status.name)
-    
-    def _process_pending_update(self):
-        """Process queued updates."""
-        updates = self._pending_updates
-        self._pending_updates = {}
-        
-        status = updates.get('status')
-        progress = updates.get('progress')
-        
-        if status is not None:
-            # Convert string to enum if needed
-            if isinstance(status, str):
-                status = TestStatus[status.upper()]
-            current_status = status
-        else:
-            current_status = TestStatus.READY
-        
-        if progress is not None:
-            try:
-                current_progress = float(progress)
-                current_progress = max(0, min(100, current_progress))
-            except (TypeError, ValueError):
-                current_progress = 0
-        else:
-            current_progress = self.progress_bar.value()
-        
-        self._apply_style(current_status, current_progress)
+        self.progress_bar.setFormat(f"{status.name} ({progress:.1f}%)")
     
     def contextMenuEvent(self, event):
         """Handle context menu."""

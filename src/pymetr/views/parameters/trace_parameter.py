@@ -1,4 +1,5 @@
 from typing import Optional, Any
+import numpy as np
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QFileDialog, QMenu
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPainter, QColor, QPen
@@ -10,34 +11,53 @@ from pymetr.models import Trace
 
 class TraceStylePreview(QWidget):
     """
-    Custom widget showing trace length and style preview.
-    Draws a small line sample using the trace's style.
+    Enhanced trace preview widget showing style and data length.
+    Handles updates efficiently and maintains visual consistency.
     """
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setFixedHeight(20)
         self.setMinimumWidth(100)
         
-        self._color = QColor("#ffffff")
-        self._style = Qt.SolidLine
-        self._width = 1
-        self._length = 0
+        # Cache current values to avoid unnecessary redraws
+        self._current_style = {
+            'color': QColor("#ffffff"),
+            'style': Qt.SolidLine,
+            'width': 1
+        }
+        self._current_length = 0
     
     def update_style(self, color: str, style: str, width: int):
-        """Update line style properties."""
-        self._color = QColor(color)
-        self._style = self._get_qt_line_style(style)
-        self._width = max(1, int(width))
-        self.update()
+        """Update line style properties efficiently."""
+        try:
+            new_color = QColor(color)
+            new_style = self._get_qt_line_style(style)
+            new_width = max(1, int(width))
+            
+            # Only update if something changed
+            if (new_color != self._current_style['color'] or 
+                new_style != self._current_style['style'] or
+                new_width != self._current_style['width']):
+                
+                self._current_style.update({
+                    'color': new_color,
+                    'style': new_style,
+                    'width': new_width
+                })
+                self.update()
+                
+        except Exception as e:
+            logger.error(f"Error updating trace style: {e}")
     
     def set_length(self, length: int):
-        """Update data length."""
-        self._length = length
-        self.update()
+        """Update data length display efficiently."""
+        if length != self._current_length:
+            self._current_length = length
+            self.update()
     
     @staticmethod
     def _get_qt_line_style(style_str: str) -> Qt.PenStyle:
-        """Convert string style to Qt PenStyle, normalizing the input."""
+        """Convert string style to Qt PenStyle with proper normalization."""
         normalized = style_str.lower().replace(" ", "").replace("-", "")
         styles = {
             "solid": Qt.SolidLine,
@@ -45,24 +65,22 @@ class TraceStylePreview(QWidget):
             "dot": Qt.DotLine,
             "dashdot": Qt.DashDotLine
         }
-        result = styles.get(normalized, Qt.SolidLine)
-        logger.debug(f"_get_qt_line_style: converting '{style_str}' -> '{normalized}' -> {result}")
-        return result
+        return styles.get(normalized, Qt.SolidLine)
     
     def paintEvent(self, event):
         try:
             painter = QPainter(self)
             painter.setRenderHint(QPainter.Antialiasing)
             
-            # Draw length indicator
+            # Draw length indicator efficiently
             painter.setPen(QPen(Qt.white))
-            length_text = f"[{self._length:,}]"
+            length_text = f"[{self._current_length:,}]"
             painter.drawText(2, 0, 50, 20, Qt.AlignVCenter, length_text)
             
-            # Draw style preview
-            pen = QPen(self._color)
-            pen.setStyle(self._style)
-            pen.setWidth(self._width)
+            # Draw style preview with cached values
+            pen = QPen(self._current_style['color'])
+            pen.setStyle(self._current_style['style'])
+            pen.setWidth(self._current_style['width'])
             painter.setPen(pen)
             
             # Draw line sample after the length text
@@ -70,14 +88,19 @@ class TraceStylePreview(QWidget):
             painter.drawLine(line_start, 10, self.width() - 5, 10)
             
         except Exception as e:
-            logger.error(f"Error drawing trace preview: {e}")
+            logger.error(f"Error painting trace preview: {e}")
 
 class TraceInfoWidget(ParameterWidget):
-    """Widget showing trace info and style preview."""
+    """Widget showing trace info and style preview with proper update handling."""
     
     def __init__(self, param, parent=None):
         super().__init__(param, parent)
         self._setup_ui()
+        
+        # Cache current values
+        self._current_color = "#ffffff"
+        self._current_style = "solid"
+        self._current_width = 1
     
     def _setup_ui(self):
         layout = QHBoxLayout(self)
@@ -88,7 +111,7 @@ class TraceInfoWidget(ParameterWidget):
         layout.addWidget(self.style_preview)
     
     def _process_pending_update(self):
-        """Process style and data updates."""
+        """Process style and data updates efficiently."""
         updates = self._pending_updates
         self._pending_updates = {}
         
@@ -106,14 +129,28 @@ class TraceInfoWidget(ParameterWidget):
                 self.style_preview.update_style(color, style, width)
             
             # Update length if data changed
-            if 'x_data' in updates or 'y_data' in updates:
+            if 'x_data' in updates:
+                if isinstance(updates['x_data'], (list, tuple, np.ndarray)):
+                    self.style_preview.set_length(len(updates['x_data']))
+            
+            # Also check model for initial data
+            elif not hasattr(self, '_initialized'):
                 model = self.param.state.get_model(self.param.model_id)
-                if model:
-                    data_length = len(model.get_property('x_data', []))
-                    self.style_preview.set_length(data_length)
+                if model and hasattr(model, 'x_data'):
+                    self.style_preview.set_length(len(model.x_data))
+                self._initialized = True
             
         except Exception as e:
             logger.error(f"Error updating trace info: {e}")
+    
+    def cleanup(self):
+        """Clean up resources."""
+        try:
+            super().cleanup()
+            if hasattr(self, 'style_preview'):
+                self.style_preview.deleteLater()
+        except Exception as e:
+            logger.error(f"Error cleaning up trace info widget: {e}")
 
 class TraceParameterItem(ModelParameterItem):
     """Parameter item for traces with line style preview."""
@@ -273,6 +310,7 @@ class TraceParameter(ModelParameter):
             {
                 'name': 'pen',
                 'type': 'pen',
+                'expanded':False,
                 'value': qpen
             }
         ]

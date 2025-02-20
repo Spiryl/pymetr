@@ -16,17 +16,16 @@ def run_test(test):
     
     # Create x points
     x = np.linspace(0, 10, 5000)
-    
-    # Only do 3 updates
-    for i in range(100):
+
+    for i in range(50):
         # Simple sine wave with changing phase
         y = np.sin(x + i)
         plot.set_trace("Sine", x, y, color="#4CAF50")
         
         # Longer wait to see each update clearly
-        test.wait(10)  # 10 ms between updates
-        result.progress = ((i+1) * 33)
+        test.wait(100)  # 100 ms between updates
+        result.progress = (i*2)
     
     result.progress = 100
-    result.status = "Pass"
+    result.status = "PASS"
     return True

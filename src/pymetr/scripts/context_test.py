@@ -7,10 +7,10 @@ def run_test(test):
     cursors, and a table with analysis data.
     """
     # Create a result container and show it
-    result = test.create_result("Complex Plot Test")
+    result = test.create_result("Test Result")
     result.show()
     # Create a plot and add it to the result
-    plot = test.create_plot("Feature Test Plot")
+    plot = test.create_plot("Test Plot")
     plot.x_label = "Time (s)"
     plot.y_label = "Voltage (V)"
     result.add(plot)
@@ -38,7 +38,7 @@ def run_test(test):
     
     
     # Create a table with 10 rows of analysis data and add it to the result
-    table = test.create_table("Analysis Data")
+    table = test.create_table("Test Data")
     result.add(table)
     table.columns = ["Index", "Value1", "Value2", "Value3"]
     for i in range(10):
@@ -59,7 +59,7 @@ def run_test(test):
     
     # Initialize traces for each color
     for idx, col in enumerate(colors):
-        plot.set_trace(f"AnimTrace{idx+1}", x_points, np.zeros_like(x_points), color=col)
+        plot.set_trace(f"Test Trace{idx+1}", x_points, np.zeros_like(x_points), color=col)
     
     # Animate for 1000 frames
     for frame in range(1000):
@@ -67,8 +67,8 @@ def run_test(test):
             phase = frame * 0.1
             # Generate sine data with a phase shift and small noise
             y_data = np.sin(x_points + phase + idx) + np.random.normal(0, 0.05, len(x_points))
-            plot.set_trace(f"AnimTrace{idx+1}", x_points, y_data, color=col)
-        test.wait(30)  # 10 ms wait between frames
+            plot.set_trace(f"Test Trace{idx+1}", x_points, y_data, color=col)
+        test.wait(17)  # 10 ms wait between frames
         # Update progress from 50% to 80%
         result.progress = 50 + int((frame+1)/200 * 30)
     

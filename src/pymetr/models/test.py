@@ -60,7 +60,7 @@ class TestScript(BaseModel):
         super().__init__(model_type='TestScript', model_id=model_id, name=name)
         
         self.set_property('script_path', script_path)
-        self.set_property('status', 'Not Run')
+        self.set_property('status', 'READY')
         self.set_property('start_time', None)
         self.set_property('elapsed_time', 0)
         self.set_property('progress', 0.0)
@@ -76,7 +76,7 @@ class TestScript(BaseModel):
         
     @status.setter
     def status(self, value: str):
-        allowed = ['Not Run', 'Running', 'Complete', 'Error', 'Stopped']
+        allowed = ['READY', 'RUNNING', 'COMPLETE', 'ERROR', 'STOPPED', 'PASS', 'FAIL']
         if value not in allowed:
             raise ValueError(f"Invalid status: {value}")
         self.set_property('status', value)
@@ -198,17 +198,25 @@ class TestResult(TestGroup):
         self.set_property('progress', value)
     
     @property
-    def status(self) -> ResultStatus:
-        """Get result status."""
-        status_str = self.get_property('status', ResultStatus.PASS.name)
-        return ResultStatus[status_str]
-    
+    def status(self) -> Optional[ResultStatus]:
+        """Get result status. Returns None if not reported."""
+        status_str = self.get_property('status', None)
+        if status_str is None:
+            return None
+        try:
+            return ResultStatus[status_str.upper()]
+        except KeyError:
+            return None
+
     @status.setter
-    def status(self, value: ResultStatus):
-        """Set result status."""
-        if isinstance(value, str):
-            value = ResultStatus[value.upper()]
-        self.set_property('status', value.name)
+    def status(self, value: Optional[ResultStatus]):
+        """Set result status. Allow None to indicate not reported."""
+        if value is None:
+            self.set_property('status', None)
+        else:
+            if isinstance(value, str):
+                value = ResultStatus[value.upper()]
+            self.set_property('status', value.name)
 
     def add(self, child_or_children):
         """
@@ -218,9 +226,9 @@ class TestResult(TestGroup):
         if not isinstance(child_or_children, list):
             child_or_children = [child_or_children]
         for child in child_or_children:
-            # If child has another parent, unlink it first.
-            if self.state:
-                current_parent = self.state.get_parent(child.id)
-                if current_parent and current_parent.id != self.id:
-                    self.state.unlink_models(current_parent.id, child.id)
+            # # If child has another parent, unlink it first.
+            # if self.state:
+            #     current_parent = self.state.get_parent(child.id)
+            #     if current_parent and current_parent.id != self.id:
+            #         self.state.unlink_models(current_parent.id, child.id)
             self.add_child(child)

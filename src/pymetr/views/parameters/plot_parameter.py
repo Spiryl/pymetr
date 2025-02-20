@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Optional, Any
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QMenu
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QPainter, QColor, QIcon, QFont
+from PySide6.QtGui import QPainter, QColor, QIcon, QFont, QBrush, QPen
 
 from pyqtgraph.parametertree import Parameter
 from .base import ModelParameter, ModelParameterItem, ParameterWidget
@@ -10,11 +10,12 @@ from pymetr.core.logging import logger
 from pymetr.models import Plot, Trace, Marker, Cursor
 
 class ItemCountIcon(QWidget):
-    """Custom widget showing an icon with a count."""
-    def __init__(self, icon_path: str, color: str = "#dddddd", parent=None):
+    """Custom widget showing an icon with a count badge in the top-right corner."""
+    def __init__(self, icon_path: str, badge_color: str = "#FF8400", text_color: str = "#DDDDDD", parent=None):
         super().__init__(parent)
         self._icon = QIcon(icon_path)
-        self._color = QColor(color)
+        self._badge_color = QColor(badge_color)
+        self._text_color = QColor(text_color)
         self._count = 0
         self.setFixedSize(24, 24)
         
@@ -26,23 +27,36 @@ class ItemCountIcon(QWidget):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
         
-        # Draw icon
-        self._icon.paint(painter, 2, 2, 20, 20)
+        # Draw the icon to cover the entire widget area.
+        self._icon.paint(painter, 0, 0, self.width(), self.height())
         
         if self._count > 0:
-            # Draw count
-            painter.setPen(self._color)
-            painter.setFont(QFont("Arial", 8))
-            painter.drawText(0, 0, 24, 24, Qt.AlignCenter, str(self._count))
+            # Define badge size.
+            badge_radius = 8
+            # Position badge at top-right.
+            badge_x = self.width() - badge_radius * 2
+            badge_y = 0
+            # Draw a circle for the badge background.
+            painter.setBrush(QBrush(self._badge_color))
+            painter.setPen(Qt.NoPen)
+            painter.drawEllipse(badge_x, badge_y, badge_radius * 2, badge_radius * 2)
+            
+            # Draw the count number over the badge.
+            painter.setPen(QPen(self._text_color))
+            painter.setFont(QFont("Arial", 8, QFont.Bold))
+            painter.drawText(badge_x, badge_y, badge_radius * 2, badge_radius * 2, 
+                             Qt.AlignCenter, str(self._count))
 
 class PlotInfoWidget(ParameterWidget):
     """
     Enhanced widget showing counts of traces, markers, and cursors.
+    Updates efficiently and tracks changes properly.
     """
     def __init__(self, param, parent=None):
         super().__init__(param, parent)
         self._setup_ui()
-    
+        self._current_counts = {'traces': 0, 'markers': 0, 'cursors': 0}
+        
     def _setup_ui(self):
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -61,10 +75,18 @@ class PlotInfoWidget(ParameterWidget):
         
         # Add spacer
         layout.addStretch()
+        
+        # Connect to model signals
+        if self.param.state:
+            self.param.state.models_linked.connect(self._handle_model_linked)
+            self.param.state.model_removed.connect(self._handle_model_removed)
     
     def _process_pending_update(self):
         """Update item counts."""
         try:
+            if not self.param.state or not self.param.model_id:
+                return
+                
             model = self.param.state.get_model(self.param.model_id)
             if not model:
                 return
@@ -72,17 +94,50 @@ class PlotInfoWidget(ParameterWidget):
             children = self.param.state.get_children(model.id)
             
             # Count each type
-            trace_count = sum(1 for c in children if isinstance(c, Trace))
-            marker_count = sum(1 for c in children if isinstance(c, Marker))
-            cursor_count = sum(1 for c in children if isinstance(c, Cursor))
+            new_counts = {
+                'traces': sum(1 for c in children if isinstance(c, Trace)),
+                'markers': sum(1 for c in children if isinstance(c, Marker)),
+                'cursors': sum(1 for c in children if isinstance(c, Cursor))
+            }
             
-            # Update icons
-            self.trace_icon.setCount(trace_count)
-            self.marker_icon.setCount(marker_count)
-            self.cursor_icon.setCount(cursor_count)
+            # Only update icons if counts changed
+            if new_counts['traces'] != self._current_counts['traces']:
+                self.trace_icon.setCount(new_counts['traces'])
+            if new_counts['markers'] != self._current_counts['markers']:
+                self.marker_icon.setCount(new_counts['markers'])
+            if new_counts['cursors'] != self._current_counts['cursors']:
+                self.cursor_icon.setCount(new_counts['cursors'])
+                
+            self._current_counts = new_counts
             
         except Exception as e:
             logger.error(f"Error updating plot info: {e}")
+    
+    def _handle_model_linked(self, parent_id: str, child_id: str):
+        """Update counts when new models are linked."""
+        if not self.param.model_id or parent_id != self.param.model_id:
+            return
+        self.queue_update()
+    
+    def _handle_model_removed(self, model_id: str):
+        """Update counts when models are removed."""
+        if not self.param.model_id:
+            return
+            
+        # Check if removed model was our child
+        model = self.param.state.get_model(self.param.model_id)
+        if model and model_id in [c.id for c in model.get_children()]:
+            self.queue_update()
+    
+    def cleanup(self):
+        """Clean up signal connections."""
+        try:
+            if self.param.state:
+                self.param.state.models_linked.disconnect(self._handle_model_linked)
+                self.param.state.model_removed.disconnect(self._handle_model_removed)
+        except:
+            pass
+        super().cleanup()
 
 class PlotParameterItem(ModelParameterItem):
     """Parameter item for plots."""

@@ -78,6 +78,8 @@ class ModelParameterItem(ParameterItem):
         
         if self.widget is None:
             self.widget = self.makeWidget()
+            # Attach the widget to the parameter so that later calls to handle_property_update can find it.
+            self.param.widget = self.widget
         tree = self.treeWidget()
         if tree is not None:
             tree.setItemWidget(self, 1, self.widget)
