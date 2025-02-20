@@ -21,7 +21,7 @@ class ParameterWidget(QWidget):
         self._update_timer.setSingleShot(True)
         self._update_timer.timeout.connect(self._process_pending_update)
         self._pending_updates: Dict[str, Any] = {}
-        self._throttle_interval = 33  # ~30fps
+        self._throttle_interval = 200  # ~30fps
     
     def _setup_ui(self):
         """Set up the widget UI."""
@@ -43,6 +43,13 @@ class ParameterWidget(QWidget):
         logger.debug(f"Cleaning up ParameterWidget for {self.param.title()}")
         self._update_timer.stop()
 
+    def isDeleted(self):
+        """Check if widget has been deleted."""
+        try:
+            return not self.isVisible()  # This will raise an error if widget is deleted
+        except RuntimeError:
+            return True
+
 
 class ModelParameterItem(ParameterItem):
     """
@@ -51,19 +58,19 @@ class ModelParameterItem(ParameterItem):
     """
     
     def __init__(self, param, depth, **kwargs):
-        logger.debug(f"Initializing ModelParameterItem for {param.title()}")
+        # logger.debug(f"Initializing ModelParameterItem for {param.title()}")
         super().__init__(param, depth, **kwargs)
         self.hideWidget = False
         self.widget = None
         self._context_icons = self._load_context_icons()
 
     def optsChanged(self, param, changes):
-        logger.debug(f"optsChanged called for parameter {param.title()} with changes: {changes}")
+        # logger.debug(f"optsChanged called for parameter {param.title()} with changes: {changes}")
         # changes is typically a list of (propertyName, changeType, data)
         for change in changes:
             propName, changeType, data = change
             if propName == 'icon' and (changeType in ('value', 'childAdded')):
-                logger.debug(f"Setting icon for {param.title()}: {data}")
+                # logger.debug(f"Setting icon for {param.title()}: {data}")
                 self.setIcon(data)  # Tell the item to display the icon
         
         super().optsChanged(param, changes)
@@ -96,7 +103,7 @@ class ModelParameterItem(ParameterItem):
     
     def _load_context_icons(self) -> Dict[str, QIcon]:
         """Load standard context menu icons."""
-        logger.debug("Loading context icons")
+        # logger.debug("Loading context icons")
         try:
             icons_path = Path(__file__).parent.parent / 'icons'
             icons = {
@@ -105,7 +112,7 @@ class ModelParameterItem(ParameterItem):
                 'export': QIcon(str(icons_path / 'export.png')),
                 'refresh': QIcon(str(icons_path / 'refresh.png'))
             }
-            logger.debug(f"Context icons loaded: {list(icons.keys())}")
+            # logger.debug(f"Context icons loaded: {list(icons.keys())}")
             return icons
         except Exception as e:
             logger.error(f"Error loading context icons: {e}")

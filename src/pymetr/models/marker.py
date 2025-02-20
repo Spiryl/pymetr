@@ -7,8 +7,6 @@ from PySide6.QtCore import QThread, Qt, QMetaObject, Q_ARG
 from pymetr.models.base import BaseModel
 from pymetr.core.logging import logger
 
-if TYPE_CHECKING:
-    from pymetr.models import Trace
 
 class Marker(BaseModel):
     """
@@ -125,7 +123,8 @@ class Marker(BaseModel):
         if not self.state:
             return False
         parent = self.state.get_parent(self.id)
-        return parent is not None and isinstance(parent, Trace)
+        # Check type by name instead of using isinstance
+        return parent is not None and parent.model_type == 'Trace'
     
     def _get_interpolated_y(self, x: float) -> Optional[float]:
         """Get interpolated y-value from parent trace at x position."""

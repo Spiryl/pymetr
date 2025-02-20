@@ -136,10 +136,10 @@ class PlotView(BaseWidget):
             # Update basic plot settings
             self._update_plot_settings()
             
-            # Initialize handlers
+            # Initialize handlers TODO: Clean this up?  Why is the pattern different?
             self.trace_handler = TraceHandler(self.main_plot_item, self.plot_layout)
-            self.cursor_handler = CursorHandler(self.main_plot_item)
-            self.marker_handler = MarkerHandler(self.main_plot_item)
+            self.cursor_handler = CursorHandler(self.main_plot_item, self.state)
+            self.marker_handler = MarkerHandler(self.main_plot_item, self.state)
             
             # Initialize existing traces
             for trace in self.model.get_traces():
@@ -189,11 +189,7 @@ class PlotView(BaseWidget):
         """
         try:
 
-            logger.debug(
-                f"{model_type} {model_id} prop={prop}, value={type(value)}"
-            )
             if model_id == self.model_id and model_type == "Plot":
-                logger.debug(f"[PlotView] This is my own plot property '{prop}'.")
                 # This is the Plot itself
                 if prop == 'roi':
                     self._suppress_roi_updates = True
@@ -219,11 +215,7 @@ class PlotView(BaseWidget):
             # For traces, cursors, markers: only update if I'm their *immediate* parent
             if model_type in ("Trace", "Cursor", "Marker"):
                 parent = self.state.get_parent(model_id)
-                logger.debug(
-                    f"[PlotView] {model_type} {model_id} parent = {parent.id if parent else None}"
-                )
                 if parent and parent.id == self.model_id:
-                    logger.debug(f"[PlotView] => Accepted update for {model_type} {model_id}, prop={prop}")
                     if model_type == "Trace":
                         self.trace_handler.handle_property_change(model_id, model_type, prop, value)
                         trace_model = self.state.get_model(model_id)

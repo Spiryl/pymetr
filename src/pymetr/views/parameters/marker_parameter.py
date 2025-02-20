@@ -6,7 +6,7 @@ from pyqtgraph.parametertree import Parameter
 
 from .base import ModelParameter, ModelParameterItem, ParameterWidget
 from pymetr.core.logging import logger
-from pymetr.models import Marker
+from pymetr.models import Marker, Trace  # Add Trace import
 
 class MarkerPreviewWidget(ParameterWidget):
     """
@@ -59,6 +59,55 @@ class MarkerPreviewWidget(ParameterWidget):
         layout.addWidget(self.binding_label)
         layout.addStretch()
 
+    def _process_pending_update(self):
+        """Process position and style updates."""
+        updates = self._pending_updates
+        self._pending_updates = {}
+        
+        try:
+            # Update position display if x or y changed
+            if 'x' in updates or 'y' in updates:
+                x = updates.get('x', self._current_x)
+                y = updates.get('y', self._current_y)
+                self._current_x = x
+                self._current_y = y
+                self.position_label.setText(f"({x:.4g}, {y:.4g})")
+
+            # Update marker style if style properties changed
+            if any(key in updates for key in ['color', 'symbol', 'size']):
+                color = updates.get('color', self._current_color)
+                symbol = updates.get('symbol', self._current_symbol)
+                size = updates.get('size', self._current_size)
+                
+                self._current_color = color
+                self._current_symbol = symbol
+                self._current_size = size
+
+                # Get current uncertainty values
+                if 'uncertainty_visible' in updates:
+                    if updates['uncertainty_visible']:
+                        upper = updates.get('uncertainty_upper', 0.0)
+                        lower = updates.get('uncertainty_lower', 0.0)
+                        self._current_uncertainty = (lower, upper)
+                    else:
+                        self._current_uncertainty = (None, None)
+                
+                self.symbol_preview.update_style(
+                    color, 
+                    symbol, 
+                    size, 
+                    self._current_uncertainty
+                )
+
+            # Update binding status if changed
+            if 'bound_to_trace' in updates:
+                self._current_bound = updates['bound_to_trace']
+                self.binding_label.setText("[bound]" if self._current_bound else "")
+                self.binding_label.setVisible(self._current_bound)
+
+        except Exception as e:
+            logger.error(f"Error updating marker preview: {e}")
+
 class MarkerSymbolPreview(QWidget):
     """
     Custom widget showing marker symbol with uncertainty bars.
@@ -82,11 +131,15 @@ class MarkerSymbolPreview(QWidget):
     
     def update_style(self, color: str, symbol: str, size: int, 
                     uncertainty: Tuple[Optional[float], Optional[float]]):
-        self._color = QColor(color)
-        self._symbol = symbol
-        self._size = size
-        self._uncertainty = uncertainty
-        self.update()
+        try:
+            self._color = QColor(color)
+            self._symbol = symbol
+            self._size = size
+            self._uncertainty = uncertainty
+            self.update()  # Force a repaint
+            logger.debug(f"Updated marker style: color={color}, symbol={symbol}, size={size}")
+        except Exception as e:
+            logger.error(f"Error updating marker style: {e}")
     
     def paintEvent(self, event):
         try:
@@ -117,6 +170,38 @@ class MarkerSymbolPreview(QWidget):
         except Exception as e:
             logger.error(f"Error drawing marker preview: {e}")
 
+    def _draw_circle(self, painter, center, size):
+        """Draw circle symbol."""
+        radius = size / 2
+        painter.drawEllipse(center, radius, radius)
+
+    def _draw_square(self, painter, center, size):
+        """Draw square symbol."""
+        half_size = size / 2
+        painter.drawRect(center.x() - half_size, center.y() - half_size, 
+                        size, size)
+
+    def _draw_triangle(self, painter, center, size):
+        """Draw triangle symbol."""
+        half_size = size / 2
+        points = [
+            QPointF(center.x(), center.y() - half_size),  # Top
+            QPointF(center.x() - half_size, center.y() + half_size),  # Bottom left
+            QPointF(center.x() + half_size, center.y() + half_size)   # Bottom right
+        ]
+        painter.drawPolygon(points)
+
+    def _draw_diamond(self, painter, center, size):
+        """Draw diamond symbol."""
+        half_size = size / 2
+        points = [
+            QPointF(center.x(), center.y() - half_size),  # Top
+            QPointF(center.x() + half_size, center.y()),  # Right
+            QPointF(center.x(), center.y() + half_size),  # Bottom
+            QPointF(center.x() - half_size, center.y())   # Left
+        ]
+        painter.drawPolygon(points)
+
 class MarkerInfoWidget(ParameterWidget):
     """Widget showing marker info and symbol preview."""
     
@@ -138,7 +223,7 @@ class MarkerInfoWidget(ParameterWidget):
         self._pending_updates = {}
         
         try:
-            # Update symbol style if any style properties changed
+            # Update marker style if any style properties changed
             if any(key in updates for key in ['color', 'symbol', 'size']):
                 color = updates.get('color', self._current_color)
                 symbol = updates.get('symbol', self._current_symbol)
@@ -148,20 +233,34 @@ class MarkerInfoWidget(ParameterWidget):
                 self._current_symbol = symbol
                 self._current_size = size
                 
-                self.symbol_preview.update_style(color, symbol, size)
+                # Get current uncertainty values
+                uncertainty = self._current_uncertainty
+                if 'uncertainty_visible' in updates:
+                    if updates['uncertainty_visible']:
+                        upper = updates.get('uncertainty_upper', 0.0)
+                        lower = updates.get('uncertainty_lower', 0.0)
+                        uncertainty = (lower, upper)
+                    else:
+                        uncertainty = (None, None)
+                
+                self.symbol_preview.update_style(color, symbol, size, uncertainty)
             
             # Update position if x or y changed
             if 'x' in updates or 'y' in updates:
                 x = updates.get('x', self._current_x)
                 y = updates.get('y', self._current_y)
-                
                 self._current_x = x
                 self._current_y = y
+                self.position_label.setText(f"({x:.4g}, {y:.4g})")
                 
-                self.symbol_preview.set_position(x, y)
+            # Update binding status if changed
+            if 'bound_to_trace' in updates:
+                self._current_bound = updates['bound_to_trace']
+                self.binding_label.setText("[bound]" if self._current_bound else "")
+                self.binding_label.setVisible(self._current_bound)
                 
         except Exception as e:
-            logger.error(f"Error updating marker info: {e}")
+            logger.error(f"Error updating marker preview: {e}")
 
 class MarkerParameterItem(ModelParameterItem):
     """Parameter item for markers with enhanced preview."""
@@ -275,6 +374,40 @@ class MarkerParameter(ModelParameter):
             else:
                 param.sigValueChanged.connect(self._handle_parameter_change)
     
+    def handle_property_update(self, prop: str, value: Any):
+        """Handle model property updates with preview updates."""
+        try:
+            # For uncertainty properties, we need to handle them separately
+            if prop.startswith('uncertainty_'):
+                uncertainty_group = self.child('Uncertainty')
+                if uncertainty_group:
+                    param = uncertainty_group.child(prop)
+                    if param:
+                        param.setValue(value)
+            else:
+                # For all other properties, they're at the root level
+                param = self.child(prop)
+                if param:
+                    param.setValue(value)
+
+            # Special handling for bound_to_trace
+            if prop == 'bound_to_trace':
+                y_param = self.child('y')
+                if y_param:
+                    y_param.setOpts(enabled=not value)
+                
+                # Show/hide interpolation mode
+                interp_param = self.child('interpolation_mode')
+                if interp_param:
+                    interp_param.setOpts(visible=value)
+
+            # Update preview widget
+            if hasattr(self, 'widget') and self.widget:
+                self.widget.queue_update(**{prop: value})
+
+        except Exception as e:
+            logger.error(f"Error handling property update: {e}")
+
     def _handle_parameter_change(self, param, value):
         """Handle parameter changes with trace binding awareness."""
         try:
@@ -289,51 +422,14 @@ class MarkerParameter(ModelParameter):
             
             # Handle uncertainty visibility changes
             if param.name() == 'uncertainty_visible':
-                uncertainty_group = self.child('Settings').child('Uncertainty')
-                for child in uncertainty_group.children():
-                    if child.name() != 'uncertainty_visible':
-                        child.setOpts(visible=value)
+                uncertainty_group = self.child('Uncertainty')
+                if uncertainty_group:
+                    for child in uncertainty_group.children():
+                        if child.name() != 'uncertainty_visible':
+                            child.setOpts(visible=value)
             
-            # Normal property update
+            # Update the model
             self.set_model_property(param.name(), value)
             
         except Exception as e:
             logger.error(f"Error handling parameter change: {e}")
-    
-    def handle_property_update(self, prop: str, value: Any):
-        """Handle model property updates with preview updates."""
-        try:
-            # Update matching parameter
-            settings = self.child('Settings')
-            if settings:
-                def update_param(parent, name, val):
-                    for child in parent.children():
-                        if child.name() == name:
-                            child.setValue(val)
-                            return True
-                        if child.type() == 'group':
-                            if update_param(child, name, val):
-                                return True
-                    return False
-                
-                update_param(settings, prop, value)
-            
-            # Check if we need to enable/disable y input
-            if prop == 'bound_to_trace':
-                pos_group = settings.child('Position')
-                if pos_group:
-                    y_param = pos_group.child('y')
-                    if y_param:
-                        y_param.setOpts(enabled=not value)
-                    # Show/hide interpolation mode
-                    interp_param = pos_group.child('interpolation_mode')
-                    if interp_param:
-                        interp_param.setOpts(visible=value)
-            
-            # Update preview widget
-            if hasattr(self, 'widget'):
-                self.widget.queue_update(**{prop: value})
-                
-        except Exception as e:
-            logger.error(f"Error handling property update: {e}")
-
