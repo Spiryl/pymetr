@@ -167,7 +167,8 @@ class TraceHandler(QObject):
             return
 
         try:
-            curve = self.traces[trace_id]
+            # Unpack the tuple to get the curve
+            _, curve = self.traces[trace_id]
             
             # Remove from main plot if present
             if curve.scene() == self.plot_item.scene():
@@ -184,7 +185,7 @@ class TraceHandler(QObject):
                 self.plot_layout.removeItem(self.isolated_axes[trace_id])
                 del self.isolated_axes[trace_id]
             
-            # Remove curve
+            # Remove curve from traces dictionary
             del self.traces[trace_id]
             
         except Exception as e:
@@ -211,5 +212,4 @@ class TraceHandler(QObject):
             "dashdot": Qt.DashDotLine
         }
         result = styles.get(normalized, Qt.SolidLine)
-        logger.debug(f"_get_qt_line_style: converting '{style_str}' -> '{normalized}' -> {result}")
         return result

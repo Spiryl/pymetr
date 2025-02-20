@@ -43,17 +43,17 @@ class PythonHighlighter(QSyntaxHighlighter):
             # Purple neon for keywords
             'keyword':   self._create_format("#9D00FF", bold=True),  
             # Electric cyan for builtins
-            'builtin':   self._create_format("#00F0FF", bold=True),
+            'builtin':   self._create_format("#5E57FF", bold=True),
             # Bright orange for functions
-            'function':  self._create_format("#FFA900", bold=False),
+            'function':  self._create_format("#FF9535", bold=False),
             # Slightly subdued green for comments (italic)
-            'comment':   self._create_format("#4FC366", italic=True),
+            'comment':   self._create_format("#4BAA36", italic=True),
             # Neon yellow for strings
-            'string':    self._create_format("#FFFF82", bold=False),
+            'string':    self._create_format("#4BEE36", bold=False),
             # Gold for numbers
-            'number':    self._create_format("#FFD700", bold=False),
+            'number':    self._create_format("#5E57FF", bold=False),
             # Neon pink for decorators
-            'decorator': self._create_format("#E86BF0", bold=False),
+            'decorator': self._create_format("#F23CA6", bold=False),
         }
 
     def _create_format(self, color: str, bold: bool=False, italic: bool=False) -> QTextCharFormat:

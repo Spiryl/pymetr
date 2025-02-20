@@ -101,7 +101,7 @@ def run_test(test):
                 # Simulate power measurement delay
                 test.wait(20)
         
-        sweep_result.status = ResultStatus.PASS
+        sweep_result.status = 'PASS'
         
         # =============================================
         # Second phase: Individual power level sweeps

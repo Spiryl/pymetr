@@ -34,10 +34,9 @@ class TableView(BaseWidget):
         
         # Configure header
         header = self.table.horizontalHeader()
-        header.setSectionResizeMode(QHeaderView.Interactive)
         header.setDefaultSectionSize(100)
         header.setMinimumSectionSize(50)
-        header.setStretchLastSection(True)
+        header.setSectionResizeMode(QHeaderView.Stretch) 
         
         # Set selection behavior
         self.table.setSelectionBehavior(QTableWidget.SelectRows)

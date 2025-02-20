@@ -24,6 +24,8 @@ class ResultTab(BaseTab):
             "3 Columns",
             "Auto Grid"
         ])
+        # Set the default to Auto Grid (index 3) to match ResultView's default
+        self.layout_combo.setCurrentIndex(3)
         self.layout_combo.currentIndexChanged.connect(self._handle_layout_changed)
         self.toolbar.addWidget(self.layout_combo)
         

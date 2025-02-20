@@ -260,15 +260,14 @@ class PlotView(BaseWidget):
                 self.plot_layout.setBackground(value)
             elif prop == "grid_enabled":
                 self.main_plot_item.showGrid(x=value, y=value, alpha=0.3)
-            elif prop == "x_range":
-                if value:
-                    self.main_plot_item.setXRange(*value, padding=0)
-            elif prop == "y_range":
-                if value:
-                    self.main_plot_item.setYRange(*value, padding=0)
+            elif prop == "x_lim":  # Changed from x_range to x_lim
+                if value and isinstance(value, (list, tuple)) and len(value) == 2:
+                    self.main_plot_item.setXRange(value[0], value[1], padding=0)
+            elif prop == "y_lim":  # Changed from y_range to y_lim
+                if value and isinstance(value, (list, tuple)) and len(value) == 2:
+                    self.main_plot_item.setYRange(value[0], value[1], padding=0)
             elif prop == "title":
                 self.main_plot_item.setTitle(value, size="20pt", color='w')
-
         except Exception as e:
             logger.error(f"Error handling plot property change: {e}")
 
@@ -321,13 +320,13 @@ class PlotView(BaseWidget):
     def _update_plot_ranges(self) -> None:
         """Update plot ranges and scaling."""
         try:
-            x_lim = self.model.get_property('x_lim')
-            y_lim = self.model.get_property('y_lim')
+            x_lim = self.model.get_property('x_lim')  # Changed from x_range to x_lim
+            y_lim = self.model.get_property('y_lim')  # Changed from y_range to y_lim
             
-            if x_lim is not None:
-                self.main_plot_item.setXRange(*x_lim, padding=0)
-            if y_lim is not None:
-                self.main_plot_item.setYRange(*y_lim, padding=0)
+            if x_lim is not None and isinstance(x_lim, (list, tuple)) and len(x_lim) == 2:
+                self.main_plot_item.setXRange(x_lim[0], x_lim[1], padding=0)
+            if y_lim is not None and isinstance(y_lim, (list, tuple)) and len(y_lim) == 2:
+                self.main_plot_item.setYRange(y_lim[0], y_lim[1], padding=0)
 
             vb = self.main_plot_item.getViewBox()
             vb.invertX(self.model.get_property('x_inverted', False))
@@ -337,7 +336,6 @@ class PlotView(BaseWidget):
                 x=self.model.get_property('x_log', False),
                 y=self.model.get_property('y_log', False)
             )
-
         except Exception as e:
             logger.error(f"Error updating plot ranges: {e}")
 

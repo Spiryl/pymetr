@@ -111,33 +111,31 @@ class ResultView(BaseWidget):
     def __init__(self, state, model_id: str, parent=None):
         logger.debug(f"Initializing ResultView for model_id: {model_id}")
         super().__init__(state, parent)
-        self._signals_connected = False  # Track connection state
+        self._signals_connected = False
         
         self.child_views = {}
         self.layout_mode = LayoutMode.GridAuto
         
+        # Ensure the main widget expands in both directions
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.setMinimumSize(400, 300)
-        logger.debug(f"ResultView initial size: {self.size()}")
         
         self._init_ui()
-        logger.debug("Setting model...")
         self.set_model(model_id)
         
     def _init_ui(self):
-        """Initialize the UI components."""
-        logger.debug("Setting up ResultView UI")
+        """Initialize the UI components with improved layout behavior."""
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
         
-        # Header
+        # Header setup remains the same
         self.header = ResultHeader()
         self.header.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.header.setMinimumHeight(40)
         layout.addWidget(self.header)
         
-        # Scroll area setup
+        # Scroll area with improved size policy
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
         self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
@@ -151,19 +149,18 @@ class ResultView(BaseWidget):
         """)
         layout.addWidget(self.scroll_area)
         
-        # Content widget setup
+        # Content widget with improved layout handling
         self.content_widget = QWidget()
         self.content_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.scroll_area.setWidget(self.content_widget)
         
-        # Content layout setup
         self.content_layout = QGridLayout(self.content_widget)
         self.content_layout.setContentsMargins(10, 10, 10, 10)
         self.content_layout.setSpacing(10)
-        # Remove vertical alignment to allow expansion; keep left alignment.
-        self.content_layout.setAlignment(Qt.AlignLeft)
         
-        logger.debug("ResultView UI setup complete")
+        # Critical: Set the content layout to expand properly
+        self.content_layout.setColumnStretch(0, 1)
+        self.content_layout.setRowStretch(0, 1)
     
     def set_model(self, model_id: str):
         """Set up model and establish connections."""
@@ -191,7 +188,7 @@ class ResultView(BaseWidget):
         self._update_layout()
     
     def _add_child_view(self, model, force_layout=True):
-        """Add appropriate view for child model."""
+        """Add child view with improved size handling."""
         if model.id in self.child_views:
             return
             
@@ -207,7 +204,7 @@ class ResultView(BaseWidget):
                 view.setMinimumHeight(200)
             elif isinstance(model, Measurement):
                 view = MeasurementWidget(self)
-                view.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+                view.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
                 view.setMinimumHeight(80)
                 view.update_measurement(model)
                 
@@ -220,37 +217,33 @@ class ResultView(BaseWidget):
             logger.error(f"Error creating view for {model.id}: {e}")
     
     def _update_layout(self):
-        """Rearrange content based on current layout mode."""
-        logger.debug("Updating layout")
-        logger.debug(f"Current widget size: {self.size()}")
-        logger.debug(f"Content widget size: {self.content_widget.size()}")
-        logger.debug(f"Scroll area viewport size: {self.scroll_area.viewport().size()}")
-        
-        # Remove all widgets from layout
+        """Enhanced layout management for better space utilization."""
+        # Clear existing layout and reset stretch factors
+        for i in range(self.content_layout.rowCount()):
+            self.content_layout.setRowStretch(i, 0)
+        for i in range(self.content_layout.columnCount()):
+            self.content_layout.setColumnStretch(i, 0)
+            
         while self.content_layout.count():
             item = self.content_layout.takeAt(0)
             if item.widget():
                 item.widget().setParent(None)
         
         views = list(self.child_views.values())
-        logger.debug(f"Updating layout with {len(views)} views")
         if not views:
-            logger.debug("No views to layout")
+            # Even with no views, ensure the layout stretches
+            self.content_layout.setRowStretch(0, 1)
+            self.content_layout.setColumnStretch(0, 1)
             return
             
         # Calculate grid dimensions
-        count = len(views)
         viewport_width = self.scroll_area.viewport().width()
+        viewport_height = self.scroll_area.viewport().height()
+        width = self.width()
         
+        # Determine columns based on layout mode
         if self.layout_mode == LayoutMode.GridAuto:
-            width = self.width()
-            logger.debug(f"Current width: {width}")
-            if width < 800:
-                cols = 1
-            elif width < 1200:
-                cols = 2
-            else:
-                cols = 3
+            cols = 1 if width < 800 else (2 if width < 1200 else 3)
         elif self.layout_mode == LayoutMode.Grid2:
             cols = 2
         elif self.layout_mode == LayoutMode.Grid3:
@@ -258,53 +251,67 @@ class ResultView(BaseWidget):
         else:  # LayoutMode.Vertical
             cols = 1
             
-        rows = (count + cols - 1) // cols
-        logger.debug(f"Layout grid: {rows} rows x {cols} columns")
+        rows = (len(views) + cols - 1) // cols
         
-        # Reset column stretches
-        for col in range(self.content_layout.columnCount()):
-            self.content_layout.setColumnStretch(col, 0)
+        # Ensure at least one row and column
+        rows = max(1, rows)
+        cols = max(1, cols)
         
-        # Configure grid based on column count
-        if cols == 1:
-            # Single column - stretch to full width
-            self.content_layout.setColumnStretch(0, 1)
-            for view in views:
+        # Set up grid stretching
+        available_height = viewport_height - (rows - 1) * self.content_layout.spacing()
+        row_height = available_height // rows if rows > 0 else available_height
+        
+        # Special handling for single items
+        if len(views) == 1:
+            view = views[0]
+            if isinstance(view, (PlotView, TableView)):
+                view.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
                 if isinstance(view, PlotView):
-                    view.setMinimumWidth(viewport_width - 40)  # Account for margins
-                    view.setMaximumWidth(16777215)  # Qt's QWIDGETSIZE_MAX
-        else:
-            # Multi-column - equal width columns
+                    view.setMinimumHeight(max(250, viewport_height - 40))
+            self.content_layout.addWidget(view, 0, 0, 1, cols)
+            self.content_layout.setRowStretch(0, 1)
             for col in range(cols):
                 self.content_layout.setColumnStretch(col, 1)
-            for view in views:
-                if isinstance(view, PlotView):
-                    view.setMinimumWidth(300)
-                    view.setMaximumWidth(16777215)
+            return
+            
+        # For multiple items, set equal stretching
+        for row in range(rows):
+            self.content_layout.setRowStretch(row, 1)
+        for col in range(cols):
+            self.content_layout.setColumnStretch(col, 1)
         
-        # Add widgets to grid
+        # Handle multiple items
         for idx, view in enumerate(views):
             row = idx // cols
             col = idx % cols
-            logger.debug(f"Adding view at position ({row}, {col})")
-            self.content_layout.addWidget(view, row, col)
-            logger.debug(f"View size: {view.size()}")
             
-        # Set equal stretch for each row so they fill the vertical space
-        for row in range(rows):
-            self.content_layout.setRowStretch(row, 1)
+            # Ensure proper size policies
+            if isinstance(view, (PlotView, TableView)):
+                view.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+                if isinstance(view, PlotView):
+                    view.setMinimumHeight(max(200, row_height))
+                
+            # Add widget to grid with proper span
+            if idx == len(views) - 1 and len(views) % cols != 0:
+                # Last item spans remaining columns if needed
+                remaining_cols = cols - (len(views) % cols) + 1
+                self.content_layout.addWidget(view, row, col, 1, remaining_cols)
+            else:
+                self.content_layout.addWidget(view, row, col)
         
-        # Update minimum width of content widget
-        logger.debug(f"Setting content widget minimum width: {viewport_width}")
+        # Update content widget constraints
         self.content_widget.setMinimumWidth(viewport_width)
-    
+        self.content_widget.setMinimumHeight(viewport_height)
+        
     def resizeEvent(self, event):
-        """Handle resize events to update layout if needed."""
+        """Enhanced resize handling."""
         super().resizeEvent(event)
         viewport = self.scroll_area.viewport()
-        # Set the content widget's minimum dimensions to match the viewport.
+        
+        # Update content widget constraints
         self.content_widget.setMinimumWidth(viewport.width())
-        self.content_widget.setMinimumHeight(viewport.height())
+        
+        # Trigger layout update if in auto mode
         if self.layout_mode == LayoutMode.GridAuto:
             self._update_layout()
     

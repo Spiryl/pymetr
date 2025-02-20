@@ -313,6 +313,38 @@ class Plot(BaseModel):
             value = (float(value[0]), float(value[1]))
         self.set_property("y_lim", value)
 
+    def add(self, item: Union['BaseModel', List['BaseModel']]) -> None:
+        """
+        Add an existing Trace, Marker, or Cursor to the plot.
+        Accepts a single model or a list of models.
+        If a model already has a parent, it will be moved to this plot.
+        
+        Args:
+            item: A Trace, Marker, or Cursor instance or a list of such instances
+            
+        Raises:
+            TypeError: If any item is not a valid plot item type.
+        """
+        from pymetr.models import Trace, Marker, Cursor
+
+        # Wrap single model into a list for uniform processing
+        items = item if isinstance(item, list) else [item]
+        
+        for model in items:
+            if not isinstance(model, (Trace, Marker, Cursor)):
+                raise TypeError(
+                    f"Can only add Trace, Marker, or Cursor objects, got {type(model).__name__}"
+                )
+            # Unlink from the current parent if it exists
+            current_parent = self.state.get_parent(model.id)
+            if current_parent:
+                self.state.unlink_models(current_parent.id, model.id)
+                
+            # Add the model as a child of this plot
+            self.add_child(model)
+            logger.debug(f"Added {type(model).__name__} {model.id} to Plot {self.id}")
+
+
 # --- Trace Management Methods ---
 
     def create_trace(
@@ -345,64 +377,33 @@ class Plot(BaseModel):
         self.add(trace)
         return trace
 
-    def add(self, item: Union['BaseModel', List['BaseModel']]) -> None:
-        """
-        Add an existing Trace, Marker, or Cursor to the plot.
-        Accepts a single model or a list of models.
-        If a model already has a parent, it will be moved to this plot.
-        
-        Args:
-            item: A Trace, Marker, or Cursor instance or a list of such instances
-            
-        Raises:
-            TypeError: If any item is not a valid plot item type.
-        """
-        from pymetr.models import Trace, Marker, Cursor
-
-        # Wrap single model into a list for uniform processing
-        items = item if isinstance(item, list) else [item]
-        
-        for model in items:
-            if not isinstance(model, (Trace, Marker, Cursor)):
-                raise TypeError(
-                    f"Can only add Trace, Marker, or Cursor objects, got {type(model).__name__}"
-                )
-            # Unlink from the current parent if it exists
-            current_parent = self.state.get_parent(model.id)
-            if current_parent:
-                self.state.unlink_models(current_parent.id, model.id)
-                
-            # Add the model as a child of this plot
-            self.add_child(model)
-            logger.debug(f"Added {type(model).__name__} {model.id} to Plot {self.id}")
-
     def set_trace(
         self,
         trace_name: str,
         x_data: np.ndarray,
         y_data: np.ndarray,
-        mode: str = "Group",
-        color: Optional[str] = "#ffffff",
-        style: str = "solid", 
-        width: int = 1,
-        marker_style: str = "",
-        visible: bool = True,
-        opacity: float = 1.0,
+        mode: Optional[str] = None,
+        color: Optional[str] = None,
+        style: Optional[str] = None,
+        width: Optional[int] = None,
+        marker_style: Optional[str] = None,
+        visible: Optional[bool] = None,
+        opacity: Optional[float] = None,
     ) -> 'Trace':
         """
-        Create or update a trace by name.
+        Create or update a trace by name. Only updates properties that are explicitly passed.
         
         Args:
             trace_name: Name to identify the trace
             x_data: X-axis data points
             y_data: Y-axis data points
-            mode: 'Group' or 'Isolate'
-            color: Trace color (hex or name)
-            style: Line style ('solid', 'dash', 'dot', etc.)
-            width: Line width
-            marker_style: Point marker style
-            visible: Visibility flag
-            opacity: Opacity value (0.0 to 1.0)
+            mode: Optional - 'Group' or 'Isolate'
+            color: Optional - Trace color (hex or name)
+            style: Optional - Line style ('solid', 'dash', 'dot', etc.)
+            width: Optional - Line width
+            marker_style: Optional - Point marker style
+            visible: Optional - Visibility flag
+            opacity: Optional - Opacity value (0.0 to 1.0)
             
         Returns:
             Trace: The created or updated trace object
@@ -417,43 +418,52 @@ class Plot(BaseModel):
                 break
 
         if existing_trace is None:
-            # Create new trace
+            # For new traces, collect only the non-None properties
+            props = {
+                'x_data': x_data,
+                'y_data': y_data,
+                'name': trace_name
+            }
+            
+            # Only add optional properties if they were explicitly set
+            optional_props = {
+                'mode': mode,
+                'color': color,
+                'style': style,
+                'width': width,
+                'marker_style': marker_style,
+                'visible': visible,
+                'opacity': opacity
+            }
+            
+            # Add only non-None optional properties
+            props.update({k: v for k, v in optional_props.items() if v is not None})
+            
+            # Create new trace with collected properties
             logger.debug(f"Creating new trace '{trace_name}' in Plot '{self.title}'.")
-            new_trace = self.state.create_model(
-                Trace,
-                x_data=x_data,
-                y_data=y_data,
-                name=trace_name,
-                mode=mode,
-                color=color,
-                style=style,
-                width=width,
-                marker_style=marker_style,
-                visible=visible,
-                opacity=opacity
-            )
+            new_trace = self.state.create_model(Trace, **props)
             self.add_child(new_trace)
             return new_trace
         else:
-            # Update existing trace
+            # Always update data
             existing_trace.data = (x_data, y_data)
 
-            # Update style properties if they changed
-            props = {
-                "mode": mode,
-                "color": color,
-                "style": style,
-                "width": width,
-                "marker_style": marker_style,
-                "visible": visible,
-                "opacity": opacity
-            }
-
-            for prop_name, value in props.items():
-                current_value = existing_trace.get_property(prop_name)
-                if current_value != value:
-                    existing_trace.set_property(prop_name, value)
-                    
+            # Only update properties that were explicitly passed (not None)
+            if mode is not None:
+                existing_trace.set_property('mode', mode)
+            if color is not None:
+                existing_trace.set_property('color', color)
+            if style is not None:
+                existing_trace.set_property('style', style)
+            if width is not None:
+                existing_trace.set_property('width', width)
+            if marker_style is not None:
+                existing_trace.set_property('marker_style', marker_style)
+            if visible is not None:
+                existing_trace.set_property('visible', visible)
+            if opacity is not None:
+                existing_trace.set_property('opacity', opacity)
+                
             return existing_trace
 
     def get_traces(self) -> List['Trace']:
@@ -473,13 +483,10 @@ class Plot(BaseModel):
 
     def create_marker(
         self, 
-        x: float, 
-        y: float, 
-        label: str = "", 
-        color: str = "yellow",
-        size: int = 8,
-        symbol: str = "o",
-        visible: bool = True
+        x: float,
+        y: float,
+        name: str = "",
+        **kwargs
     ) -> 'Marker':
         """
         Create and register a new Marker model.
@@ -487,29 +494,25 @@ class Plot(BaseModel):
         Args:
             x: X-coordinate
             y: Y-coordinate
-            label: Marker label text; if not provided, a default is generated.
-            color: Marker color
-            size: Marker size in pixels
-            symbol: Marker symbol ('o', 't', 's', 'd')
-            visible: Visibility flag
-            
-        Returns:
-            Marker: The created marker object
+            name: Optional marker name (auto-generated if empty)
+            **kwargs: Additional marker properties
+                Defaults handled by Marker class:
+                - color: "yellow"
+                - size: 8
+                - symbol: "o"
+                - visible: True
         """
         from pymetr.models import Marker
-        if not label:
-            # Auto-generate a label based on the current number of markers.
-            current_markers = self.get_markers()  # Assumes this method exists.
-            label = f"Marker {len(current_markers) + 1}"
+        if not name:
+            current_markers = self.get_markers()
+            name = f"Marker {len(current_markers) + 1}"
+            
         marker = self.state.create_model(
             Marker,
             x=x,
             y=y,
-            label=label,
-            color=color,
-            size=size,
-            symbol=symbol,
-            visible=visible
+            name=name,
+            **kwargs
         )
         self.add_child(marker)
         return marker
@@ -519,31 +522,15 @@ class Plot(BaseModel):
         name: str,
         x: float,
         y: float,
-        color: str = "yellow",
-        size: int = 8,
-        symbol: str = "o",
-        visible: bool = True
+        color: Optional[str] = None,
+        size: Optional[int] = None,
+        symbol: Optional[str] = None,
+        visible: Optional[bool] = None
     ) -> 'Marker':
         """
         Create or update a marker by name.
-        
-        If a marker with the given name exists, its position and properties are updated.
-        Otherwise, a new marker is created.
-        
-        Args:
-            marker_name: Unique name to identify the marker.
-            x: X-coordinate.
-            y: Y-coordinate.
-            color: Marker color.
-            size: Marker size in pixels.
-            symbol: Marker symbol.
-            visible: Visibility flag.
-            
-        Returns:
-            Marker: The created or updated marker object.
+        Only updates properties that are explicitly passed.
         """
-        from pymetr.models import Marker
-
         existing_marker = None
         for marker in self.get_markers():
             if marker.name == name:
@@ -551,74 +538,62 @@ class Plot(BaseModel):
                 break
 
         if existing_marker is None:
-            # Create new marker with the given marker_name as label
-            new_marker = self.create_marker(
-                x=x,
-                y=y,
-                label=name,
-                color=color,
-                size=size,
-                symbol=symbol,
-                visible=visible
-            )
-            return new_marker
+            # For new markers, only include non-None properties
+            props = {'x': x, 'y': y}
+            if color is not None: props['color'] = color
+            if size is not None: props['size'] = size
+            if symbol is not None: props['symbol'] = symbol
+            if visible is not None: props['visible'] = visible
+            
+            return self.create_marker(name=name, **props)
         else:
-            # Update existing marker's properties
+            # Always update position
             existing_marker.x = x
             existing_marker.y = y
             
-            if existing_marker.color != color:
+            # Only update properties that were explicitly passed
+            if color is not None:
                 existing_marker.color = color
-            if existing_marker.size != size:
+            if size is not None:
                 existing_marker.size = size
-            if existing_marker.symbol != symbol:
+            if symbol is not None:
                 existing_marker.symbol = symbol
-            if existing_marker.visible != visible:
+            if visible is not None:
                 existing_marker.visible = visible
             
             return existing_marker
 
     def create_cursor(
         self,
-        name: str = "",
+        position: float,
         axis: str = "x",
-        position: float = 0.0,
-        color: str = "yellow",
-        style: str = "solid",
-        width: int = 1,
-        visible: bool = True,
+        name: str = "",
         **kwargs
     ) -> 'Cursor':
         """
         Create and register a new Cursor model.
         
         Args:
-            name: The cursor name. If not provided, a default name will be auto-generated.
-            axis: 'x' for vertical, 'y' for horizontal
             position: Position along the axis
-            color: Cursor color
-            style: Line style
-            width: Line width
-            visible: Visibility flag
+            axis: 'x' for vertical, 'y' for horizontal
+            name: Optional cursor name (auto-generated if empty)
             **kwargs: Additional cursor properties
-            
-        Returns:
-            Cursor: The created cursor object
+                Defaults handled by Cursor class:
+                - color: "yellow"
+                - style: "solid"
+                - width: 1
+                - visible: True
         """
         from pymetr.models import Cursor
-        # Auto-generate a name if one is not provided.
         if not name:
-            current_cursors = self.get_cursors()  # Assumes a method that returns a list of existing cursors.
+            current_cursors = self.get_cursors()
             name = f"Cursor {len(current_cursors) + 1}"
+            
         cursor = self.state.create_model(
             Cursor,
-            name=name,
-            axis=axis,
             position=position,
-            color=color,
-            style=style,
-            width=width,
-            visible=visible,
+            axis=axis,
+            name=name,
             **kwargs
         )
         self.add_child(cursor)
@@ -626,66 +601,48 @@ class Plot(BaseModel):
 
     def set_cursor(
         self,
-        cursor_name: str,
-        axis: str = "x",
-        position: float = 0.0,
-        color: str = "yellow",
-        style: str = "solid",
-        width: int = 1,
-        visible: bool = True,
-        **kwargs
+        name: str,
+        position: float,
+        axis: Optional[str] = None,
+        color: Optional[str] = None,
+        style: Optional[str] = None,
+        width: Optional[int] = None,
+        visible: Optional[bool] = None
     ) -> 'Cursor':
         """
         Create or update a cursor by name.
-        
-        If a cursor with the given name exists, its properties are updated.
-        Otherwise, a new cursor is created.
-        
-        Args:
-            cursor_name: Unique name to identify the cursor.
-            axis: 'x' for vertical or 'y' for horizontal.
-            position: Position along the axis.
-            color: Cursor color.
-            style: Line style.
-            width: Line width.
-            visible: Visibility flag.
-            **kwargs: Additional cursor properties.
-            
-        Returns:
-            Cursor: The created or updated cursor object.
+        Only updates properties that are explicitly passed.
         """
-        from pymetr.models import Cursor
-
         existing_cursor = None
         for cursor in self.get_cursors():
-            if cursor.name == cursor_name:
+            if cursor.name == name:
                 existing_cursor = cursor
                 break
 
         if existing_cursor is None:
-            new_cursor = self.create_cursor(
-                name=cursor_name,
-                axis=axis,
-                position=position,
-                color=color,
-                style=style,
-                width=width,
-                visible=visible,
-                **kwargs
-            )
-            return new_cursor
+            # For new cursors, only include non-None properties
+            props = {'position': position}
+            if axis is not None: props['axis'] = axis
+            if color is not None: props['color'] = color
+            if style is not None: props['style'] = style
+            if width is not None: props['width'] = width
+            if visible is not None: props['visible'] = visible
+            
+            return self.create_cursor(name=name, **props)
         else:
-            if existing_cursor.axis != axis:
+            # Always update position
+            existing_cursor.position = position
+            
+            # Only update properties that were explicitly passed
+            if axis is not None:
                 existing_cursor.axis = axis
-            if existing_cursor.position != position:
-                existing_cursor.position = position
-            if existing_cursor.color != color:
+            if color is not None:
                 existing_cursor.color = color
-            if existing_cursor.style != style:
+            if style is not None:
                 existing_cursor.style = style
-            if existing_cursor.width != width:
+            if width is not None:
                 existing_cursor.width = width
-            if existing_cursor.visible != visible:
+            if visible is not None:
                 existing_cursor.visible = visible
             
             return existing_cursor
