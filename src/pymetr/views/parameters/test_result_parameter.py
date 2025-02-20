@@ -69,7 +69,7 @@ class ResultStatusWidget(ParameterWidget):
             logger.error(f"Invalid progress value: {progress_val} - {e}")
             progress = 0
         
-        logger.debug(f"Updating widget: status={status if status else 'None'}, progress={progress}")
+        # logger.debug(f"Updating widget: status={status if status else 'None'}, progress={progress}")
         self._apply_style(status, progress)
     
     def _apply_style(self, status: Optional[ResultStatus], progress: float):

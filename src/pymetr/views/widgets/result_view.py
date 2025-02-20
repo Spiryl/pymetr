@@ -170,7 +170,7 @@ class ResultView(BaseWidget):
             
         # Update header
         name = self.model.get_property('name', 'Untitled Result')
-        status = self.model.get_property('status', 'Pending')
+        status = self.model.get_property('status', None)
         self.header.update_name(name)
         self.header.update_status(status)
         

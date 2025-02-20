@@ -21,20 +21,6 @@ def run_test(test):
     plot.y_unit = "V"
     plot.grid_enabled = True
     plot.legend_enabled = True
-    plot.roi_visible = True
-    plot.background_color = "#1E1E1E"
-    plot.foreground_color = "#FFFFFF"
-    plot.grid_color = "#404040"
-    plot.grid_alpha = 0.3
-    plot.legend_position = "right"
-    plot.x_log = False
-    plot.y_log = False
-    plot.x_inverted = False
-    plot.y_inverted = False
-    plot.x_ticks = None  # Auto ticks
-    plot.y_ticks = None  # Auto ticks
-    plot.x_tick_labels = None  # Auto labels
-    plot.y_tick_labels = None  # Auto labels
     
     
     # Create a table with 10 rows of analysis data and add it to the result

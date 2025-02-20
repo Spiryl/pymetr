@@ -171,84 +171,129 @@ class PlotView(BaseWidget):
         except Exception as e:
             logger.error(f"Error during plot model initialization: {e}")
 
+    def _is_descendant(self, model_id: str, ancestor_id: str) -> bool:
+        """Return True if the model with model_id is a descendant of the model with ancestor_id."""
+        current = self.state.get_parent(model_id)
+        while current:
+            if current.id == ancestor_id:
+                return True
+            current = self.state.get_parent(current.id)
+        return False
+
     @Slot(str, str, str, object)
     def _handle_model_changed(self, model_id: str, model_type: str, prop: str, value: Any) -> None:
+        """
+        Handle property changes. We only process changes for:
+        - This Plot itself (model_id == self.model_id)
+        - A Trace/Cursor/Marker whose *immediate* parent is this Plot.
+        """
         try:
-            if model_id == self.model_id:
-                if model_type == "Plot":
-                    if prop == 'roi':
-                        self._suppress_roi_updates = True
-                        self.roi.setRegion(value)
-                        self.main_plot_item.setXRange(*value, padding=0)
-                        self._suppress_roi_updates = False
-                        self._queue_roi_update()  # Debounced update
-                        return
-                    elif prop == 'roi_visible':
-                        self.roi_plot_area.setVisible(value)
-                        if value and not self._roi_connected:
-                            self.roi.sigRegionChanged.connect(self._handle_roi_changed)
-                            self._roi_connected = True
-                        elif not value and self._roi_connected:
-                            try:
-                                self.roi.sigRegionChanged.disconnect(self._handle_roi_changed)
-                            except Exception:
-                                pass
-                            self._roi_connected = False
-                        return
-                    else:
-                        self._handle_plot_property_change(prop, value)
-                        return
-            elif model_type == "Trace":
-                self.trace_handler.handle_property_change(model_id, model_type, prop, value)
-                trace_model = self.state.get_model(model_id)
-                if trace_model:
-                    self._create_or_update_roi_curve(trace_model)
-                if self.roi_plot_area.isVisible():
-                    self._queue_roi_update()  # Debounced update for trace changes
-            elif model_type == "Cursor":
-                self.cursor_handler.handle_property_change(model_id, model_type, prop, value)
-            elif model_type == "Marker":
-                self.marker_handler.handle_property_change(model_id, model_type, prop, value)
+
+            logger.debug(
+                f"{model_type} {model_id} prop={prop}, value={type(value)}"
+            )
+            if model_id == self.model_id and model_type == "Plot":
+                logger.debug(f"[PlotView] This is my own plot property '{prop}'.")
+                # This is the Plot itself
+                if prop == 'roi':
+                    self._suppress_roi_updates = True
+                    self.roi.setRegion(value)
+                    self.main_plot_item.setXRange(*value, padding=0)
+                    self._suppress_roi_updates = False
+                    self._queue_roi_update()  # Debounced update
+                elif prop == 'roi_visible':
+                    self.roi_plot_area.setVisible(value)
+                    if value and not self._roi_connected:
+                        self.roi.sigRegionChanged.connect(self._handle_roi_changed)
+                        self._roi_connected = True
+                    elif not value and self._roi_connected:
+                        try:
+                            self.roi.sigRegionChanged.disconnect(self._handle_roi_changed)
+                        except Exception:
+                            pass
+                        self._roi_connected = False
+                else:
+                    self._handle_plot_property_change(prop, value)
+                return
+
+            # For traces, cursors, markers: only update if I'm their *immediate* parent
+            if model_type in ("Trace", "Cursor", "Marker"):
+                parent = self.state.get_parent(model_id)
+                logger.debug(
+                    f"[PlotView] {model_type} {model_id} parent = {parent.id if parent else None}"
+                )
+                if parent and parent.id == self.model_id:
+                    logger.debug(f"[PlotView] => Accepted update for {model_type} {model_id}, prop={prop}")
+                    if model_type == "Trace":
+                        self.trace_handler.handle_property_change(model_id, model_type, prop, value)
+                        trace_model = self.state.get_model(model_id)
+                        if trace_model:
+                            self._create_or_update_roi_curve(trace_model)
+                        if self.roi_plot_area.isVisible():
+                            self._queue_roi_update()  # Debounced update
+                    elif model_type == "Cursor":
+                        self.cursor_handler.handle_property_change(model_id, model_type, prop, value)
+                    elif model_type == "Marker":
+                        self.marker_handler.handle_property_change(model_id, model_type, prop, value)
+                return
+
         except Exception as e:
             logger.error(f"Error handling model change: {e}")
 
+
     @Slot(str)
     def _handle_model_registered(self, model_id: str) -> None:
-        """Handle new model registration."""
+        """
+        Handle new model registration. Only add it if its *immediate* parent is this Plot.
+        """
         try:
             model = self.state.get_model(model_id)
             if not model:
                 return
 
-            if model.model_type == "Trace":
-                self.trace_handler.add_trace(model)
-                self._create_or_update_roi_curve(model)
-                # Legacy: if parent has ROI update flag, trigger update
-                if hasattr(self.parent(), '_roi_update_needed'):
-                    self.parent()._roi_update_needed = True
-                    self.parent().roi_update_timer.start()
-            elif model.model_type == "Cursor":
-                self.cursor_handler.add_cursor(model)
-            elif model.model_type == "Marker":
-                self.marker_handler.add_marker(model)
+            if model.model_type in ("Trace", "Cursor", "Marker"):
+                parent = self.state.get_parent(model_id)
+                if parent and parent.id == self.model_id:
+                    if model.model_type == "Trace":
+                        self.trace_handler.add_trace(model)
+                        self._create_or_update_roi_curve(model)
+                        if self.roi_plot_area.isVisible():
+                            self._queue_roi_update()
+                    elif model.model_type == "Cursor":
+                        self.cursor_handler.add_cursor(model)
+                    elif model.model_type == "Marker":
+                        self.marker_handler.add_marker(model)
 
         except Exception as e:
             logger.error(f"Error handling model registration: {e}")
 
+
     @Slot(str)
     def _handle_model_removed(self, model_id: str) -> None:
-        """Remove model from appropriate handler."""
+        """
+        Remove a model from the appropriate handler if I'm its *immediate* parent.
+        """
         try:
+            # If it's in the trace handler
             if model_id in getattr(self.trace_handler, 'traces', {}):
-                self.trace_handler.remove_trace(model_id)
-                # Remove corresponding ROI curve if it exists
-                if model_id in self.roi_curves:
-                    self.roi_plot_item.removeItem(self.roi_curves[model_id])
-                    del self.roi_curves[model_id]
+                parent = self.state.get_parent(model_id)
+                if parent and parent.id == self.model_id:
+                    self.trace_handler.remove_trace(model_id)
+                    if model_id in self.roi_curves:
+                        self.roi_plot_item.removeItem(self.roi_curves[model_id])
+                        del self.roi_curves[model_id]
+
+            # If it's in the cursor handler
             elif model_id in getattr(self.cursor_handler, 'cursors', {}):
-                self.cursor_handler.remove_cursor(model_id)
+                parent = self.state.get_parent(model_id)
+                if parent and parent.id == self.model_id:
+                    self.cursor_handler.remove_cursor(model_id)
+
+            # If it's in the marker handler
             elif model_id in getattr(self.marker_handler, 'markers', {}):
-                self.marker_handler.remove_marker(model_id)
+                parent = self.state.get_parent(model_id)
+                if parent and parent.id == self.model_id:
+                    self.marker_handler.remove_marker(model_id)
 
         except Exception as e:
             logger.error(f"Error handling model removal: {e}")

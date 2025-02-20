@@ -172,7 +172,7 @@ def run_test(test):
             # Update trace with temporal smoothing
             plot.set_trace(f"Cosmic{idx+1}", x, y, color=color)
         
-        test.wait(20)
+        test.wait(10)
         result.progress = int((frame + 1) / total_frames * 100)
     
     result.status = "PASS"

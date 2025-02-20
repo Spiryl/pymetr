@@ -1,4 +1,4 @@
-def run_test():
+def run_test(test):
     """
     Test script to analyze model linking behavior.
     Creates a hierarchy of models and monitors registration/linking.
@@ -39,7 +39,7 @@ def run_test():
     result.add(plot1)  # This should ideally be ignored
     
     # Add delay to ensure we can see all events
-    wait(1000)
+    test.wait(10)
     
     result.status = "Pass"
     return True

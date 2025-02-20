@@ -38,7 +38,7 @@ class TestProgressWidget(ParameterWidget):
         self._apply_style(TestStatus.READY, 0)
     
     def _process_pending_update(self):
-        logger.debug(f"TestProgressWidget._process_pending_update: {self._pending_updates}")
+        # logger.debug(f"TestProgressWidget._process_pending_update: {self._pending_updates}")
         self._pending_updates.clear()
         
         status_val = self.param.get_model_property("status", "READY")
@@ -63,7 +63,7 @@ class TestProgressWidget(ParameterWidget):
             logger.error(f"TestProgressWidget: Invalid progress value: {progress_val} - {e}")
             progress = 0
         
-        logger.debug(f"TestProgressWidget updating: status={status.name}, progress={progress}")
+        # logger.debug(f"TestProgressWidget updating: status={status.name}, progress={progress}")
         self._apply_style(status, progress)
     
     def _apply_style(self, status: TestStatus, progress: float):

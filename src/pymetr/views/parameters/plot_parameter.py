@@ -11,7 +11,7 @@ from pymetr.models import Plot, Trace, Marker, Cursor
 
 class ItemCountIcon(QWidget):
     """Custom widget showing an icon with a count badge in the top-right corner."""
-    def __init__(self, icon_path: str, badge_color: str = "#FF8400", text_color: str = "#DDDDDD", parent=None):
+    def __init__(self, icon_path: str, badge_color: str = "#FF8400", text_color: str = "#1e1e1e", parent=None):
         super().__init__(parent)
         self._icon = QIcon(icon_path)
         self._badge_color = QColor(badge_color)
