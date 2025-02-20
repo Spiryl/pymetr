@@ -33,7 +33,7 @@ class ParameterWidget(QWidget):
     
     def queue_update(self, **kwargs):
         """Queue updates with throttling."""
-        logger.debug(f"Queueing update for {self.param.title()}: {kwargs}")
+        # logger.debug(f"Queueing update for {self.param.title()}: {kwargs}")
         self._pending_updates.update(kwargs)
         if not self._update_timer.isActive():
             self._update_timer.start(self._throttle_interval)

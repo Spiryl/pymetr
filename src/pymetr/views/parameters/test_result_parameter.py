@@ -39,14 +39,14 @@ class ResultStatusWidget(ParameterWidget):
     
     def queue_update(self, **kwargs):
         # Add our debug log here
-        logger.debug(f"ResultStatusWidget.queue_update called with: {kwargs}")
+        # logger.debug(f"ResultStatusWidget.queue_update called with: {kwargs}")
         super().queue_update(**kwargs)
         # For debugging: force an immediate processing call.
         # Remove or comment this line once you confirm the update chain works.
         self._process_pending_update()
     
     def _process_pending_update(self):
-        logger.debug(f"ResultStatusWidget._process_pending_update: {self._pending_updates}")
+        # logger.debug(f"ResultStatusWidget._process_pending_update: {self._pending_updates}")
         self._pending_updates.clear()
         
         # Read current values from the model
@@ -165,7 +165,7 @@ class TestResultParameter(ModelParameter):
         pass
     
     def handle_property_update(self, prop: str, value: Any):
-        logger.debug(f"TestResultParameter: handle_property_update prop: {prop}, value: {value}, widget: {getattr(self, 'widget', None)}")
+        # logger.debug(f"TestResultParameter: handle_property_update prop: {prop}, value: {value}, widget: {getattr(self, 'widget', None)}")
         # If the widget isn't attached directly to self, try the one on self.param
         widget = getattr(self, 'widget', None) or getattr(self, 'widget', None)
         if widget is not None:

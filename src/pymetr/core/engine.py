@@ -5,7 +5,7 @@ from pathlib import Path
 import importlib.util
 import sys
 import traceback
-
+from typing import Optional
 import numpy as np
 import pandas as pd
 
@@ -85,18 +85,59 @@ class Engine(QObject):
             'TestStatus': TestStatus,
             'ResultStatus': ResultStatus
         }
-        
+
+        self.state.model_changed.connect(self._handle_model_changed)
         logger.info("Engine initialized.")
+
+    def _handle_model_changed(self, model_id: str, model_type: str, prop: str, value: object):
+        """
+        Whenever a model changes, if it's a TestResult child of the active script,
+        recalc the script's aggregated progress.
+        """
+        # We only care about progress changes on TestResult
+        if model_type == "TestResult" and prop == "progress":
+            # See if the top-level parent is a TestScript
+            script = self._find_top_level_script(model_id)
+            # If the script is the currently active test, recalc progress
+            active_test = self.state.get_active_test()
+            if script and active_test and script.id == active_test.id:
+                self._update_script_progress(script)
+    
+    def _find_top_level_script(self, model_id: str) -> Optional[TestScript]:
+        """
+        Climb up the parent chain until we find a TestScript or no parent.
+        """
+        while True:
+            parent = self.state.get_parent(model_id)
+            if not parent:
+                return None
+            if isinstance(parent, TestScript):
+                return parent
+            model_id = parent.id
+
+    def _update_script_progress(self, script: TestScript):
+        """
+        Compute average progress across all child TestResults
+        and update the script's 'progress' property.
+        """
+        # Get all child models that are TestResults
+        results = [
+            child for child in self.state.get_children(script.id)
+            if isinstance(child, TestResult)
+        ]
+        if not results:
+            return  # No results => do nothing
+        
+        total = sum(r.get_property("progress", 0.0) for r in results)
+        avg = total / len(results)
+        
+        script.set_property("progress", avg)
 
     # ---------------------------------------------------
     # Script Running
     # ---------------------------------------------------
 
     def run_test_script(self, script_id: str) -> None:
-        """
-        Run a test script using the specified TestScript model ID.
-        Now uses TestContext to manage script state and operations.
-        """
         script = self.state.get_model(script_id)
         if not script or not isinstance(script, TestScript):
             logger.error(f"Engine.run_test_script: No TestScript found with id '{script_id}'")
@@ -104,18 +145,22 @@ class Engine(QObject):
 
         # Clear previous child models
         self.state.clear_children(script.id)
-        
+
+        # Make sure the script is "RUNNING" from the start
+        script.set_property("status", "RUNNING")
+        script.set_property("progress", 0)
+
         # Create context for this script
         context = TestContext(script, self)
-        
+
         # Set as active test
         self.state.set_active_test(script_id)
-        
+
         # Start execution
         context.on_script_start()
         self.script_started.emit(script.id)
 
-        self.script_runner = ScriptRunner(script.script_path, {'test': context})
+        self.script_runner = ScriptRunner(script.script_path, {"test": context})
         self.script_runner.finished.connect(
             lambda success, error: self._on_script_finished(context, success, error)
         )
