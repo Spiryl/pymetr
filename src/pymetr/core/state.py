@@ -9,6 +9,49 @@ from pymetr.drivers import Instrument
 T = TypeVar('T', bound=BaseModel)
 
 
+class DiscoveryWorker(QObject):
+    """Worker object for performing instrument discovery in a background thread."""
+    
+    # Signals
+    finished = Signal(dict)  # Emits discovered instruments dict
+    instrument_found = Signal(dict)  # Emits each instrument as it's found
+    error = Signal(str)  # Emits error message if discovery fails
+
+    def __init__(self, model_filter: Optional[List[str]] = None):
+        super().__init__()
+        self.model_filter = model_filter
+        self._running = False
+        
+    def discover(self):
+        """Run discovery process."""
+        try:
+            logger.debug("Starting discovery in worker thread")
+            self._running = True
+            
+            # Perform discovery
+            instruments = Instrument.list_instruments(self.model_filter)
+            
+            # Emit each instrument as we find it
+            for uid, info in instruments.items():
+                if not self._running:
+                    # Check if we should stop
+                    break
+                self.instrument_found.emit(info)
+            
+            if self._running:
+                # Only emit finished if we weren't stopped
+                self.finished.emit(instruments)
+                
+        except Exception as e:
+            logger.error(f"Error in discovery worker: {e}")
+            self.error.emit(str(e))
+        finally:
+            self._running = False
+            
+    def stop(self):
+        """Stop the discovery process."""
+        self._running = False
+
 class ApplicationState(QObject):
     # Signals
     model_registered = Signal(str)           # model_id
@@ -46,6 +89,10 @@ class ApplicationState(QObject):
         self._update_timer.setSingleShot(True)
         self._update_timer.timeout.connect(self._process_pending_updates)
         self._throttle_interval = 16  # About 60fps
+
+        self._discovered_instruments = {}
+        self._discovery_thread = None
+        self._discovery_worker = None
         
         self.engine = Engine(self)
         self.model_registration_requested.connect(self._handle_registration_request)
@@ -298,26 +345,61 @@ class ApplicationState(QObject):
         self.model_viewed.emit(model_id)
 
     def discover_instruments(self, model_filter: Optional[List[str]] = None):
-        """Start instrument discovery process."""
+        """Start instrument discovery process in background thread."""
         logger.debug("Starting instrument discovery")
         self.discovery_started.emit()
         
-        try:
-            instruments = Instrument.list_instruments(model_filter)
-            
-            self._discovered_instruments = instruments
-            
-            # Emit found signal for each instrument
-            for uid, info in instruments.items():
-                self.instrument_found.emit(info)
-            
-            # Emit completion signal with all instruments
-            self.discovery_complete.emit(instruments)
-            logger.info(f"Discovery complete. Found {len(instruments)} instruments")
-            
-        except Exception as e:
-            logger.error(f"Error during instrument discovery: {e}")
-            self.discovery_complete.emit({})
+        # Create worker and thread
+        self._discovery_worker = DiscoveryWorker(model_filter)
+        self._discovery_thread = QThread()
+        
+        # Move worker to thread
+        self._discovery_worker.moveToThread(self._discovery_thread)
+        
+        # Connect signals
+        self._discovery_thread.started.connect(self._discovery_worker.discover)
+        self._discovery_worker.finished.connect(self._handle_discovery_complete)
+        self._discovery_worker.instrument_found.connect(self._handle_instrument_found)
+        self._discovery_worker.error.connect(self._handle_discovery_error)
+        self._discovery_worker.finished.connect(self._discovery_thread.quit)
+        self._discovery_thread.finished.connect(self._cleanup_discovery)
+        
+        # Start the thread
+        self._discovery_thread.start()
+
+    def stop_discovery(self):
+        """Stop any ongoing discovery process."""
+        if self._discovery_worker:
+            self._discovery_worker.stop()
+        if self._discovery_thread:
+            self._discovery_thread.quit()
+            self._discovery_thread.wait()
+        self._cleanup_discovery()
+
+    def _cleanup_discovery(self):
+        """Clean up discovery thread and worker."""
+        if self._discovery_thread:
+            self._discovery_thread.deleteLater()
+            self._discovery_thread = None
+        if self._discovery_worker:
+            self._discovery_worker.deleteLater()
+            self._discovery_worker = None
+
+    def _handle_discovery_complete(self, instruments: Dict):
+        """Handle discovery completion."""
+        logger.debug(f"Discovery complete, found {len(instruments)} instruments")
+        self._discovered_instruments = instruments
+        self.discovery_complete.emit(instruments)
+
+    def _handle_instrument_found(self, info: Dict):
+        """Handle individual instrument discovery."""
+        logger.debug(f"Found instrument: {info.get('model', 'Unknown')}")
+        self.instrument_found.emit(info)
+
+    def _handle_discovery_error(self, error: str):
+        """Handle discovery error."""
+        logger.error(f"Discovery error: {error}")
+        self.discovery_complete.emit({})  # Emit empty dict on error
 
     def get_discovered_instruments(self) -> Dict[str, Dict]:
         """Get the currently discovered instruments."""
