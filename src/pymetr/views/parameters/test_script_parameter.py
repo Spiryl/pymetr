@@ -1,6 +1,7 @@
 from typing import Optional, Any
 from PySide6.QtWidgets import QWidget, QProgressBar, QHBoxLayout, QMenu
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QIcon
 from pymetr.models import TestStatus, TestScript
 from pymetr.core.logging import logger
 
@@ -143,15 +144,47 @@ class TestScriptParameterItem(ModelParameterItem):
             self.widget.queue_update(**kwargs)
     
     def addCustomContextActions(self, menu: QMenu):
-        """Add test-specific context actions."""
-        # No additional actions needed - handled by widget's context menu
-        pass
+        """Add test-specific context menu actions."""
+        if not self._context_icons:
+            logger.debug("No context icons available")
+            return
+            
+        # Add Run action
+        run_action = menu.addAction(
+            self._context_icons.get('run', QIcon()),
+            "Run Test"
+        )
+        run_action.triggered.connect(self._handle_run)
+        
+        # Add Stop action (enabled only when running)
+        stop_action = menu.addAction(
+            self._context_icons.get('stop', QIcon()),
+            "Stop Test"
+        )
+        stop_action.triggered.connect(self._handle_stop)
+        
+        # Add separator before standard actions
+        menu.addSeparator()
+        
+        # Enable/disable based on current status
+        model = self.param.state.get_model(self.param.model_id)
+        if model:
+            status = model.get_property('status', 'READY')
+            stop_action.setEnabled(status == 'RUNNING')
+            run_action.setEnabled(status != 'RUNNING')
+    
+    def _handle_run(self):
+        """Handle Run Test action."""
+        if hasattr(self.param, 'state'):
+            self.param.state.engine.run_test_script(self.param.model_id)
+    
+    def _handle_stop(self):
+        """Handle Stop Test action."""
+        if hasattr(self.param, 'state'):
+            self.param.state.engine.script_runner.stop()
 
 class TestScriptParameter(ModelParameter):
-    """
-    Parameter for test scripts. Only shows children (results, plots, etc.)
-    and provides progress tracking.
-    """
+    """Parameter for test scripts."""
     
     itemClass = TestScriptParameterItem
     

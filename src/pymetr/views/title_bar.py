@@ -1,5 +1,3 @@
-# pymetr/views/title_bar.py
-
 import logging
 import os
 from PySide6.QtWidgets import (
@@ -9,7 +7,6 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Signal, Qt, QPoint, QSize
 from PySide6.QtGui import QIcon
 
-# Import your standard actions
 from pymetr.core.actions import STANDARD_ACTIONS
 
 logger = logging.getLogger(__name__)
@@ -17,9 +14,9 @@ logger = logging.getLogger(__name__)
 class TitleBar(QWidget):
     """
     A custom, frameless title bar with:
-      - "File," "Report," "Automation," "Window" QToolButtons
+      - Menu buttons (File, Edit, Instrument, Report, Window, Options)
       - Minimize, Maximize, Close buttons
-      - Optionally hooking up actions from STANDARD_ACTIONS
+      - Window dragging support
     """
     
     windowMinimizeRequested = Signal()
@@ -27,12 +24,9 @@ class TitleBar(QWidget):
     windowCloseRequested = Signal()
 
     def __init__(self, parent=None, state=None):
-        """
-        Pass in 'state' so we can call e.g. STANDARD_ACTIONS['open_script'].handler(state)
-        """
         super().__init__(parent)
         
-        self.state = state    # Store the app state to run actions
+        self.state = state
         self._pressing = False
         self._start_pos = None
         
@@ -43,90 +37,158 @@ class TitleBar(QWidget):
 
         # Build absolute path to icons
         base_dir = os.path.dirname(os.path.abspath(__file__))
-        icons_dir = os.path.join(base_dir, "icons")
+        self.icons_dir = os.path.join(base_dir, "icons")
 
-        # ---------- "File" QToolButton ----------
+        self._setup_menu_buttons()
+        self._setup_window_controls()
+
+    def _setup_menu_buttons(self):
+        """Set up the menu buttons on the left side."""
+        # File menu
         self.file_button = QToolButton(self)
         self.file_button.setText("File")
-        self.file_button.clicked.connect(self.on_file_menu_clicked)
+        self.file_button.clicked.connect(self._show_file_menu)
         self.layout.addWidget(self.file_button)
 
-        # ---------- "Report" Button ----------
+        # Edit menu
+        self.edit_button = QToolButton(self)
+        self.edit_button.setText("Edit")
+        self.edit_button.clicked.connect(self._show_edit_menu)
+        self.layout.addWidget(self.edit_button)
+
+        # Instrument menu
+        self.instrument_button = QToolButton(self)
+        self.instrument_button.setText("Instrument")
+        self.instrument_button.clicked.connect(self._show_instrument_menu)
+        self.layout.addWidget(self.instrument_button)
+
+        # Report menu
         self.report_button = QToolButton(self)
         self.report_button.setText("Report")
-        # If you'd like a menu or direct action, handle similarly
-        # self.report_button.clicked.connect(self.on_report_menu_clicked)
+        self.report_button.clicked.connect(self._show_report_menu)
         self.layout.addWidget(self.report_button)
 
-        # ---------- "Automation" Button ----------
-        self.automation_button = QToolButton(self)
-        self.automation_button.setText("Automation")
-        # self.automation_button.clicked.connect(self.on_automation_menu_clicked)
-        self.layout.addWidget(self.automation_button)
-
-        # ---------- "Window" Button ----------
+        # Window menu
         self.window_button = QToolButton(self)
         self.window_button.setText("Window")
-        # Possibly open a QMenu or do something else
+        self.window_button.clicked.connect(self._show_window_menu)
         self.layout.addWidget(self.window_button)
 
-        # ---------- Spacer pushes window-controls to the right ----------
+        # Options menu
+        self.options_button = QToolButton(self)
+        self.options_button.setText("Options")
+        self.options_button.clicked.connect(self._show_options_menu)
+        self.layout.addWidget(self.options_button)
+
+        # Add expanding spacer to push window controls right
         spacer = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
         self.layout.addSpacerItem(spacer)
 
-        # ---------- Window control buttons ----------
-        minimize_icon = os.path.join(icons_dir, "minimize.png")
+    def _setup_window_controls(self):
+        """Set up the window control buttons on the right side."""
+        # Minimize button
+        minimize_icon = os.path.join(self.icons_dir, "minimize.png")
         self.minimize_button = QToolButton()
         self.minimize_button.setIcon(QIcon(minimize_icon))
         self.minimize_button.setIconSize(QSize(24, 24))
         self.minimize_button.clicked.connect(self.on_minimize_clicked)
         self.layout.addWidget(self.minimize_button)
 
-        maximize_icon = os.path.join(icons_dir, "maximize.png")
+        # Maximize button
+        maximize_icon = os.path.join(self.icons_dir, "maximize.png")
         self.maximize_button = QToolButton()
         self.maximize_button.setIcon(QIcon(maximize_icon))
         self.maximize_button.setIconSize(QSize(24, 24))
         self.maximize_button.clicked.connect(self.on_maximize_clicked)
         self.layout.addWidget(self.maximize_button)
 
-        close_icon = os.path.join(icons_dir, "close.png")
+        # Close button
+        close_icon = os.path.join(self.icons_dir, "close.png")
         self.close_button = QToolButton()
         self.close_button.setIcon(QIcon(close_icon))
         self.close_button.setIconSize(QSize(24, 24))
         self.close_button.clicked.connect(self.on_close_clicked)
         self.layout.addWidget(self.close_button)
 
-    # ----------------------------------------------------------------------
-    # EXAMPLE: "File" button -> QMenu -> standard actions
-    # ----------------------------------------------------------------------
-    def on_file_menu_clicked(self):
-        """
-        Create a QMenu with "New," "Open," "Save" that call standard actions
-        by hooking up to e.g. STANDARD_ACTIONS['new_script'].handler(self.state)
-        """
+    def _show_file_menu(self):
         menu = QMenu(self)
+        
+        # New submenu
+        new_menu = menu.addMenu("New")
+        new_menu.addAction("Suite", lambda: self._trigger_action('new_suite'))
+        new_menu.addAction("Script", lambda: self._trigger_action('new_script'))
+        
+        # Open submenu
+        open_menu = menu.addMenu("Open")
+        open_menu.addAction("Suite", lambda: self._trigger_action('open_suite'))
+        open_menu.addAction("Script", lambda: self._trigger_action('open_script'))
+        
+        menu.addSeparator()
+        
+        # Save actions
+        menu.addAction("Save", lambda: self._trigger_action('save_script'))
+        menu.addAction("Save Suite", lambda: self._trigger_action('save_suite'))
+        
+        menu.addSeparator()
+        
+        # Data submenu
+        data_menu = menu.addMenu("Data")
+        data_menu.addAction("Load Data")
+        data_menu.addAction("Save Data")
+        
+        # State submenu
+        state_menu = menu.addMenu("State")
+        state_menu.addAction("Load State")
+        state_menu.addAction("Save State")
+        
+        menu.exec_(self.file_button.mapToGlobal(QPoint(0, self.file_button.height())))
 
-        # "New Script"
-        action_new = menu.addAction("New Script")
-        action_new.triggered.connect(lambda: self._trigger_action('new_script'))
+    def _show_edit_menu(self):
+        menu = QMenu(self)
+        menu.addAction("Create Result")
+        menu.addAction("Create Plot")
+        
+        markers_menu = menu.addMenu("Markers")
+        markers_menu.addAction("Create Marker")
+        markers_menu.addAction("Create Cursor")
+        
+        menu.exec_(self.edit_button.mapToGlobal(QPoint(0, self.edit_button.height())))
 
-        # "Open Script"
-        action_open = menu.addAction("Open Script")
-        action_open.triggered.connect(lambda: self._trigger_action('open_script'))
+    def _show_instrument_menu(self):
+        menu = QMenu(self)
+        menu.addAction("Discover", lambda: self._trigger_action('discover_instruments'))
+        menu.addAction("Load Driver")
+        menu.addAction("Mock Instrument")
+        
+        menu.exec_(self.instrument_button.mapToGlobal(QPoint(0, self.instrument_button.height())))
 
-        # "Save Script"
-        action_save = menu.addAction("Save Script")
-        action_save.triggered.connect(lambda: self._trigger_action('save_script'))
+    def _show_report_menu(self):
+        menu = QMenu(self)
+        menu.addAction("Generate")
+        menu.addAction("Load Template")
+        menu.addAction("New Template")
+        menu.addSeparator()
+        menu.addAction("Preferences")
+        
+        menu.exec_(self.report_button.mapToGlobal(QPoint(0, self.report_button.height())))
 
-        # Show the QMenu under the File button
-        pos = self.file_button.mapToGlobal(QPoint(0, self.file_button.height()))
-        menu.exec_(pos)
+    def _show_window_menu(self):
+        menu = QMenu(self)
+        menu.addAction("Default Layout")
+        menu.addSeparator()
+        menu.addAction("Show/Hide Instrument Dock")
+        menu.addAction("Show/Hide Console")
+        
+        menu.exec_(self.window_button.mapToGlobal(QPoint(0, self.window_button.height())))
+
+    def _show_options_menu(self):
+        menu = QMenu(self)
+        menu.addAction("Settings")
+        
+        menu.exec_(self.options_button.mapToGlobal(QPoint(0, self.options_button.height())))
 
     def _trigger_action(self, action_id: str):
-        """
-        Utility: calls the relevant STANDARD_ACTIONS action handler
-        if it 'can_execute' on the current state.
-        """
+        """Trigger a standard action if available and executable."""
         if not self.state:
             logger.warning("TitleBar has no 'state'; cannot run action.")
             return
@@ -143,9 +205,7 @@ class TitleBar(QWidget):
         logger.debug(f"TitleBar: calling handler for '{action_id}'")
         action_obj.handler(self.state)
 
-    # ----------------------------------------------------------------------
-    # Window control: we simply emit signals that the main window connects
-    # ----------------------------------------------------------------------
+    # Window control handlers
     def on_minimize_clicked(self):
         self.windowMinimizeRequested.emit()
 
@@ -155,9 +215,7 @@ class TitleBar(QWidget):
     def on_close_clicked(self):
         self.windowCloseRequested.emit()
 
-    # ----------------------------------------------------------------------
-    # Enable window dragging by the title bar
-    # ----------------------------------------------------------------------
+    # Window dragging support
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
             self._pressing = True

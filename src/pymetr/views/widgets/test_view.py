@@ -16,6 +16,7 @@ from ..parameters.cursor_parameter import CursorParameter
 from ..parameters.data_table_parameter import DataTableParameter
 from ..parameters.test_script_parameter import TestScriptParameter
 from ..parameters.test_result_parameter import TestResultParameter
+from ..parameters.test_suite_parameter import TestSuiteParameter
 from ..parameters.base import ModelParameter
 
 from ..widgets.base import BaseWidget
@@ -39,7 +40,8 @@ class ModelTreeView(BaseWidget):
         'cursor': CursorParameter,
         'datatable': DataTableParameter,
         'testscript': TestScriptParameter,
-        'testresult': TestResultParameter
+        'testresult': TestResultParameter,
+        'testsuite': TestSuiteParameter  # Add TestSuite parameter type
     }
     
     # Register parameter types with pyqtgraph
@@ -51,6 +53,7 @@ class ModelTreeView(BaseWidget):
     
     # Model type icons
     MODEL_ICONS = {
+        'TestSuite': 'test_suite.png',  # Add TestSuite icon
         'TestScript': 'script.png',
         'TestResult': 'result.png',
         'TestGroup': 'folder.png',
@@ -160,7 +163,8 @@ class ModelTreeView(BaseWidget):
             param_type = model_type.lower()
             if param_type in self.PARAMETER_TYPES:
                 param_class = self.PARAMETER_TYPES[param_type]
-                if param_type == 'testscript':
+                # Auto-expand suites and scripts
+                if param_type in ['testsuite', 'testscript']:
                     param_opts['expanded'] = True
                 return param_class(**param_opts)
             

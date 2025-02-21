@@ -9,9 +9,9 @@ from typing import Optional, Any, Dict, List
 import numpy as np
 import concurrent.futures
 
-from drivers.connections import PyVisaConnection
-from drivers.connections import RawSocketConnection
-from drivers.connections import ConnectionInterface
+from pymetr.drivers.connections import PyVisaConnection
+from pymetr.drivers.connections import RawSocketConnection
+from pymetr.drivers.connections import ConnectionInterface
 
 
 logger = logging.getLogger(__name__)

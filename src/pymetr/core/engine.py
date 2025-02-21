@@ -13,6 +13,156 @@ from .context import TestContext
 from pymetr.models import *
 from pymetr.core.logging import logger
 
+class SuiteRunner(QObject):
+    """
+    Handles test suite execution using run configurations.
+    """
+    suite_started = Signal(str)          # suite_id
+    suite_completed = Signal(str, bool)  # suite_id, success
+    suite_error = Signal(str, str)       # suite_id, error_msg
+    script_queued = Signal(str, str)     # suite_id, script_name
+    
+    def __init__(self, engine):
+        super().__init__()
+        self._engine = engine
+        self._state = engine.state
+        self._current_suite = None
+        self._current_config = None
+        self._running = False
+        self._script_queue = []
+        
+        # Connect to engine script signals
+        self._engine.script_finished.connect(self._handle_script_completed)
+    
+    def run_suite(self, suite_id: str):
+        """Start suite execution with active run configuration."""
+        if self._running:
+            logger.warning("Suite already running")
+            return
+            
+        suite = self._state.get_model(suite_id)
+        if not isinstance(suite, TestSuite):
+            logger.error(f"Model {suite_id} is not a TestSuite")
+            return
+            
+        # Get active config
+        active_config_name = suite.get_property('active_config')
+        config = None
+        
+        if active_config_name:
+            # Find config by name
+            for cfg in suite.get_run_configs():
+                if cfg.get_property('name') == active_config_name:
+                    config = cfg
+                    break
+        
+        if not config:
+            # Fallback to default config
+            config = suite.get_default_config()
+            if not config:
+                self._handle_error("No valid run configuration found")
+                return
+        
+        self._current_suite = suite
+        self._current_config = config
+        self._running = True
+        
+        try:
+            # Build execution queue from config
+            self._script_queue = config.get_execution_order()
+            for script_id in self._script_queue:
+                script = self._state.get_model(script_id)
+                if script:
+                    self.script_queued.emit(suite_id, script.get_property('name', ''))
+            
+            # Start first script
+            self._run_next_script()
+            
+            # Emit started
+            self.suite_started.emit(suite_id)
+            suite.set_property('status', TestStatus.RUNNING)
+            
+        except Exception as e:
+            self._handle_error(str(e))
+    
+    def stop_suite(self):
+        """Stop current suite execution."""
+        if not self._running:
+            return
+            
+        # Stop current script
+        if self._engine.script_runner:
+            self._engine.script_runner.stop()
+        
+        self._cleanup()
+    
+    def _run_next_script(self):
+        """Run next script in queue."""
+        if not self._script_queue:
+            self._handle_suite_complete(True)
+            return
+            
+        script_id = self._script_queue.pop(0)
+        try:
+            # Get script model
+            script = self._state.get_model(script_id)
+            if not script:
+                raise ValueError(f"Script {script_id} not found")
+                
+            # Run it
+            self._engine.run_test_script(script.id)
+            
+        except Exception as e:
+            self._handle_error(f"Failed to run script {script_id}: {e}")
+    
+    def _handle_script_completed(self, script_id: str, success: bool, error_msg: str):
+        """Handle individual script completion."""
+        if not self._running:
+            return
+            
+        script = self._state.get_model(script_id)
+        if not script:
+            return
+            
+        if success:
+            # Run next script
+            self._run_next_script()
+        else:
+            # Check suite behavior
+            behavior = self._current_suite.get_property('failure_behavior', 'stop')
+            if behavior == 'stop':
+                self._handle_suite_complete(False)
+            else:
+                # Continue with next script
+                self._run_next_script()
+    
+    def _handle_suite_complete(self, success: bool):
+        """Handle suite completion."""
+        if self._current_suite:
+            # Update suite status
+            status = TestStatus.PASS if success else TestStatus.FAIL
+            self._current_suite.set_property('status', status)
+            
+            # Emit completion
+            self.suite_completed.emit(self._current_suite.id, success)
+        
+        self._cleanup()
+    
+    def _handle_error(self, error_msg: str):
+        """Handle suite error."""
+        if self._current_suite:
+            self._current_suite.set_property('status', TestStatus.ERROR)
+            self.suite_error.emit(self._current_suite.id, error_msg)
+        
+        self._cleanup()
+    
+    def _cleanup(self):
+        """Clean up suite run state."""
+        self._running = False
+        self._script_queue.clear()
+        self._current_suite = None
+        self._current_config = None
+
 class ScriptRunner(QThread):
     # Signal: finished(success, error_message)
     finished = Signal(bool, str)
@@ -88,6 +238,17 @@ class Engine(QObject):
 
         self.state.model_changed.connect(self._handle_model_changed)
         logger.info("Engine initialized.")
+
+    def run_suite(self, suite_id: str):
+        """Run a test suite."""
+        if not hasattr(self, 'suite_runner'):
+            self.suite_runner = SuiteRunner(self)
+        self.suite_runner.run_suite(suite_id)
+
+    def stop_suite(self):
+        """Stop current suite execution."""
+        if hasattr(self, 'suite_runner'):
+            self.suite_runner.stop_suite()
 
     def _handle_model_changed(self, model_id: str, model_type: str, prop: str, value: object):
         """

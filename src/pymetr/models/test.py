@@ -1,7 +1,7 @@
 # pymetr/models/test.py
 from pathlib import Path
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List, Dict
 
 from PySide6.QtCore import Slot
 from pymetr.models.base import BaseModel
@@ -46,6 +46,38 @@ class ResultStatus(Enum):
     def from_bool(cls, success: bool) -> 'ResultStatus':
         """Convert a boolean success value to ResultStatus."""
         return cls.PASS if success else cls.FAIL
+
+
+class RunConfig(BaseModel):
+    """
+    Defines a configuration of scripts to run and their order.
+    """
+    def __init__(self, **kwargs):
+        super().__init__("runconfig", **kwargs)
+        
+        # Initialize properties
+        self.set_property('name', kwargs.get('name', 'Default Config'))
+        self.set_property('description', kwargs.get('description', ''))
+        self.set_property('is_default', kwargs.get('is_default', False))
+        
+        # Script execution map: script_id -> order
+        self._script_map: Dict[str, int] = {}
+    
+    def add_script(self, script_id: str, order: int):
+        """Add script to this configuration."""
+        self._script_map[script_id] = order
+    
+    def remove_script(self, script_id: str):
+        """Remove script from configuration."""
+        if script_id in self._script_map:
+            del self._script_map[script_id]
+    
+    def get_execution_order(self) -> List[str]:
+        """Get script IDs in execution order."""
+        return [
+            script_id for script_id, _ in 
+            sorted(self._script_map.items(), key=lambda x: x[1])
+        ]
     
 class TestScript(BaseModel):
     """
@@ -122,6 +154,47 @@ class TestScript(BaseModel):
             self.set_property('error', error_msg)
         logger.info(f"Script {self.name} finished: {self.status}")
 
+class TestSuite(BaseModel):
+    """
+    Container for test scripts and their execution configurations.
+    Scripts can be added/removed dynamically.
+    """
+    def __init__(self, model_id: Optional[str] = None, name: Optional[str] = None):
+        super().__init__(model_type='TestSuite', model_id=model_id, name=name)
+        
+        # Initialize with default properties
+        self.set_property('status', TestStatus.READY.name)
+        self.set_property('failure_behavior', 'stop')  # or 'continue'
+        
+    def add_script(self, script: TestScript):
+        """Add a test script to this suite."""
+        self.add_child(script)
+        
+    def remove_script(self, script_id: str):
+        """Remove a script from this suite."""
+        if self.state:
+            self.state.remove_model(script_id)
+            
+    def get_scripts(self) -> List[TestScript]:
+        """Get all test scripts in this suite."""
+        return [
+            model for model in self.get_children()
+            if isinstance(model, TestScript)
+        ]
+    
+    def get_run_configs(self) -> List[RunConfig]:
+        """Get all run configurations."""
+        return [
+            model for model in self.get_children()
+            if isinstance(model, RunConfig)
+        ]
+    
+    def get_default_config(self) -> Optional[RunConfig]:
+        """Get default run configuration."""
+        for config in self.get_run_configs():
+            if config.get_property('is_default', False):
+                return config
+        return None
 
 class TestGroup(BaseModel):
     """

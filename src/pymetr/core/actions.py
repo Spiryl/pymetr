@@ -1,11 +1,15 @@
 # Start of C:/Users/rsmith/Documents/GitHub/pymetr/src/pymetr/core/actions.py
 from dataclasses import dataclass, field
 from enum import Enum, auto
+from dataclasses import dataclass, field
+from enum import Enum, auto
 from typing import Dict, Any, Optional, Callable
 from pathlib import Path
 from PySide6.QtWidgets import QMessageBox
 
+from pymetr.models.test import TestSuite
 from pymetr.services.script import ScriptService
+from pymetr.services.file_services import FileService
 from pymetr.core.logging import logger
 
 class ActionCategory(Enum):
@@ -17,6 +21,9 @@ class ActionCategory(Enum):
     PLOT = auto()
     DATA = auto()
     INSTRUMENT = auto()
+    WINDOW = auto()
+    OPTIONS = auto()
+    REPORT = auto()
 
 @dataclass
 class MenuItem:
@@ -46,7 +53,80 @@ class Action:
 
 class FileActions:
     """File-related actions coordinator."""
-    
+
+    @staticmethod
+    def new_suite(state) -> None:
+        """Create a new empty test suite."""
+        try:
+            from pymetr.models.test import TestSuite
+            # Create basic suite with just a name
+            suite = state.create_model(TestSuite, name="New Test Suite")
+            state.set_active_model(suite.id)
+            logger.debug(f"Created new test suite with ID: {suite.id}")
+            
+            # Could add a default test script folder here if desired:
+            # script_group = state.create_model(TestGroup, name="Scripts")
+            # state.link_models(suite.id, script_group.id)
+            
+        except Exception as e:
+            logger.error(f"Error creating test suite: {e}")
+            parent = getattr(state, '_parent', None)
+            if parent:
+                QMessageBox.critical(parent, "Error", f"Failed to create test suite: {e}")
+
+    @staticmethod
+    def open_suite(state) -> None:
+        """Open an existing test suite."""
+        parent = getattr(state, '_parent', None)
+        success, path, error = FileService.open_suite(parent)
+        
+        if success and path:
+            try:
+                suite_id = FileService.import_model_data(path, state)
+                if suite_id:
+                    state.set_active_model(suite_id)
+                    logger.debug(f"Opened test suite from {path}")
+            except Exception as e:
+                logger.error(f"Error opening suite: {e}")
+                if parent:
+                    QMessageBox.critical(parent, "Error", f"Failed to open suite: {e}")
+        elif error and parent:
+            QMessageBox.critical(parent, "Error", f"Failed to open suite: {error}")
+
+    @staticmethod
+    def save_suite(state) -> None:
+        """Save current test suite."""
+        model = state.get_active_model()
+        if model and isinstance(model, TestSuite):
+            parent = getattr(state, '_parent', None)
+            success, path, error = FileService.save_suite(model, parent)
+            
+            if not success and error and parent:
+                QMessageBox.critical(parent, "Error", f"Failed to save suite: {error}")
+
+    @staticmethod 
+    def add_script_to_suite(state, suite_id: str) -> None:
+        """Add an existing script to a suite."""
+        try:
+            # Let user select a script file
+            parent = getattr(state, '_parent', None)
+            success, path, error = ScriptService.open_script(parent)
+            
+            if success and path:
+                from pymetr.models.test import TestScript
+                # Create script model
+                script = state.create_model(TestScript, script_path=path)
+                script.set_property('name', path.stem)
+                
+                # Link to suite
+                state.link_models(suite_id, script.id)
+                logger.debug(f"Added script {script.id} to suite {suite_id}")
+                
+        except Exception as e:
+            logger.error(f"Error adding script to suite: {e}")
+            if parent:
+                QMessageBox.critical(parent, "Error", f"Failed to add script: {e}")
+
     @staticmethod
     def new_script(state) -> None:
         """Coordinate script creation between service and state."""
@@ -166,38 +246,58 @@ class InstrumentActions:
     
     @staticmethod
     def discover_instruments(state) -> None:
-        """Open instrument discovery dialog."""
+        """Open instrument discovery dialog or view."""
+        logger.debug("InstrumentActions: Initiating instrument discovery")
         parent = getattr(state, '_parent', None)
-        if parent:
-            try:
-                from pymetr.views.widgets.discovery_view import DiscoveryDialog
-                logger.debug("InstrumentActions: Launching discovery dialog")
-                dialog = DiscoveryDialog(state, parent)
-                if dialog.exec_():
-                    info = dialog.result_info
-                    if info:
-                        try:
-                            from pymetr.models.device import Device
-                            device = state.create_model(
-                                Device,
-                                manufacturer=info.get('manufacturer'),
-                                model=info.get('model'),
-                                serial_number=info.get('serial'),
-                                firmware=info.get('firmware'),
-                                resource=info.get('resource')
-                            )
-                            state.set_active_model(device.id)
-                            logger.debug(f"InstrumentActions: Device model created with ID: {device.id}")
-                        except Exception as e:
-                            logger.error(f"InstrumentActions: Error creating device: {e}")
-                            QMessageBox.critical(parent, "Error", f"Failed to create device: {e}")
-            except Exception as e:
-                logger.error(f"InstrumentActions: Failed to open discovery dialog: {e}")
-                QMessageBox.critical(parent, "Error", f"Failed to open discovery dialog: {e}")
+        
+        try:
+            if not parent:
+                # No parent window - just do discovery
+                state.discover_instruments()
+                return
+                
+            from pymetr.views.widgets.discovery_view import DiscoveryDialog
+            dialog = DiscoveryDialog(state, parent)
+            
+            if dialog.exec_():
+                # User selected an instrument
+                info = dialog.result_info
+                if info:
+                    state.connect_instrument(info)
+                    
+        except Exception as e:
+            logger.error(f"Error in discover_instruments: {e}")
+            if parent:
+                QMessageBox.critical(
+                    parent,
+                    "Discovery Error",
+                    f"Failed to start discovery: {str(e)}"
+                )
 
 # Define standard actions
 STANDARD_ACTIONS = {
     # File actions
+    'new_suite': Action(
+        id='new_suite',
+        name='New Suite',
+        category=ActionCategory.FILE,
+        icon='new_suite.png',
+        handler=FileActions.new_suite
+    ),
+    'open_suite': Action(
+        id='open_suite',
+        name='Open Suite',
+        category=ActionCategory.FILE,
+        icon='open_suite.png',
+        handler=FileActions.open_suite
+    ),
+    'save_suite': Action(
+        id='save_suite',
+        name='Save Suite',
+        category=ActionCategory.FILE,
+        icon='save.png',
+        handler=FileActions.save_suite
+    ),
     'new_script': Action(
         id='new_script',
         name='New',

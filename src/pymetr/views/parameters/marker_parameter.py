@@ -380,29 +380,29 @@ class MarkerParameter(ModelParameter):
             # For uncertainty properties, we need to handle them separately
             if prop.startswith('uncertainty_'):
                 uncertainty_group = self.child('Uncertainty')
-                if uncertainty_group:
+                if uncertainty_group and not uncertainty_group.isRemoved():
                     param = uncertainty_group.child(prop)
-                    if param:
+                    if param and not param.isRemoved():
                         param.setValue(value)
             else:
                 # For all other properties, they're at the root level
                 param = self.child(prop)
-                if param:
+                if param and not param.isRemoved():
                     param.setValue(value)
 
             # Special handling for bound_to_trace
             if prop == 'bound_to_trace':
                 y_param = self.child('y')
-                if y_param:
+                if y_param and not y_param.isRemoved():
                     y_param.setOpts(enabled=not value)
                 
                 # Show/hide interpolation mode
                 interp_param = self.child('interpolation_mode')
-                if interp_param:
+                if interp_param and not interp_param.isRemoved():
                     interp_param.setOpts(visible=value)
 
             # Update preview widget
-            if hasattr(self, 'widget') and self.widget:
+            if hasattr(self, 'widget') and self.widget and not self.widget.isDeleted():
                 self.widget.queue_update(**{prop: value})
 
         except Exception as e:
@@ -416,6 +416,10 @@ class MarkerParameter(ModelParameter):
             if not model:
                 return
             
+            # Make sure parameter still exists
+            if param.isRemoved():
+                return
+            
             # Special handling for y-value when trace bound
             if param.name() == 'y' and model.bound_to_trace:
                 return  # Ignore y changes when bound to trace
@@ -423,9 +427,9 @@ class MarkerParameter(ModelParameter):
             # Handle uncertainty visibility changes
             if param.name() == 'uncertainty_visible':
                 uncertainty_group = self.child('Uncertainty')
-                if uncertainty_group:
+                if uncertainty_group and not uncertainty_group.isRemoved():
                     for child in uncertainty_group.children():
-                        if child.name() != 'uncertainty_visible':
+                        if child and not child.isRemoved() and child.name() != 'uncertainty_visible':
                             child.setOpts(visible=value)
             
             # Update the model

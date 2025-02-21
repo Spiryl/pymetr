@@ -132,7 +132,7 @@ class ResultView(BaseWidget):
         # Header setup remains the same
         self.header = ResultHeader()
         self.header.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self.header.setMinimumHeight(40)
+        self.header.setMinimumHeight(20)
         layout.addWidget(self.header)
         
         # Scroll area with improved size policy
@@ -155,8 +155,8 @@ class ResultView(BaseWidget):
         self.scroll_area.setWidget(self.content_widget)
         
         self.content_layout = QGridLayout(self.content_widget)
-        self.content_layout.setContentsMargins(10, 10, 10, 10)
-        self.content_layout.setSpacing(10)
+        self.content_layout.setContentsMargins(4, 0, 4, 4)
+        self.content_layout.setSpacing(4)
         
         # Critical: Set the content layout to expand properly
         self.content_layout.setColumnStretch(0, 1)
