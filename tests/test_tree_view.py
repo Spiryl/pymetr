@@ -1,6 +1,6 @@
 # tests/test_tree_view.py
 import pytest
-from pymetr.views.widgets.test_view import ModelTreeView
+from pymetr.views.widgets.test_tree_view import ModelTreeView
 from .conftest import TestScript, TestResult
 
 def test_model_creation(state, qapp, test_script):

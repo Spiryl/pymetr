@@ -7,6 +7,7 @@ from pymetr.models.trace import Trace
 from pymetr.models.marker import Marker
 from pymetr.models.cursor import Cursor
 from pymetr.models.table import DataTable
+from pymetr.core.visitor import InstrumentVisitor
     
 class TestContext:
     """
@@ -201,3 +202,21 @@ class TestContext:
             self.script.set_property('status', TestStatus.ERROR)
             self.script.set_property('error', str(e))
     
+    # Add methods for the script engine context
+    @classmethod
+    def get_instrument(cls, model: str, state=None):
+        """
+        Factory method to create and register a new instrument instance.
+        Used by the script engine context.
+        """
+        # Create device instance
+        device = cls(model=model, state=state)
+        
+        # Load driver and build parameter tree
+        visitor = InstrumentVisitor()
+        driver_info = visitor.create_instrument_data_from_driver(f"drivers/{model}.py")
+        device.set_driver_info(driver_info)
+        
+        # Connect and return
+        device.connect()
+        return device

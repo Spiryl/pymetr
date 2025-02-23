@@ -16,11 +16,11 @@ communication is now asynchronous.
 import logging
 import numpy as np
 
-from scpi.core.scpi_instrument import SCPIInstrument
-from scpi.core.subsystem import Subsystem
-from scpi.core.sources import Sources
-from scpi.core.trace import Trace
-from scpi.core.properties import (
+from pymetr.drivers.base import SCPIInstrument
+from pymetr.drivers.base import Subsystem
+from pymetr.drivers.base.sources import Sources
+from pymetr.models import Trace
+from pymetr.drivers.base.properties import (
     SwitchProperty,
     SelectProperty,
     ValueProperty,

@@ -1,246 +1,194 @@
 from typing import Dict, Any, Optional, List
+import pandas as pd
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QLabel, QMenu
-from PySide6.QtCore import QTimer
-
+from PySide6.QtCore import Qt
 from pyqtgraph.parametertree import Parameter
-from .base import ModelParameter, ModelParameterItem
 from pymetr.core.logging import logger
 
-class TableInfoWidget(QWidget):
+from .base import ModelParameter, ModelParameterItem, ParameterWidget
+
+
+class DataTableDisplayWidget(ParameterWidget):
     """
-    Enhanced widget showing table metadata with efficient updates.
-    Displays row/column counts and data type information.
+    Widget that displays the row and column counts in the format
+    "[{row_count}:{column_count}]" in white text.
     """
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        
-        # Update throttling: adjusted to ~33ms (~30fps)
-        self._update_timer = QTimer(self)
-        self._update_timer.setSingleShot(True)
-        self._update_timer.timeout.connect(self._process_pending_update)
-        self._pending_info = None
-        self._throttle_interval = 33
-        
-        # Cache for metadata
-        self._current_info = {
-            'rows': 0,
-            'cols': 0,
-            'types': []
-        }
-        
+    def __init__(self, param, parent=None):
+        super().__init__(param, parent)
+        self._current_counts = {'rows': None, 'cols': None}
         self._setup_ui()
-        
+
     def _setup_ui(self):
-        layout = QHBoxLayout()
+        logger.debug("Setting up DataTableDisplayWidget UI")
+        layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(4)
         
-        # Info labels
         self.size_label = QLabel()
-        self.type_label = QLabel()
-        
-        # Style labels
-        for label in [self.size_label, self.type_label]:
-            label.setStyleSheet("""
-                QLabel {
-                    color: #dddddd;
-                    padding: 2px 4px;
-                }
-            """)
-        
+        self.size_label.setStyleSheet("""
+            QLabel {
+                color: white;
+                padding: 2px 4px;
+                font-weight: bold;
+            }
+        """)
         layout.addWidget(self.size_label)
-        layout.addWidget(self.type_label)
         layout.addStretch()
-        
         self.setLayout(layout)
-        
-    def queue_update(self, rows: int, cols: int, types: List[str] = None):
-        """Queue metadata update with throttling."""
-        self._pending_info = {
-            'rows': rows,
-            'cols': cols,
-            'types': types or []
-        }
-        if not self._update_timer.isActive():
-            self._update_timer.start(self._throttle_interval)
-    
+
     def _process_pending_update(self):
-        """Process pending metadata update."""
-        if not self._pending_info:
+        logger.debug("DataTableDisplayWidget processing pending update")
+        self._pending_updates.clear()
+
+        # Get the model from state
+        model = (self.param.state.get_model(self.param.model_id)
+                 if self.param.state and self.param.model_id else None)
+        if model is None:
+            logger.debug("DataTableDisplayWidget: No model found")
             return
-            
-        info = self._pending_info
-        self._pending_info = None
-        
-        try:
-            # Update only if changed
-            if (info['rows'] != self._current_info['rows'] or 
-                info['cols'] != self._current_info['cols']):
-                self.size_label.setText(f"{info['rows']}×{info['cols']}")
-                self._current_info.update(info)
-            
-            # Update type info if provided and changed
-            if info['types'] and info['types'] != self._current_info['types']:
-                type_text = self._format_type_info(info['types'])
-                self.type_label.setText(type_text)
-                self._current_info['types'] = info['types']
-                
-        except Exception as e:
-            logger.error(f"Error updating table info: {e}")
-    
-    def _format_type_info(self, types: List[str]) -> str:
-        """Format type information efficiently."""
-        if not types:
-            return ""
-            
-        try:
-            # Get unique types with counts
-            type_counts = {}
-            for t in types:
-                type_counts[t] = type_counts.get(t, 0) + 1
-            
-            # Format as compact string
-            type_info = [f"{t}({c})" for t, c in type_counts.items()]
-            return ", ".join(type_info)
-            
-        except Exception as e:
-            logger.error(f"Error formatting type info: {e}")
-            return ""
-    
-    def cleanup(self):
-        """Clean up resources."""
-        self._update_timer.stop()
+
+        # Get the DataFrame
+        df = model.get_property("data")
+        if not isinstance(df, pd.DataFrame):
+            logger.debug("DataTableDisplayWidget: Model data is not a DataFrame")
+            return
+
+        # Calculate row and column counts
+        row_count = len(df)
+        col_count = len(df.columns)
+        logger.debug(f"DataTableDisplayWidget: Row count = {row_count}, Col count = {col_count}")
+
+        # Only update the label if counts have changed
+        if (row_count != self._current_counts['rows'] or 
+            col_count != self._current_counts['cols']):
+            self.size_label.setText(f"[{row_count}:{col_count}]")
+            self._current_counts['rows'] = row_count
+            self._current_counts['cols'] = col_count
+            logger.debug("DataTableDisplayWidget label updated")
+        else:
+            logger.debug("DataTableDisplayWidget: No change in row/col counts")
+
 
 class DataTableParameterItem(ModelParameterItem):
-    """Enhanced parameter item for data tables."""
-    
-    def __init__(self, param, depth):
-        super().__init__(param, depth)
-        self.hideWidget = False
-        self.widget = None
-        
+    """
+    Parameter item for the DataTable parameter.
+    Creates and attaches the DataTableDisplayWidget.
+    """
     def makeWidget(self) -> Optional[QWidget]:
-        """Create the info widget."""
+        logger.debug(f"Creating DataTable widget for parameter {self.param.title()}")
         try:
-            self.widget = TableInfoWidget()
-            self.update_table_info()
+            self.widget = DataTableDisplayWidget(self.param)
             return self.widget
         except Exception as e:
-            logger.error(f"Error creating table widget: {e}")
+            logger.error(f"Error creating DataTable widget for {self.param.title()}: {e}")
             return None
-        
-    def update_table_info(self):
-        """Update table metadata display."""
-        if (hasattr(self, 'widget') and self.widget and 
-            hasattr(self.param, 'state') and 
-            hasattr(self.param, 'model_id')):
-            try:
-                model = self.param.state.get_model(self.param.model_id)
-                if model:
-                    rows = model.get_property('row_count', 0)
-                    cols = model.get_property('col_count', 0)
-                    types = model.get_property('column_types', [])
-                    self.widget.queue_update(rows, cols, types)
-            except Exception as e:
-                logger.error(f"Error updating table info: {e}")
-                
-    def treeWidgetChanged(self):
-        """Set up tree widget with info display."""
+
+    def updateWidget(self, **kwargs):
+        if self.widget:
+            logger.debug(f"DataTableParameterItem updating widget with {kwargs}")
+            self.widget.queue_update(**kwargs)
+
+    def treeWidgetChanged(self) -> None:
+        # Attach the widget when the item is added to the tree.
         super().treeWidgetChanged()
-        if not hasattr(self, 'widget') or not self.widget:
+        if self.widget is None:
+            logger.debug(f"DataTableParameterItem.treeWidgetChanged: Creating widget for parameter {self.param.title()}")
             self.widget = self.makeWidget()
+            self.param.widget = self.widget
         tree = self.treeWidget()
         if tree is not None:
+            logger.debug("DataTableParameterItem.treeWidgetChanged: Setting item widget in tree")
             tree.setItemWidget(self, 1, self.widget)
-    
-    def cleanup(self):
-        """Clean up resources properly."""
-        try:
-            if hasattr(self, 'widget') and self.widget:
-                self.widget.cleanup()
-                self.widget.deleteLater()
-                self.widget = None
-        except Exception as e:
-            logger.error(f"Error cleaning up table parameter: {e}")
-        super().cleanup()
 
 class DataTableParameter(ModelParameter):
     """
-    Enhanced parameter for data table display and control.
-    Handles table metadata and provides efficient updates.
+    Model parameter for data table display.
+    This parameter both displays table metadata via a custom widget
+    and holds sub-parameters for display and formatting options.
     """
     itemClass = DataTableParameterItem
 
     def __init__(self, **opts):
-        opts['type'] = 'datatable'
+        opts['type'] = 'table'
         super().__init__(**opts)
-        
-        # Get model for initial values
-        model = self.state.get_model(self.model_id) if self.state and self.model_id else None
-        
-        # Add export capability
         self.can_export = True
-        
-        # Set up child parameters
+        # Retrieve the initial model if available
+        model = self.state.get_model(self.model_id) if self.state and self.model_id else None
         self._setup_parameters(model)
-        
+
     def _setup_parameters(self, model):
-        """Set up child parameters with proper structure."""
+        logger.debug("Setting up DataTableParameter child parameters")
+        # Define child parameters for table display options.
         children = [
-            dict(
-                name='Display',
-                type='group',
-                children=[
-                    dict(name='show_index', type='bool', default=None,
-                         value=model.get_property('show_index', True) if model else True),
-                    dict(name='show_header', type='bool', default=None,
-                         value=model.get_property('show_header', True) if model else True),
-                    dict(name='alternate_rows', type='bool', default=None,
-                         value=model.get_property('alternate_rows', True) if model else True)
+            {
+                'name': 'Display',
+                'type': 'group',
+                'expanded': False,
+                'children': [
+                    {
+                        'name': 'show_index',
+                        'type': 'bool',
+                        'value': model.get_property('show_index', True) if model else True
+                    },
+                    {
+                        'name': 'show_header',
+                        'type': 'bool',
+                        'value': model.get_property('show_header', True) if model else True
+                    },
+                    {
+                        'name': 'alternate_rows',
+                        'type': 'bool',
+                        'value': model.get_property('alternate_rows', True) if model else True
+                    }
                 ]
-            ),
-            dict(
-                name='Format',
-                type='group',
-                children=[
-                    dict(name='decimal_places', type='int', default=None,
-                         value=model.get_property('decimal_places', 2) if model else 2,
-                         limits=(0, 10)),
-                    dict(name='thousands_separator', type='bool', default=None,
-                         value=model.get_property('thousands_separator', True) if model else True)
+            },
+            {
+                'name': 'Format',
+                'type': 'group',
+                'expanded': False,
+                'children': [
+                    {
+                        'name': 'decimal_places',
+                        'type': 'int',
+                        'value': model.get_property('decimal_places', 2) if model else 2,
+                        'limits': (0, 10)
+                    },
+                    {
+                        'name': 'thousands_separator',
+                        'type': 'bool',
+                        'value': model.get_property('thousands_separator', True) if model else True
+                    }
                 ]
-            )
+            }
         ]
         
-        # Add parameters and connect handlers
         for child in children:
             param = Parameter.create(**child)
             self.addChild(param)
             if child['type'] == 'group':
                 for subchild in param.children():
                     subchild.sigValueChanged.connect(self._handle_child_change)
-    
+        logger.debug("DataTableParameter child parameters set up")
+
     def _handle_child_change(self, param, value):
-        """Handle parameter changes efficiently."""
+        logger.debug(f"DataTableParameter child parameter {param.name()} changed to {value}")
         if not self.state or not self.model_id:
+            logger.debug("DataTableParameter: Missing state or model_id")
             return
-            
         try:
-            # Update the model
+            # Update the underlying model property when a child parameter changes
             self.set_model_property(param.name(), value)
-            
-            # Update display if needed
+            # Trigger an update to the widget
             if hasattr(self, 'widget') and self.widget:
-                self.widget.update_table_info()
-                
+                self.widget.queue_update()
         except Exception as e:
-            logger.error(f"Error handling parameter change: {e}")
-    
+            logger.error(f"Error handling child parameter change for {param.name()}: {e}")
+
     def handle_property_update(self, name: str, value: Any):
-        """Handle model property updates efficiently."""
+        logger.debug(f"DataTableParameter handling property update: {name} = {value}")
         try:
-            # First update any matching parameters
             updated = False
+            # Update matching child parameter values.
             for group in self.children():
                 if group.type() == 'group':
                     for param in group.children():
@@ -250,16 +198,9 @@ class DataTableParameter(ModelParameter):
                             break
                     if updated:
                         break
-            
-            # Update table info if metadata changed
-            if name in ['row_count', 'col_count', 'column_types']:
+            # For metadata updates (row and column counts), trigger the widget update.
+            if name in ['row_count', 'col_count', 'data']:
                 if hasattr(self, 'widget') and self.widget:
-                    self.widget.update_table_info()
-                    
+                    self.widget.queue_update(**{name: value})
         except Exception as e:
-            logger.error(f"Error handling property update: {e}")
-
-    def add_context_actions(self, menu: QMenu) -> None:
-        """Add table-specific context actions."""
-        # Add actions for table operations if needed
-        pass
+            logger.error(f"Error handling property update for {name}: {e}")

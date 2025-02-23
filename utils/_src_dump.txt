@@ -2855,11 +2855,11 @@ communication is now asynchronous.
 import logging
 import numpy as np
 
-from scpi.core.scpi_instrument import SCPIInstrument
-from scpi.core.subsystem import Subsystem
-from scpi.core.sources import Sources
-from scpi.core.trace import Trace
-from scpi.core.properties import (
+from pymetr.drivers.base.scpi_instrument import SCPIInstrument
+from pymetr.drivers.base.subsystem import Subsystem
+from pymetr.drivers.base.sources import Sources
+from pymetr.drivers.base.trace import Trace
+from pymetr.drivers.base.properties import (
     SwitchProperty,
     SelectProperty,
     ValueProperty,
@@ -3139,9 +3139,9 @@ import logging
 from enum import Enum
 import numpy as np
 
-from scpi.core.subsystem import Subsystem
-from scpi.core.scpi_instrument import SCPIInstrument
-from scpi.core.properties import (
+from pymetr.drivers.base.subsystem import Subsystem
+from pymetr.drivers.base.scpi_instrument import SCPIInstrument
+from pymetr.drivers.base.properties import (
     ValueProperty, SelectProperty, SwitchProperty, DataProperty
 )
 
@@ -3375,9 +3375,9 @@ class HP8563A(SCPIInstrument):
 ================================================================================
 
 import logging
-from scpi.core.scpi_instrument import SCPIInstrument
-from scpi.core.subsystem import Subsystem
-from scpi.core.properties import (
+from pymetr.drivers.base.scpi_instrument import SCPIInstrument
+from pymetr.drivers.base.subsystem import Subsystem
+from pymetr.drivers.base.properties import (
     ValueProperty, SelectProperty, SwitchProperty
 )
 

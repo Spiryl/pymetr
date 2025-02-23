@@ -9,6 +9,7 @@ from PySide6.QtGui import QIcon
 import pyqtgraph.parametertree as pt
 from pyqtgraph.parametertree import Parameter, ParameterTree
 
+from ..parameters.device_parameter import DeviceParameter
 from ..parameters.trace_parameter import TraceParameter
 from ..parameters.plot_parameter import PlotParameter
 from ..parameters.marker_parameter import MarkerParameter
@@ -19,7 +20,7 @@ from ..parameters.test_result_parameter import TestResultParameter
 from ..parameters.test_suite_parameter import TestSuiteParameter
 from ..parameters.base import ModelParameter
 
-from ..widgets.base import BaseWidget
+from .base import BaseWidget
 from pymetr.core.logging import logger
 from pymetr.models.base import BaseModel
 
@@ -34,6 +35,7 @@ class ModelTreeView(BaseWidget):
     
     # Register parameter types
     PARAMETER_TYPES = {
+        'device': DeviceParameter,
         'trace': TraceParameter,
         'plot': PlotParameter,
         'marker': MarkerParameter,
@@ -57,6 +59,7 @@ class ModelTreeView(BaseWidget):
         'TestScript': 'script.png',
         'TestResult': 'result.png',
         'TestGroup': 'folder.png',
+        'Device': 'instruments.png',
         'Plot': 'chart.png',
         'Trace': 'waves.png',
         'Cursor': 'cursor.png',

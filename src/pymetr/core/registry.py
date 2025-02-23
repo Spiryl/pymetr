@@ -1,3 +1,13 @@
+"""
+Registry for instrument drivers and device management.
+
+This module provides a thread-safe singleton registry that maintains:
+- Driver registration and loading
+- Connection type information
+- Discovery configuration
+- Instance tracking
+"""
+
 from typing import Dict, Optional, Type, List, Any
 import importlib
 from enum import Enum, auto
@@ -5,6 +15,8 @@ from dataclasses import dataclass
 from PySide6.QtCore import QObject, Signal, QThread, Slot, Qt, QMetaObject, Q_ARG
 
 from pymetr.core.logging import logger
+from pymetr.drivers.base.connections import ConnectionInterface
+from pymetr.models.device import Device
 
 class ConnectionType(Enum):
     """Known connection interface types"""
@@ -15,22 +27,28 @@ class ConnectionType(Enum):
 @dataclass
 class DriverInfo:
     """Driver configuration information"""
-    module: str
-    class_name: str
-    interfaces: List[ConnectionType]
-    socket_port: Optional[int] = None
-    discovery_config: Optional[Dict[str, Any]] = None
+    module: str                                      # Driver module path
+    class_name: str                                 # Driver class name
+    interfaces: List[ConnectionType]                # Supported connection types
+    socket_port: Optional[int] = None              # Default socket port if applicable
+    discovery_config: Optional[Dict[str, Any]] = None  # Discovery protocol config
 
 class InstrumentRegistry(QObject):
     """
     Thread-safe singleton registry for instrument drivers and instances.
+    
+    Manages:
+    - Driver registration and loading
+    - Device model creation
+    - Instance tracking
+    - Connection configuration
     """
-    # Singleton instance
-    _instance = None
+    _instance = None  # Singleton instance
     
     # Signals
-    driver_loaded = Signal(str)  # driver_module
-    instance_created = Signal(str, object)  # model, instance
+    driver_loaded = Signal(str)           # driver_module
+    device_created = Signal(str, Device)  # model, device_instance
+    driver_created = Signal(str, object)  # model, driver_instance
     
     def __new__(cls):
         if cls._instance is None:
@@ -43,12 +61,13 @@ class InstrumentRegistry(QObject):
             return
             
         super().__init__()
-        self._drivers: Dict[str, DriverInfo] = {}
-        self._driver_cache: Dict[str, Type] = {}
-        self._instances: Dict[str, object] = {}
+        self._drivers: Dict[str, DriverInfo] = {}         # Model -> Driver info
+        self._driver_cache: Dict[str, Type] = {}         # Model -> Driver class
+        self._devices: Dict[str, Device] = {}            # ID -> Device model
+        self._driver_instances: Dict[str, object] = {}   # ID -> Driver instance
         self._register_builtin_drivers()
         self._initialized = True
-        
+
     def _register_builtin_drivers(self):
         """Register built-in instrument drivers."""
         self.register_driver(
@@ -56,7 +75,7 @@ class InstrumentRegistry(QObject):
             DriverInfo(
                 module="pymetr.drivers.instruments.dsox1204g",
                 class_name="DSOX1204G",
-                interfaces=[ConnectionType.VISA],
+                interfaces=[ConnectionType.VISA]
             )
         )
         
@@ -73,16 +92,9 @@ class InstrumentRegistry(QObject):
                 }
             )
         )
-        # Add more built-in drivers...
         
     def register_driver(self, model: str, info: DriverInfo) -> None:
-        """
-        Register a new instrument driver.
-        
-        Args:
-            model: Instrument model identifier
-            info: Driver configuration information
-        """
+        """Register a new instrument driver."""
         if QThread.currentThread() != self.thread():
             QMetaObject.invokeMethod(
                 self,
@@ -93,14 +105,42 @@ class InstrumentRegistry(QObject):
             )
         else:
             self._register_driver_internal(model, info)
-            
+
     @Slot(str, object)
     def _register_driver_internal(self, model: str, info: DriverInfo) -> None:
         """Internal registration that always runs in main thread."""
         self._drivers[model.upper()] = info
         logger.debug(f"Registered driver for {model}")
+
+    def create_device(self, info: Dict[str, Any]) -> Optional[Device]:
+        """
+        Create a Device model from discovery information.
         
-    def get_driver(self, model: str) -> Optional[Type]:
+        Args:
+            info: Dictionary containing device info from discovery
+                 (manufacturer, model, serial, etc.)
+        
+        Returns:
+            Device model or None if creation fails
+        """
+        try:
+            # Create device model
+            device = Device.from_discovery_info(info)
+            
+            # Store device
+            self._devices[device.id] = device
+            
+            # Emit signal
+            self.device_created.emit(info['model'], device)
+            logger.debug(f"Created device model for {info['model']}")
+            
+            return device
+            
+        except Exception as e:
+            logger.error(f"Failed to create device model: {e}")
+            return None
+        
+    def get_driver_class(self, model: str) -> Optional[Type]:
         """
         Get driver class for an instrument model.
         Loads driver module if needed.
@@ -139,56 +179,64 @@ class InstrumentRegistry(QObject):
         except Exception as e:
             logger.error(f"Failed to load driver for {model}: {e}")
             return None
-            
-    def create_instance(self, model: str, connection: Any) -> Optional[object]:
+
+    def create_driver_instance(self, 
+                           device: Device,
+                           connection: ConnectionInterface,
+                           threaded_mode: bool = True) -> Optional[object]:
         """
-        Create an instrument instance with thread safety.
+        Create a driver instance for a device.
         
         Args:
-            model: Instrument model identifier
+            device: Device model instance
             connection: Connection interface instance
+            threaded_mode: Whether to use threaded communication
             
         Returns:
-            Instrument instance or None if creation fails
+            Driver instance or None if creation fails
         """
         if QThread.currentThread() != self.thread():
             result = None
             QMetaObject.invokeMethod(
                 self,
-                "_create_instance_internal",
-                Qt.BlockingQueuedConnection,  # We need the result
-                Q_ARG(str, model),
+                "_create_driver_internal",
+                Qt.BlockingQueuedConnection,
+                Q_ARG(Device, device),
                 Q_ARG(object, connection),
+                Q_ARG(bool, threaded_mode),
                 Q_ARG(object, result)
             )
             return result
         else:
-            return self._create_instance_internal(model, connection)
-            
-    @Slot(str, object, object)
-    def _create_instance_internal(self, model: str, connection: Any, result: object = None) -> Optional[object]:
-        """Internal creation that always runs in main thread."""
-        driver_class = self.get_driver(model)
+            return self._create_driver_internal(device, connection, threaded_mode)
+
+    @Slot(Device, object, bool, object)
+    def _create_driver_internal(self, 
+                            device: Device,
+                            connection: ConnectionInterface,
+                            threaded_mode: bool,
+                            result: object = None) -> Optional[object]:
+        """Internal driver creation that always runs in main thread."""
+        driver_class = self.get_driver_class(device.get_property('model'))
         if not driver_class:
             return None
             
         try:
-            # Create instance
-            instance = driver_class(connection)
+            # Create driver instance
+            instance = driver_class(connection, threaded_mode=threaded_mode)
             
             # Store instance
-            instance_id = f"{model}_{len(self._instances)}"
-            self._instances[instance_id] = instance
+            self._driver_instances[device.id] = instance
             
-            self.instance_created.emit(model, instance)
-            logger.debug(f"Created instance {instance_id} of {model}")
+            self.driver_created.emit(device.get_property('model'), instance)
+            logger.debug(f"Created driver instance for device {device.id}")
             
             return instance
             
         except Exception as e:
-            logger.error(f"Failed to create instance of {model}: {e}")
+            logger.error(f"Failed to create driver instance: {e}")
             return None
-            
+
     def get_supported_interfaces(self, model: str) -> List[ConnectionType]:
         """Get supported connection types for a model."""
         info = self._drivers.get(model.upper())
@@ -198,25 +246,21 @@ class InstrumentRegistry(QObject):
         """Get discovery configuration for a model."""
         info = self._drivers.get(model.upper())
         return info.discovery_config if info else None
+
+    def cleanup_device(self, device_id: str) -> None:
+        """Clean up a device and its driver instance."""
+        if device_id in self._devices:
+            del self._devices[device_id]
+        if device_id in self._driver_instances:
+            del self._driver_instances[device_id]
+            
+    def get_device(self, device_id: str) -> Optional[Device]:
+        """Get a device model by ID."""
+        return self._devices.get(device_id)
         
-def create_instrument(model: str, connection: Optional[Any] = None) -> Optional[object]:
-    """
-    Global function to create instrument instances.
-    Uses default connection if none provided.
-    
-    Args:
-        model: Instrument model identifier
-        connection: Optional connection interface
-        
-    Returns:
-        Instrument instance or None if creation fails
-    """
-    registry = InstrumentRegistry()  # This could be a singleton
-    if not connection:
-        # Create default connection based on model
-        # This would use your connection factories
-        pass
-    return registry.create_instance(model, connection)
+    def get_driver_instance(self, device_id: str) -> Optional[object]:
+        """Get a driver instance by device ID."""
+        return self._driver_instances.get(device_id)
 
 # Global access function
 def get_registry() -> InstrumentRegistry:

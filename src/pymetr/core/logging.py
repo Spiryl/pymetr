@@ -21,7 +21,7 @@ def setup_logging(log_to_file: bool = False):
 
     # Create custom formatter
     formatter = CustomFormatter(
-        '%(levelname)-6s:%(lineno)-4d\t%(filename)-28s\t%(funcName)-20s - %(message)s'
+        '%(levelname)-6s:%(lineno)-4d\t%(filename)-36s\t%(funcName)-20s - %(message)s'
     )
 
     # Console handler

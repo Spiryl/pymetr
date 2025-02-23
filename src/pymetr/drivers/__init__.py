@@ -1,29 +1,37 @@
-# drivers/__init__.py
-
-from .base import (
-    Instrument, SCPIInstrument, Subsystem, Sources, 
-    Property, ValueProperty, SwitchProperty, 
-    SelectProperty, DataProperty, DataBlockProperty
+from .base.instrument import (
+    Instrument, SCPIInstrument, Subsystem
 )
-from .connections import (
+from .base.properties import (
+    Property, ValueProperty, SwitchProperty, 
+    SelectProperty, DataProperty, DataBlockProperty,
+    PropertyResponse
+)
+from .base.connections import (
     ConnectionInterface, PyVisaConnection, RawSocketConnection
 )
+from .base.sources import Sources
 
-from .registry import DRIVER_REGISTRY, get_driver_info
 
 __all__ = [
+    # Base instrument classes
     'Instrument',
     'SCPIInstrument',
     'Subsystem',
-    'Sources',
+    
+    # Properties
     'Property',
+    'PropertyResponse',
     'ValueProperty',
     'SwitchProperty',
     'SelectProperty',
     'DataProperty',
     'DataBlockProperty',
+    
+    # Connections
     'ConnectionInterface',
     'PyVisaConnection',
     'RawSocketConnection',
-    'Registry'
+    
+    # Sources
+    'Sources',
 ]

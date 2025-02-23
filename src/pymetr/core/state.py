@@ -3,9 +3,11 @@
 from typing import Dict, Optional, Type, TypeVar, List, Any
 from PySide6.QtCore import QObject, Signal, Slot, QThread, Qt, QMetaObject, Q_ARG, QTimer
 from pymetr.models.base import BaseModel
+from pymetr.models import Device
 from pymetr.core.engine import Engine
 from pymetr.core.logging import logger
 from pymetr.drivers import Instrument
+
 T = TypeVar('T', bound=BaseModel)
 
 
@@ -73,6 +75,7 @@ class ApplicationState(QObject):
     discovery_started = Signal()  # When instrument discovery begins
     discovery_complete = Signal(dict)  # When discovery finishes (with instruments dict)
     instrument_found = Signal(dict)  # When each instrument is found (with instrument info)
+    instrument_connected = Signal(str)  # Emits the device ID when an instrument is connected
 
     def __init__(self):
         super().__init__()
@@ -406,26 +409,27 @@ class ApplicationState(QObject):
         return self._discovered_instruments
 
     def connect_instrument(self, info: Dict[str, Any]):
-        """
-        Connect to an instrument and create its model.
-        
-        Args:
-            info: Dictionary containing instrument info ('resource', etc.)
-        """
+        """Connect to an instrument from discovery info."""
         try:
-            # Import here to avoid circular import
-            from pymetr.models.device import Device
-            device = self.create_model(
-                Device,
-                manufacturer=info.get('manufacturer'),
-                model=info.get('model'),
-                serial_number=info.get('serial'),
-                firmware=info.get('firmware'),
-                resource=info.get('resource')
-            )
-            self.set_active_model(device.id)
-            logger.info(f"Created device model with ID: {device.id}")
+            logger.debug(f"ApplicationState: Creating device from discovery info: {info}")
+            
+            # Create device with state reference
+            device = Device.from_discovery_info(info)
+            logger.debug(f"ApplicationState: Created device with ID: {device.id}")
+            
+            # Register with state BEFORE connecting
+            logger.debug("ApplicationState: Registering device with state")
+            self.register_model(device)
+            
+            # Now connect to instrument
+            logger.debug("ApplicationState: Connecting device")
+            device.connect_device()
+            
+            logger.info(f"ApplicationState: Successfully created and connected device: {device.id}")
+            self.instrument_connected.emit(device.id)
+            
             return device
+                
         except Exception as e:
-            logger.error(f"Error creating device: {e}")
+            logger.error(f"ApplicationState.connect_instrument error: {e}", exc_info=True)
             raise

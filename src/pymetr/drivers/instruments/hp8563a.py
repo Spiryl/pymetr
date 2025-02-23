@@ -8,9 +8,9 @@ import logging
 from enum import Enum
 import numpy as np
 
-from scpi.core.subsystem import Subsystem
-from scpi.core.scpi_instrument import SCPIInstrument
-from scpi.core.properties import (
+from pymetr.drivers.base.subsystem import Subsystem
+from pymetr.drivers.base.scpi_instrument import SCPIInstrument
+from pymetr.drivers.base.properties import (
     ValueProperty, SelectProperty, SwitchProperty, DataProperty
 )
 

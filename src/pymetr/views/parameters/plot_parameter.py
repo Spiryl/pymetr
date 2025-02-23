@@ -17,7 +17,7 @@ class ItemCountIcon(QWidget):
         self._badge_color = QColor(badge_color)
         self._text_color = QColor(text_color)
         self._count = 0
-        self.setFixedSize(24, 24)
+        self.setFixedSize(22, 22)
         
     def setCount(self, count: int):
         self._count = count

@@ -1,49 +1,9 @@
-.. code-block:: text
 
-pymetr/
-│   ├── LICENSE
-│   ├── make.bat
-│   ├── Makefile
-│   ├── pyproject.toml
-│   ├── README.md
-│   ├── setup.py
-├── docs/
-│   │   ├── api.rst
-│   │   ├── bible.rst
-│   │   ├── conf.py
-│   │   ├── design.rst
-│   │   ├── doc-build.rst
-│   │   ├── index.rst
-│   │   ├── instruments.rst
-│   │   ├── instrument_gui.rst
-│   │   ├── logging.rst
-│   │   ├── oscilloscope.rst
-│   │   ├── packaging.rst
-│   │   ├── quickstart.rst
-│   │   ├── requirements.txt
-│   │   ├── sphinx.rst
-│   │   ├── subsystem_example.rst
-│   │   ├── subsystem_theory.rst
-│   │   ├── unit-test.rst
-│   ├── diagrams/
-│   │   ├── out/
-│   │   │   ├── signals/
-│   │   │   │   │   ├── continuous_fetch.png
-│   │   │   │   │   ├── fetch_trace.png
-│   │   ├── src/
-│   │   │   │   ├── signals.wsd
-├── logs/
-│   │   ├── scpi_20250205_145858.log
-├── PyMetr.egg-info/
-│   │   ├── dependency_links.txt
-│   │   ├── PKG-INFO
-│   │   ├── SOURCES.txt
-│   │   ├── top_level.txt
 ├── src/
 │   ├── pymetr/
 │   │   ├── core/
 │   │   │   │   ├── actions.py
-│   │   │   │   ├── connections.py
+│   │   │   │   ├── context.py
 │   │   │   │   ├── engine.py
 │   │   │   │   ├── factory.py
 │   │   │   │   ├── logging.py
@@ -52,12 +12,18 @@ pymetr/
 │   │   │   │   ├── styles.qss
 │   │   │   │   ├── visitor.py
 │   │   ├── drivers/
-│   │   │   │   ├── base.py
-│   │   │   │   ├── connections.py
-│   │   │   │   ├── dsox1204g.py
-│   │   │   │   ├── hp8563a.py
-│   │   │   │   ├── hs9000.py
-│   │   │   │   ├── registry.py
+│   │   │   ├── base/
+│   │   │   │   │   ├── connections.py
+│   │   │   │   │   ├── instrument.py
+│   │   │   │   │   ├── properties.py
+│   │   │   │   │   ├── sources.py
+│   │   │   ├── instruments/
+│   │   │   │   │   ├── driver_registry.yaml
+│   │   │   │   │   ├── dsox1204g.py
+│   │   │   │   │   ├── hp8563a.py
+│   │   │   │   │   ├── hs9000.py
+│   │   │   │   │   ├── plugin.py
+│   │   │   │   │   ├── registry.py
 │   │   ├── models/
 │   │   │   │   ├── base.py
 │   │   │   │   ├── cursor.py
@@ -69,12 +35,31 @@ pymetr/
 │   │   │   │   ├── test.py
 │   │   │   │   ├── trace.py
 │   │   ├── scripts/
+│   │   │   │   ├── a_good_test_example.py
+│   │   │   │   ├── celestial.py
+│   │   │   │   ├── context_test.py
+│   │   │   │   ├── context_test_complete.py
+│   │   │   │   ├── evolution.py
+│   │   │   │   ├── finale.py
 │   │   │   │   ├── Frame_Rate.py
+│   │   │   │   ├── Frame_Rate_Plus.py
+│   │   │   │   ├── gpt_symphony.py
+│   │   │   │   ├── metatronic.py
 │   │   │   │   ├── Model_Link_Analysis.py
+│   │   │   │   ├── plot_link_test.py
 │   │   │   │   ├── Plot_Test_Script.py
 │   │   │   │   ├── Power_Meter_Check.py
+│   │   │   │   ├── quantum.py
 │   │   │   │   ├── Real_Time_Plots.py
+│   │   │   │   ├── Simple_Context.py
+│   │   │   │   ├── Simple_Context_2.py
+│   │   │   │   ├── Simple_Context_3.py
+│   │   │   │   ├── Simple_Cursor_test.py
 │   │   │   │   ├── Simple_Test.py
+│   │   │   │   ├── Speed.py
+│   │   │   │   ├── Speed_With_Cursors.py
+│   │   │   │   ├── Super_Simple.py
+│   │   │   │   ├── symphony.py
 │   │   │   │   ├── Test1.py
 │   │   │   │   ├── Test10.py
 │   │   │   │   ├── Test11.py
@@ -176,6 +161,7 @@ pymetr/
 │   │   │   │   │   ├── plot_parameter.py
 │   │   │   │   │   ├── test_result_parameter.py
 │   │   │   │   │   ├── test_script_parameter.py
+│   │   │   │   │   ├── test_suite_parameter.py
 │   │   │   │   │   ├── trace_parameter.py
 │   │   │   ├── ribbon/
 │   │   │   │   │   ├── components.py
@@ -188,15 +174,18 @@ pymetr/
 │   │   │   │   │   ├── table_tab.py
 │   │   │   ├── widgets/
 │   │   │   │   │   ├── base.py
-│   │   │   │   │   ├── device_view.py
+│   │   │   │   │   ├── cursor_handler.py
+│   │   │   │   │   ├── device_tree_view.py
 │   │   │   │   │   ├── discovery_view.py
+│   │   │   │   │   ├── marker_handler.py
 │   │   │   │   │   ├── plot_view.py
 │   │   │   │   │   ├── result_view.py
 │   │   │   │   │   ├── script_view.py
 │   │   │   │   │   ├── status_bar.py
 │   │   │   │   │   ├── table_view.py
-│   │   │   │   │   ├── test_view.py
+│   │   │   │   │   ├── test_tree_view.py
 │   │   │   │   │   ├── toolbar.py
+│   │   │   │   │   ├── trace_handler.py
 ├── tests/
 │   │   ├── conftest.py
 │   │   ├── test_actions.py

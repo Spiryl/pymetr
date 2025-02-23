@@ -1,13 +1,13 @@
 import logging
-from scpi.core.scpi_instrument import SCPIInstrument
-from scpi.core.subsystem import Subsystem
-from scpi.core.properties import (
+from pymetr.drivers.base import SCPIInstrument
+from pymetr.drivers.base import Subsystem
+from pymetr.drivers.base.properties import (
     ValueProperty, SelectProperty, SwitchProperty
 )
 
 logger = logging.getLogger(__name__)
 
-class HSXSynth(SCPIInstrument):
+class HS9000(SCPIInstrument):
     """
     HSX Series Synthesizer Driver
 
@@ -30,17 +30,17 @@ class HSXSynth(SCPIInstrument):
         super().__init__(connection)
         
         # Build subsystems
-        self.ch = Channel_Subsystem.build(self, ":CH", indices=channels)
-        self.ref = Reference_Subsystem.build(self, ":REF")
-        self.diag = HSXDiagnostics.build(self, ":HSX:DIAG")
-        self.ip = IP_Subsystem.build(self, ":IP")
-        self.comm = Communication_Subsystem.build(self, ":COMM")
+        self.channel = Channel.build(self, ":CH", indices=4)
+        self.reference = Reference.build(self, ":REF")
+        self.diagnostics = Diagnostics.build(self, ":HSX:DIAG")
+        self.ip = IP.build(self, ":IP")
+        self.communications = Communication.build(self, ":COMM")
 
         # Set response mode based on read_after_write flag
         if self.read_after_write:
-            self.comm.respond = True
+            self.communications.respond = True
 
-class Channel_Subsystem(Subsystem):
+class Channel(Subsystem):
     """
     Represents a single synthesizer channel (n) with properties and methods.
     Commands use the pattern :CHn:<command>
@@ -63,14 +63,14 @@ class Channel_Subsystem(Subsystem):
     # Temperature monitoring
     temperature = ValueProperty(":TEMP", access='read', type="float", doc_str="Channel temperature in °C", join_char=":")
 
-class Reference_Subsystem(Subsystem):
+class Reference(Subsystem):
     """
     Reference clock subsystem.
     Commands use pattern :REF:<command>
     """
     source = SelectProperty("", ["EXT:10MHz", "INT:100MHz"], doc_str="Reference clock source", join_char=":")
 
-class IP_Subsystem(Subsystem):
+class IP(Subsystem):
     """
     IP address configuration subsystem.
     Commands use pattern :IP:<command>
@@ -80,14 +80,14 @@ class IP_Subsystem(Subsystem):
     subnet = ValueProperty(":SUBNET", doc_str="Subnet mask", join_char=":")
     gateway = ValueProperty(":GATEWAY", doc_str="Gateway address", join_char=":")
 
-class Communication_Subsystem(Subsystem):
+class Communication(Subsystem):
     """
     Communication settings subsystem.
     Commands use pattern :COMM:<command>
     """
     respond = SwitchProperty(":RESPOND", doc_str="Enable responses for all commands", join_char=":")
 
-class HSXDiagnostics(Subsystem):
+class Diagnostics(Subsystem):
     """
     Diagnostics subsystem.
     Commands use pattern :HSX:DIAG:<command>

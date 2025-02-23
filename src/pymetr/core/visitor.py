@@ -1,7 +1,7 @@
 import ast
-
+import os
 from copy import deepcopy
-import ast
+
 
 from pymetr.core.logging import logger
 
@@ -13,6 +13,27 @@ class InstrumentVisitor(ast.NodeVisitor):
         self.current_subsystem = None
         logger.debug("🎼 InstrumentVisitor initialized 🎼")
 
+    def build_instrument_data_model(self, driver_source: str) -> dict:
+        """
+        Parse the provided driver source code and extract instrument data.
+        
+        Args:
+            driver_source: The source code of the driver (as a string).
+            
+        Returns:
+            A dictionary with the instrument data.
+        """
+        try:
+            tree = ast.parse(driver_source)
+            # Reset instruments dictionary before visiting
+            self.instruments = {}
+            self.visit(tree)
+            logger.debug(f"InstrumentVisitor: Completed extraction. Instruments: {list(self.instruments.keys())}")
+            return self.instruments
+        except Exception as e:
+            logger.error(f"Error in create_instrument_data_from_driver: {e}")
+            return {}
+        
     def visit_ClassDef(self, node):
         logger.debug(f"🏛 Visiting Class Definition: {node.name} 🏛")
         bases = [base.id for base in node.bases if isinstance(base, ast.Name)]
@@ -299,16 +320,20 @@ if __name__ == "__main__":
             summary_parts.append(f"[Access: {prop['access']}]")
         return " ".join(summary_parts)
     
-    # Load a test driver
-    path = 'scpi/drivers/DSOX1204G.py'  
+    # Get the directory of the current script.
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+
+    # Construct the path: one directory above, then into drivers/instruments
+    path = os.path.join(current_dir, '..', 'drivers', 'instruments', 'dsox1204g.py')
+    path = os.path.abspath(path)  # Normalize the path
+
     with open(path, 'r') as file:
         source = file.read()
 
     tree = ast.parse(source, filename=path)
 
-    # Assuming scpiClassVisitor is your revised visitor class
     visitor = InstrumentVisitor()
-    visitor.visit(tree)  # First pass to identify structure
+    visitor.visit(tree)  # Build the instrument data model
 
     print_consolidated_view(visitor.instruments)
     #print(visitor.instruments)

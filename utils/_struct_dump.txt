@@ -1,4 +1,4 @@
-# Minimal Code Structure - 2025-02-17 13:01:58.155045
+# Minimal Code Structure - 2025-02-22 12:10:47.876388
 
 # src\pymetr\__main__.py
 def main()
@@ -12,52 +12,52 @@ class Action:
     def can_execute(state) -> bool
 
 class FileActions:
-    def new_script(state) -> <ast.Constant object at 0x00000284B809D9D0>
-    def open_script(state) -> <ast.Constant object at 0x00000284B80C0FD0>
-    def save_script(state) -> <ast.Constant object at 0x00000284B80CC950>
+    def new_suite(state) -> <ast.Constant object at 0x0000019512252CD0>
+    def open_suite(state) -> <ast.Constant object at 0x000001951224F050>
+    def save_suite(state) -> <ast.Constant object at 0x000001951224CE10>
+    def add_script_to_suite(state, suite_id: str) -> <ast.Constant object at 0x0000019512241550>
+    def new_script(state) -> <ast.Constant object at 0x000001951227E750>
+    def open_script(state) -> <ast.Constant object at 0x000001951225BE90>
+    def save_script(state) -> <ast.Constant object at 0x0000019512259890>
 
 class RunActions:
-    def run_script(state) -> <ast.Constant object at 0x00000284B80CF5D0>
-    def stop_script(state) -> <ast.Constant object at 0x00000284B80D5DD0>
+    def run_script(state) -> <ast.Constant object at 0x00000195122A5450>
+    def stop_script(state) -> <ast.Constant object at 0x00000195122A7C10>
 
 class InstrumentActions:
-    def discover_instruments(state) -> <ast.Constant object at 0x00000284B80DF210>
+    def discover_instruments(state) -> <ast.Constant object at 0x00000195122AEFD0>
 
 
-# src\pymetr\core\connections.py
-class ConnectionConfig: pass
-
-class ConnectionInterface(QObject):
-    def __init__(config: ConnectionConfig)
-    def is_open() -> bool
-    def open() -> <ast.Constant object at 0x00000284B80FDC90>
-    def close() -> <ast.Constant object at 0x00000284B80FD590>
-    def write(data: str) -> <ast.Constant object at 0x00000284B80FCE90>
-    def read() -> str
-    def query(command: str) -> str
-
-class VisaConnection(ConnectionInterface):
-    def __init__(config: ConnectionConfig)
-    def open() -> <ast.Constant object at 0x00000284B80F4690>
-    def close() -> <ast.Constant object at 0x00000284B80F3B10>
-    def write(data: str) -> <ast.Constant object at 0x00000284B80F2A50>
-    def read() -> str
-    def query(command: str) -> str
-
-class SocketConnection(ConnectionInterface):
-    def __init__(config: ConnectionConfig)
-    def open() -> <ast.Constant object at 0x00000284B810D350>
-    def close() -> <ast.Constant object at 0x00000284B810C810>
-    def write(data: str) -> <ast.Constant object at 0x00000284B810F650>
-    def read() -> str
-    def query(command: str) -> str
-
-class ConnectionFactory:
-    def create_connection(config: ConnectionConfig) -> ConnectionInterface
-    def create_from_resource(resource: str) -> ConnectionInterface
+# src\pymetr\core\context.py
+class TestContext:
+    def __init__(script: TestScript, engine)
+    def progress() -> float
+    def progress(value: float)
+    def status() -> TestStatus
+    def status(value: TestStatus)
+    def elapsed_time() -> float
+    def create_result(name: str) -> TestResult
+    def create_group(name: str) -> TestGroup
+    def create_plot(title: str) -> Plot
+    def create_trace(name: str, x_data, y_data, **kwargs) -> Trace
+    def create_table(title: str) -> DataTable
+    def create_marker(name: str, **kwargs) -> Marker
+    def create_cursor(name: str, **kwargs) -> Cursor
+    def get_result(name: str) -> Optional[TestResult]
+    def get_plot(title: str) -> Optional[Plot]
+    def wait(milliseconds: int)
+    def on_script_start()
+    def on_script_error(error: Exception)
+    def on_script_complete()
+    def get_instrument(cls, model: str, state)
 
 
 # src\pymetr\core\engine.py
+class SuiteRunner(QObject):
+    def __init__(engine)
+    def run_suite(suite_id: str)
+    def stop_suite()
+
 class ScriptRunner(QThread):
     def __init__(script_path: Path, globals_dict: dict)
     def run()
@@ -65,32 +65,32 @@ class ScriptRunner(QThread):
 
 class Engine(QObject):
     def __init__(state)
-    def run_test_script(script_id: str) -> <ast.Constant object at 0x00000284B80C2450>
-    def set_test_progress(percent: float, message: str) -> <ast.Constant object at 0x00000284B80D6510>
-    def wait(milliseconds: int) -> <ast.Constant object at 0x00000284B80D5B10>
-    def create_result(name: str) -> TestResult
-    def create_group(name: str) -> TestGroup
-    def create_plot(title: str) -> Plot
-    def create_trace(name: str, x_data: np.ndarray, y_data: np.ndarray, **kwargs) -> Trace
-    def create_table(title: str) -> DataTable
+    def run_suite(suite_id: str)
+    def stop_suite()
+    def run_test_script(script_id: str) -> <ast.Constant object at 0x0000019512268450>
+    def wait(milliseconds: int) -> <ast.Constant object at 0x00000195122B0C10>
 
 
 # src\pymetr\core\factory.py
 class InstrumentFactory:
     def __init__()
-    def create_instrument_data_from_driver(path)
+    def create_instrument_data_from_driver(path: str) -> dict
+    def create_ui_configuration_from_source(source: str) -> dict
     def set_current_instrument(instrument)
-    def parse_source_file(path)
-    def generate_gui_methods_dict(instrument_data)
-    def generate_other_methods_dict(instrument_data)
-    def generate_properties_list(properties, class_name, index, subsystem)
-    def generate_sources_list(instrument_data)
-    def construct_param_dict(prop, class_name, index, subsystem)
-    def generate_parameter_tree_dict(instrument_data)
-    def create_subsystem_group(subsystem_name, subsystem_info)
+    def parse_source_file(path: str) -> dict
+    def generate_gui_methods_dict(instrument_data: dict) -> dict
+    def generate_other_methods_dict(instrument_data: dict) -> dict
+    def generate_sources_list(instrument_data: dict) -> list
+    def generate_properties_list(properties: list, class_name: str, index: int, subsystem: str) -> list
+    def construct_param_dict(prop: dict, class_name: str, index: int, subsystem: str) -> dict
+    def generate_parameter_tree_dict(instrument_data: dict) -> list
+    def create_subsystem_group(subsystem_name, subsystem_info: dict) -> dict
 
 
 # src\pymetr\core\logging.py
+class CustomFormatter(logging.Formatter):
+    def format(record)
+
 def setup_logging(log_to_file: bool)
 
 # src\pymetr\core\registry.py
@@ -100,34 +100,42 @@ class DriverInfo: pass
 
 class InstrumentRegistry(QObject):
     def __init__()
-    def register_driver(model: str, info: DriverInfo) -> <ast.Constant object at 0x00000284B80C29D0>
-    def get_driver(model: str) -> Optional[Type]
-    def create_instance(model: str, connection: Any) -> Optional[object]
+    def register_driver(model: str, info: DriverInfo) -> <ast.Constant object at 0x0000019512299E50>
+    def create_device(info: Dict[<ast.Tuple object at 0x0000019512299750>]) -> Optional[Device]
+    def get_driver_class(model: str) -> Optional[Type]
+    def create_driver_instance(device: Device, connection: ConnectionInterface, threaded_mode: bool) -> Optional[object]
     def get_supported_interfaces(model: str) -> List[ConnectionType]
-    def get_discovery_config(model: str) -> Optional[Dict[<ast.Tuple object at 0x00000284B8113310>]]
+    def get_discovery_config(model: str) -> Optional[Dict[<ast.Tuple object at 0x000001951223B510>]]
+    def cleanup_device(device_id: str) -> <ast.Constant object at 0x00000195122DD890>
+    def get_device(device_id: str) -> Optional[Device]
+    def get_driver_instance(device_id: str) -> Optional[object]
 
-def create_instrument(model: str, connection: Optional[Any]) -> Optional[object]
 def get_registry() -> InstrumentRegistry
 
 # src\pymetr\core\state.py
+class DiscoveryWorker(QObject):
+    def __init__(model_filter: Optional[List[str]])
+    def discover()
+    def stop()
+
 class ApplicationState(QObject):
     def __init__()
     def set_parent(parent: QObject)
-    def register_model(model: BaseModel) -> <ast.Constant object at 0x00000284B80F4E90>
-    def link_models(parent_id: str, child_id: str) -> <ast.Constant object at 0x00000284B80F2110>
-    def unlink_models(parent_id: str, child_id: str) -> <ast.Constant object at 0x00000284B80FDCD0>
+    def register_model(model: BaseModel) -> <ast.Constant object at 0x000001951223D150>
+    def link_models(parent_id: str, child_id: str) -> <ast.Constant object at 0x0000019512245ED0>
+    def unlink_models(parent_id: str, child_id: str) -> <ast.Constant object at 0x000001951225EE10>
     def get_model(model_id: str) -> Optional[BaseModel]
     def get_models_by_type(model_type: Type[T]) -> List[T]
     def get_children(parent_id: str) -> List[BaseModel]
     def get_parent(child_id: str) -> Optional[BaseModel]
-    def set_active_test(model_id: Optional[str]) -> <ast.Constant object at 0x00000284B80A0510>
+    def set_active_test(model_id: Optional[str]) -> <ast.Constant object at 0x0000019512301910>
     def get_active_test() -> Optional[BaseModel]
-    def set_active_model(model_id: Optional[str]) -> <ast.Constant object at 0x00000284B809D550>
+    def set_active_model(model_id: Optional[str]) -> <ast.Constant object at 0x0000019512303E50>
     def get_model_by_name(name: str) -> Optional[BaseModel]
     def get_active_model() -> Optional[BaseModel]
     def create_model(model_class: Type[T], **kwargs) -> T
-    def remove_model(model_id: str) -> <ast.Constant object at 0x00000284B80D4190>
-    def clear_children(parent_id: str) -> <ast.Constant object at 0x00000284B80D63D0>
+    def remove_model(model_id: str) -> <ast.Constant object at 0x00000195122527D0>
+    def clear_children(parent_id: str) -> <ast.Constant object at 0x0000019512251190>
     def set_status(message: str)
     def set_progress(percent: float, message: str)
     def set_error(message: str)
@@ -135,13 +143,16 @@ class ApplicationState(QObject):
     def set_info(message: str)
     def queue_model_update(model_id: str, prop: str, value: Any)
     def update_active_view(model_id: str)
+    def discover_instruments(model_filter: Optional[List[str]])
+    def stop_discovery()
+    def get_discovered_instruments() -> Dict[<ast.Tuple object at 0x00000195122894D0>]
+    def connect_instrument(info: Dict[<ast.Tuple object at 0x0000019512289A50>])
 
-def set_global_state(state)
-def get_global_state()
 
 # src\pymetr\core\visitor.py
 class InstrumentVisitor(ast.NodeVisitor):
     def __init__()
+    def build_instrument_data_model(driver_source: str) -> dict
     def visit_ClassDef(node)
     def extract_instrument_info(node)
     def extract_method_info(item)
@@ -163,21 +174,66 @@ def print_consolidated_view(instrument)
 def print_properties(properties, is_last)
 def format_property_summary(prop)
 
-# src\pymetr\drivers\base.py
-class ABCQObjectMeta(<ast.Call object at 0x00000284B8146050>, ABCMeta): pass
-
-class Instrument(QObject):
-    def __init__(connection: ConnectionInterface, read_after_write: bool, read_timeout: float, parent: Optional[QObject])
+# src\pymetr\drivers\base\connections.py
+class ConnectionInterface(ABC):
+    def __init__(read_termination: str, write_termination: str, encoding: str)
     def open()
     def close()
-    def write(command: str) -> <ast.Constant object at 0x00000284B8100CD0>
+    def write(command: str)
+    def has_data() -> bool
+    def read_available() -> bytes
+    def read() -> str
+    def query(command: str) -> str
+    def clear_buffer()
+
+class PyVisaConnection(ConnectionInterface):
+    def __init__(resource_string: str, timeout: int, read_termination: str, write_termination: str, encoding: str)
+    def list_instruments(query: str) -> Dict[<ast.Tuple object at 0x0000019512314610>]
+    def select_instrument(filter_query)
+    def read_sync() -> str
+    def open()
+    def close()
+    def write(command: str)
+    def has_data() -> bool
+    def read_available() -> bytes
+
+class RawSocketConnection(ConnectionInterface):
+    def parse_resource_string(resource: str) -> tuple[<ast.Tuple object at 0x00000195122727D0>]
+    def __init__(host: str, port: int, timeout: float, encoding: str, read_termination: str, write_termination: str)
+    def open()
+    def close()
+    def write(command: str)
+    def has_data() -> bool
+    def read_available() -> bytes
+    def list_instruments(methods: List[str], timeout: float) -> Dict[<ast.Tuple object at 0x0000019512242D50>]
+    def get_all_local_ip_ranges(default: str) -> List[str]
+    def is_private_ip(ip: str) -> bool
+    def parse_datagram(datagram: bytes) -> str
+
+
+# src\pymetr\drivers\base\instrument.py
+class ConnectionWorker(QObject):
+    def __init__(connection)
+    def process_commands()
+    def stop()
+    def write(command: str)
+    def read()
+    def query(command: str)
+
+class ABCQObjectMeta(<ast.Call object at 0x00000195122A7510>, ABCMeta): pass
+
+class Instrument(QObject):
+    def __init__(connection: ConnectionInterface, read_after_write: bool, read_timeout: float, threaded_mode: bool, parent: Optional[QObject])
+    def open()
+    def close()
+    def write(command: str) -> <ast.Constant object at 0x00000195122D5490>
     def read() -> str
     def query(command: str) -> str
     def set_continuous_mode(mode: bool)
     def set_unique_id(uid: str)
     def fetch_trace(*args, **kwargs)
     def gui_command(func)
-    def list_instruments(cls, model_filter: Optional[List[str]]) -> Dict[<ast.Tuple object at 0x00000284B8089250>]
+    def list_instruments(cls, model_filter: Optional[List[str]]) -> Dict[<ast.Tuple object at 0x00000195123C2B50>]
 
 class SCPIInstrument(Instrument):
     def __init__(connection, read_after_write, timeout, parent)
@@ -197,21 +253,13 @@ class SCPIInstrument(Instrument):
 
 class Subsystem:
     def __init__(instr, cmd_prefix, index)
-    def write(command: str) -> <ast.Constant object at 0x00000284B80A0CD0>
+    def write(command: str) -> <ast.Constant object at 0x0000019512800610>
     def read() -> str
     def query(command: str) -> str
     def build(cls, parent, cmd_prefix, indices)
 
-class Sources(QObject):
-    def __init__(sources)
-    def source()
-    def source(sources)
-    def sources()
-    def add_source(source)
-    def remove_source(source)
-    def set_sources(sources)
-    def source_command(command_template, formatter, single, join_str)
 
+# src\pymetr\drivers\base\properties.py
 class PropertyResponse: pass
 
 class Property(ABC):
@@ -221,7 +269,7 @@ class Property(ABC):
 
 class ValueProperty(Property):
     def __init__(cmd_str: str, type: str, range: Optional[Tuple], units: str, doc_str: str, access: str, join_char: str)
-    def getter(instance) -> Union[<ast.Tuple object at 0x00000284B85BFAD0>]
+    def getter(instance) -> Union[<ast.Tuple object at 0x0000019512285050>]
     def setter(instance, value)
 
 class SwitchProperty(Property):
@@ -230,8 +278,8 @@ class SwitchProperty(Property):
     def setter(instance, value)
 
 class SelectProperty(Property):
-    def __init__(cmd_str: str, choices: Union[<ast.Tuple object at 0x00000284B85F0250>], doc_str: str, access: str, join_char: str)
-    def getter(instance) -> Union[<ast.Tuple object at 0x00000284B86114D0>]
+    def __init__(cmd_str: str, choices: Union[<ast.Tuple object at 0x0000019512273F90>], doc_str: str, access: str, join_char: str)
+    def getter(instance) -> Union[<ast.Tuple object at 0x000001951228A950>]
     def setter(instance, value)
 
 class DataProperty(Property):
@@ -245,44 +293,19 @@ class DataBlockProperty(Property):
     def setter(instance, value)
 
 
-# src\pymetr\drivers\connections.py
-class ConnectionInterface(ABC):
-    def __init__(read_termination: str, write_termination: str, encoding: str)
-    def open()
-    def close()
-    def write(command: str)
-    def has_data() -> bool
-    def read_available() -> bytes
-    def read() -> str
-    def query(command: str) -> str
-    def clear_buffer()
-
-class PyVisaConnection(ConnectionInterface):
-    def __init__(resource_string: str, timeout: int, read_termination: str, write_termination: str, encoding: str)
-    def list_instruments(query: str) -> Dict[<ast.Tuple object at 0x00000284B8676150>]
-    def select_instrument(filter_query)
-    def read_sync() -> str
-    def open()
-    def close()
-    def write(command: str)
-    def has_data() -> bool
-    def read_available() -> bytes
-
-class RawSocketConnection(ConnectionInterface):
-    def parse_resource_string(resource: str) -> tuple[<ast.Tuple object at 0x00000284B86BE610>]
-    def __init__(host: str, port: int, timeout: float, encoding: str, read_termination: str, write_termination: str)
-    def open()
-    def close()
-    def write(command: str)
-    def has_data() -> bool
-    def read_available() -> bytes
-    def list_instruments(methods: List[str], timeout: float) -> Dict[<ast.Tuple object at 0x00000284B86885D0>]
-    def get_all_local_ip_ranges(default: str) -> List[str]
-    def is_private_ip(ip: str) -> bool
-    def parse_datagram(datagram: bytes) -> str
+# src\pymetr\drivers\base\sources.py
+class Sources(QObject):
+    def __init__(sources)
+    def source()
+    def source(sources)
+    def sources()
+    def add_source(source)
+    def remove_source(source)
+    def set_sources(sources)
+    def source_command(command_template, formatter, single, join_str)
 
 
-# src\pymetr\drivers\dsox1204g.py
+# src\pymetr\drivers\instruments\dsox1204g.py
 class Dsox1204g(SCPIInstrument):
     def __init__(connection)
     def format()
@@ -307,7 +330,7 @@ class WaveGen(Subsystem): pass
 class Waveform(Subsystem): pass
 
 
-# src\pymetr\drivers\hp8563a.py
+# src\pymetr\drivers\instruments\hp8563a.py
 class TriggerMode(Enum): pass
 
 class ScaleType(Enum): pass
@@ -333,87 +356,117 @@ class HP8563A(SCPIInstrument):
     def continuous_sweep()
     def preset()
     def get_identity() -> str
-    def check_error() -> tuple[<ast.Tuple object at 0x00000284B874C890>]
+    def check_error() -> tuple[<ast.Tuple object at 0x00000195122702D0>]
 
 
-# src\pymetr\drivers\hs9000.py
-class HSXSynth(SCPIInstrument):
+# src\pymetr\drivers\instruments\hs9000.py
+class HS9000(SCPIInstrument):
     def __init__(connection, channels: int)
 
-class Channel_Subsystem(Subsystem): pass
+class Channel(Subsystem): pass
 
-class Reference_Subsystem(Subsystem): pass
+class Reference(Subsystem): pass
 
-class IP_Subsystem(Subsystem): pass
+class IP(Subsystem): pass
 
-class Communication_Subsystem(Subsystem): pass
+class Communication(Subsystem): pass
 
-class HSXDiagnostics(Subsystem):
+class Diagnostics(Subsystem):
     def start()
     def get_status() -> str
     def get_errors() -> str
     def get_board_info() -> str
 
 
-# src\pymetr\drivers\registry.py
-def get_driver_info(model: str) -> Dict[<ast.Tuple object at 0x00000284B810C110>]
+# src\pymetr\drivers\instruments\plugin.py
+def load_registry() -> Dict[<ast.Tuple object at 0x000001951237F4D0>]
+def get_driver_info(model: str) -> Dict[<ast.Tuple object at 0x000001951237E390>]
+
+# src\pymetr\drivers\instruments\registry.py
+def get_driver_info(model: str) -> Dict[<ast.Tuple object at 0x000001951224EB10>]
 
 # src\pymetr\models\base.py
 class BaseModel(QObject):
-    def __init__(state, model_id: Optional[str], name: Optional[str])
+    def __init__(model_type: str, state, model_id: Optional[str], name: Optional[str])
     def id() -> str
     def name() -> str
-    def rename(new_name: str) -> <ast.Constant object at 0x00000284B808ED10>
-    def get_name() -> str
-    def begin_update()
-    def end_update()
-    def set_property(name: str, value: object) -> <ast.Constant object at 0x00000284B80F0F10>
-    def get_property(name: str, default: object) -> object
-    def add_child(child: <ast.Constant object at 0x00000284B80F3090>) -> <ast.Constant object at 0x00000284B811A0D0>
-    def get_children() -> list
-    def get_child(child_id: str) -> Optional[<ast.Constant object at 0x00000284B811ADD0>]
-    def cleanup()
-    def deleteLater()
-    def clear_children() -> <ast.Constant object at 0x00000284B809E390>
-    def show()
+    def set_property(name: str, value: object) -> <ast.Constant object at 0x000001951225D810>
+    def get_property(prop: str, default: Any) -> Any
+    def begin_update() -> <ast.Constant object at 0x00000195122F8B10>
+    def end_update() -> <ast.Constant object at 0x00000195122FAF90>
+    def add_child(child_model: <ast.Constant object at 0x00000195122F9F10>) -> <ast.Constant object at 0x00000195123776D0>
+    def get_children() -> list[<ast.Constant object at 0x000001951237CC50>]
+    def clear_children() -> <ast.Constant object at 0x000001951237C710>
+    def cleanup() -> <ast.Constant object at 0x000001951224F5D0>
+    def deleteLater() -> <ast.Constant object at 0x000001951224C150>
+    def show() -> <ast.Constant object at 0x0000019512247110>
 
 
 # src\pymetr\models\cursor.py
 class Cursor(BaseModel):
-    def __init__(axis: str, position: float, color: str, style: str, width: int, visible: bool, model_id: Optional[str])
+    def __init__(name: str, axis: str, position: float, color: str, style: str, width: int, visible: bool, model_id: Optional[str])
+    def name() -> str
+    def name(value: str)
     def axis() -> str
+    def axis(value: str)
     def position() -> float
+    def position(value: float)
+    def color() -> str
+    def color(value: str)
+    def style() -> str
+    def style(value: str)
+    def width() -> int
+    def width(value: int)
+    def visible() -> bool
+    def visible(value: bool)
     def set_position(pos: float)
 
 
 # src\pymetr\models\device.py
+class AcquisitionMode(Enum): pass
+
 class Device(BaseModel):
-    def __init__(manufacturer: Optional[str], model: Optional[str], serial_number: Optional[str], firmware: Optional[str], resource: Optional[str], id: Optional[str])
-    def manufacturer() -> Optional[str]
-    def manufacturer(value: Optional[str])
-    def model() -> Optional[str]
-    def model(value: Optional[str])
-    def serial_number() -> Optional[str]
-    def serial_number(value: Optional[str])
-    def firmware() -> Optional[str]
-    def firmware(value: Optional[str])
-    def resource() -> Optional[str]
-    def resource(value: Optional[str])
+    def __init__(manufacturer: Optional[str], model: Optional[str], serial_number: Optional[str], firmware: Optional[str], resource: Optional[str], model_id: Optional[str])
+    def from_discovery_info(cls, info: Dict[<ast.Tuple object at 0x0000019512802850>]) -> <ast.Constant object at 0x00000195123F86D0>
+    def default_plot()
+    def start_acquisition()
+    def stop_acquisition()
+    def from_discovery_info(cls, info: Dict[<ast.Tuple object at 0x000001951231D950>]) -> <ast.Constant object at 0x000001951231FC10>
+    def connect_device()
+    def disconnect()
+    def driver_info() -> Dict[<ast.Tuple object at 0x0000019512242D90>]
+    def parameter_tree() -> Any
     def error_message() -> Optional[str]
     def error_message(value: Optional[str])
-    def driver_info() -> Dict[<ast.Tuple object at 0x00000284B80B3390>]
-    def driver_instance()
-    def connect()
-    def disconnect()
-    def set_driver_info(info: Dict[<ast.Tuple object at 0x00000284B80BDFD0>])
-    def parameters() -> Dict[<ast.Tuple object at 0x00000284B811BB10>]
-    def update_parameter(path: str, value: Any)
+    def update_parameter(path: str, value: Any) -> <ast.Constant object at 0x00000195122FBCD0>
+    def set_connection_state(connected: bool) -> <ast.Constant object at 0x00000195122F9910>
+    def refresh_parameters() -> <ast.Constant object at 0x00000195122699D0>
+    def reset_state() -> <ast.Constant object at 0x0000019512268C10>
+    def cleanup()
 
 
 # src\pymetr\models\marker.py
 class Marker(BaseModel):
-    def __init__(x: float, y: float, label: str, color: str, size: int, symbol: str, visible: bool, model_id: Optional[str])
-    def position() -> Tuple[<ast.Tuple object at 0x00000284B810D0D0>]
+    def __init__(x: float, y: float, name: str, color: str, size: int, symbol: str, visible: bool, model_id: Optional[str])
+    def x() -> float
+    def x(value: float)
+    def y() -> float
+    def y(value: float)
+    def name() -> str
+    def name(value: str)
+    def color() -> str
+    def color(value: str)
+    def size() -> int
+    def size(value: int)
+    def symbol() -> str
+    def symbol(value: str)
+    def visible() -> bool
+    def visible(value: bool)
+    def position() -> Tuple[<ast.Tuple object at 0x000001951228AA50>]
+    def bound_to_trace() -> bool
+    def get_position() -> Tuple[<ast.Tuple object at 0x0000019512245390>]
+    def get_uncertainty_bounds() -> Tuple[<ast.Tuple object at 0x00000195122872D0>]
+    def follows_parent_isolation() -> bool
     def set_position(x: float, y: float)
 
 
@@ -433,29 +486,63 @@ class Plot(BaseModel):
     def __init__(title: str, model_id: Optional[str])
     def title() -> str
     def title(value: str)
-    def x_lim() -> Optional[Tuple[<ast.Tuple object at 0x00000284B8566E10>]]
-    def x_lim(value: Optional[Tuple[<ast.Tuple object at 0x00000284B8567DD0>]])
-    def y_lim() -> Optional[Tuple[<ast.Tuple object at 0x00000284B808EC90>]]
-    def y_lim(value: Optional[Tuple[<ast.Tuple object at 0x00000284B808DD90>]])
-    def x_log() -> bool
-    def x_log(value: bool)
-    def y_log() -> bool
-    def y_log(value: bool)
+    def x_label() -> str
+    def x_label(value: str)
+    def y_label() -> str
+    def y_label(value: str)
+    def x_unit() -> str
+    def x_unit(value: str)
+    def y_unit() -> str
+    def y_unit(value: str)
     def grid_enabled() -> bool
     def grid_enabled(value: bool)
     def legend_enabled() -> bool
     def legend_enabled(value: bool)
+    def roi() -> Optional[List[float]]
+    def roi(value: Optional[List[float]])
     def roi_visible() -> bool
     def roi_visible(value: bool)
-    def create_trace(x_data: np.ndarray, y_data: np.ndarray, name: str, **kwargs)
-    def create_marker(x: float, y: float, label: str, color: str, **kwargs)
-    def create_cursor(axis: str, position: float, color: str, **kwargs)
-    def get_traces() -> list
-    def get_markers() -> list
-    def get_cursors() -> list
+    def background_color() -> str
+    def background_color(value: str)
+    def foreground_color() -> str
+    def foreground_color(value: str)
+    def grid_color() -> str
+    def grid_color(value: str)
+    def grid_alpha() -> float
+    def grid_alpha(value: float)
+    def legend_position() -> str
+    def legend_position(value: str)
+    def x_log() -> bool
+    def x_log(value: bool)
+    def y_log() -> bool
+    def y_log(value: bool)
+    def x_inverted() -> bool
+    def x_inverted(value: bool)
+    def y_inverted() -> bool
+    def y_inverted(value: bool)
+    def x_ticks() -> Optional[List[float]]
+    def x_ticks(value: Optional[List[float]])
+    def y_ticks() -> Optional[List[float]]
+    def y_ticks(value: Optional[List[float]])
+    def x_tick_labels() -> Optional[List[str]]
+    def x_tick_labels(value: Optional[List[str]])
+    def y_tick_labels() -> Optional[List[str]]
+    def y_tick_labels(value: Optional[List[str]])
+    def x_lim() -> Optional[Tuple[<ast.Tuple object at 0x000001951229A3D0>]]
+    def x_lim(value: Optional[Tuple[<ast.Tuple object at 0x000001951229BB90>]])
+    def y_lim() -> Optional[Tuple[<ast.Tuple object at 0x000001951231CD10>]]
+    def y_lim(value: Optional[Tuple[<ast.Tuple object at 0x000001951231DE50>]])
+    def add(item: Union[<ast.Tuple object at 0x000001951231FFD0>]) -> <ast.Constant object at 0x000001951227C150>
+    def create_trace(x_data: np.ndarray, y_data: np.ndarray, name: str, **kwargs) -> <ast.Constant object at 0x000001951227D090>
+    def set_trace(trace_name: str, x_data: np.ndarray, y_data: np.ndarray, mode: Optional[str], color: Optional[str], style: Optional[str], width: Optional[int], marker_style: Optional[str], visible: Optional[bool], opacity: Optional[float]) -> <ast.Constant object at 0x0000019512303B90>
+    def get_traces() -> List[<ast.Constant object at 0x0000019512300B10>]
+    def get_markers() -> List[<ast.Constant object at 0x0000019512300210>]
+    def get_cursors() -> List[<ast.Constant object at 0x000001951222FE50>]
+    def create_marker(x: float, y: float, name: str, **kwargs) -> <ast.Constant object at 0x0000019512288B90>
+    def set_marker(name: str, x: float, y: float, color: Optional[str], size: Optional[int], symbol: Optional[str], visible: Optional[bool]) -> <ast.Constant object at 0x00000195122F8310>
+    def create_cursor(position: float, axis: str, name: str, **kwargs) -> <ast.Constant object at 0x00000195122FAA50>
+    def set_cursor(name: str, position: float, axis: Optional[str], color: Optional[str], style: Optional[str], width: Optional[int], visible: Optional[bool]) -> <ast.Constant object at 0x0000019512375550>
     def clear()
-    def add(item: BaseModel) -> <ast.Constant object at 0x00000284B809FD90>
-    def set_trace(trace_name: str, x_data: np.ndarray, y_data: np.ndarray, mode: str, color: Optional[str], style: str, width: int, marker_style: str, visible: bool, opacity: float)
 
 
 # src\pymetr\models\table.py
@@ -479,6 +566,17 @@ class DataTable(BaseModel):
 
 
 # src\pymetr\models\test.py
+class TestStatus(Enum): pass
+
+class ResultStatus(Enum):
+    def from_bool(cls, success: bool) -> <ast.Constant object at 0x000001951227FB90>
+
+class RunConfig(BaseModel):
+    def __init__(**kwargs)
+    def add_script(script_id: str, order: int)
+    def remove_script(script_id: str)
+    def get_execution_order() -> List[str]
+
 class TestScript(BaseModel):
     def __init__(script_path: Path, model_id: Optional[str], name: Optional[str])
     def script_path() -> Path
@@ -492,15 +590,25 @@ class TestScript(BaseModel):
     def on_started()
     def on_finished(success: bool, error_msg: str)
 
+class TestSuite(BaseModel):
+    def __init__(model_id: Optional[str], name: Optional[str])
+    def add_script(script: TestScript)
+    def remove_script(script_id: str)
+    def get_scripts() -> List[TestScript]
+    def get_run_configs() -> List[RunConfig]
+    def get_default_config() -> Optional[RunConfig]
+
 class TestGroup(BaseModel):
     def __init__(state, name, **kwargs)
     def add(child_or_children)
 
 class TestResult(TestGroup):
     def __init__(state, name, **kwargs)
-    def status() -> str
-    def status(value: str)
-    def set_error(error_msg: str)
+    def progress() -> float
+    def progress(value: float)
+    def status() -> Optional[ResultStatus]
+    def status(value: Optional[ResultStatus])
+    def add(child_or_children)
 
 
 # src\pymetr\models\trace.py
@@ -529,13 +637,46 @@ class Trace(BaseModel):
     def update_data(x_data: np.ndarray, y_data: np.ndarray)
 
 
-# src\pymetr\scripts\Power_Meter_Check.py
+# src\pymetr\scripts\Frame_Rate.py
+def run_test(test)
+
+# src\pymetr\scripts\Frame_Rate_Plus.py
+def run_test(test)
+
+# src\pymetr\scripts\Model_Link_Analysis.py
+def run_test(test)
+
+# src\pymetr\scripts\Plot_Test_Script.py
 def run_test()
 
+# src\pymetr\scripts\Power_Meter_Check.py
+def run_test(test)
+
 # src\pymetr\scripts\Real_Time_Plots.py
+def run_test(test)
+
+# src\pymetr\scripts\Simple_Context.py
+def run_test(test)
+
+# src\pymetr\scripts\Simple_Context_2.py
+def run_test(test)
+
+# src\pymetr\scripts\Simple_Context_3.py
+def run_test(test)
+
+# src\pymetr\scripts\Simple_Cursor_test.py
 def run_test()
 
 # src\pymetr\scripts\Simple_Test.py
+def run_test()
+
+# src\pymetr\scripts\Speed.py
+def run_test()
+
+# src\pymetr\scripts\Speed_With_Cursors.py
+def run_test()
+
+# src\pymetr\scripts\Super_Simple.py
 def run_test()
 
 # src\pymetr\scripts\Test1.py
@@ -568,19 +709,51 @@ def run_test()
 # src\pymetr\scripts\Test7.py
 def run_test()
 
-# src\pymetr\scripts\Test8.py
-def run_test()
+# src\pymetr\scripts\a_good_test_example.py
+def run_test(test)
+
+# src\pymetr\scripts\celestial.py
+def run_test(test)
+
+# src\pymetr\scripts\context_test.py
+def run_test(test)
+
+# src\pymetr\scripts\context_test_complete.py
+def run_test(test)
+
+# src\pymetr\scripts\evolution.py
+def run_test(test)
+
+# src\pymetr\scripts\finale.py
+def run_test(test)
+
+# src\pymetr\scripts\gpt_symphony.py
+def run_test(test)
+
+# src\pymetr\scripts\metatronic.py
+def run_test(test)
+
+# src\pymetr\scripts\plot_link_test.py
+def run_test(test)
+
+# src\pymetr\scripts\quantum.py
+def run_test(test)
+
+# src\pymetr\scripts\symphony.py
+def run_test(test)
 
 # src\pymetr\services\file_services.py
 class FileService:
     def export_model_data(model_id: str, state, path: Path) -> bool
     def import_model_data(path: Path, state) -> Optional[str]
+    def open_suite(parent: Optional[QWidget]) -> Tuple[<ast.Tuple object at 0x000001951231D510>]
+    def save_suite(suite: TestSuite, parent: Optional[QWidget]) -> Tuple[<ast.Tuple object at 0x00000195123FAD50>]
 
 
 # src\pymetr\services\script.py
 class ScriptService:
-    def create_script(parent: Optional[QWidget]) -> Tuple[<ast.Tuple object at 0x00000284B8567A50>]
-    def open_script(parent: Optional[QWidget]) -> Tuple[<ast.Tuple object at 0x00000284B808FBD0>]
+    def create_script(parent: Optional[QWidget]) -> Tuple[<ast.Tuple object at 0x00000195123A1AD0>]
+    def open_script(parent: Optional[QWidget]) -> Tuple[<ast.Tuple object at 0x00000195122882D0>]
 
 
 # src\pymetr\views\main_window.py
@@ -596,18 +769,6 @@ class WelcomeWidget(QWidget):
     def __init__(state, parent)
 
 
-# src\pymetr\views\manager.py
-class BaseWidget(QWidget):
-    def __init__(state, parent)
-    def model_id()
-    def model() -> BaseModel
-    def set_model(model_id: str)
-    def update_from_model(model: BaseModel)
-    def update_model(**properties)
-    def handle_property_update(prop: str, value: object)
-    def closeEvent(event)
-
-
 # src\pymetr\views\tab_manager.py
 class WelcomeTab(BaseWidget):
     def __init__(state, parent)
@@ -615,7 +776,7 @@ class WelcomeTab(BaseWidget):
 class TabManager(QTabWidget):
     def __init__(state, parent)
     def show_welcome()
-    def open_tab(model_id: str) -> <ast.Constant object at 0x00000284B80D5F90>
+    def open_tab(model_id: str) -> <ast.Constant object at 0x000001951223A390>
     def open_discovery()
     def get_current_view() -> Optional[BaseWidget]
 
@@ -623,7 +784,6 @@ class TabManager(QTabWidget):
 # src\pymetr\views\title_bar.py
 class TitleBar(QWidget):
     def __init__(parent, state)
-    def on_file_menu_clicked()
     def on_minimize_clicked()
     def on_maximize_clicked()
     def on_close_clicked()
@@ -633,138 +793,195 @@ class TitleBar(QWidget):
 
 
 # src\pymetr\views\parameters\base.py
+class ParameterWidget(QWidget):
+    def __init__(param, parent)
+    def queue_update(**kwargs)
+    def cleanup()
+    def isDeleted()
+
 class ModelParameterItem(ParameterItem):
-    def __init__(param, depth)
-    def contextMenuEvent(ev)
-    def add_context_menu_actions(menu)
-    def treeWidgetChanged()
+    def __init__(param, depth, **kwargs)
+    def optsChanged(param, changes)
+    def treeWidgetChanged() -> <ast.Constant object at 0x000001951229B150>
+    def makeWidget() -> Optional[QWidget]
+    def updateWidget(**kwargs)
+    def contextMenuEvent(ev) -> <ast.Constant object at 0x00000195122B02D0>
+    def addCustomContextActions(menu: QMenu)
+    def addStandardContextActions(menu: QMenu)
     def cleanup()
 
 class ModelParameter(Parameter):
     def __init__(**opts)
+    def setupParameters(model)
+    def begin_update()
+    def end_update()
+    def set_model_property(name: str, value: Any)
+    def get_model_property(name: str, default: Any) -> Any
     def remove_model()
-    def add_context_actions(menu: QMenu) -> <ast.Constant object at 0x00000284B85B6BD0>
 
 
 # src\pymetr\views\parameters\cursor_parameter.py
-class CursorStatusWidget(QWidget):
+class CursorPreviewWidget(ParameterWidget):
+    def __init__(param, parent)
+
+class CursorLinePreview(QWidget):
     def __init__(parent)
-    def update_status(axis: str, position: float)
+    def update_style(axis: str, color: str, style: str, width: int)
+    def paintEvent(event)
 
 class CursorParameterItem(ModelParameterItem):
-    def __init__(param, depth)
-    def makeWidget()
-    def update_status()
-    def treeWidgetChanged()
+    def makeWidget() -> Optional[QWidget]
+    def updateWidget(**kwargs)
+    def addCustomContextActions(menu: QMenu)
 
 class CursorParameter(ModelParameter):
     def __init__(**opts)
-    def handle_property_update(name: str, value: Any)
-    def add_context_actions(menu: QMenu) -> <ast.Constant object at 0x00000284B80BF110>
+    def setupParameters(model: Optional[Cursor])
+    def handle_property_update(prop: str, value: Any)
 
 
 # src\pymetr\views\parameters\data_table_parameter.py
+class DataTableDisplayWidget(ParameterWidget):
+    def __init__(param, parent)
+
 class DataTableParameterItem(ModelParameterItem):
-    def __init__(param, depth)
-    def makeWidget()
-    def update_info()
-    def optsChanged(param, opts)
-    def add_context_menu_actions(menu: QMenu)
-    def treeWidgetChanged()
+    def makeWidget() -> Optional[QWidget]
+    def updateWidget(**kwargs)
+    def treeWidgetChanged() -> <ast.Constant object at 0x0000019512245790>
 
 class DataTableParameter(ModelParameter):
     def __init__(**opts)
-    def add_context_actions(menu: QMenu) -> <ast.Constant object at 0x00000284B809C3D0>
+    def handle_property_update(name: str, value: Any)
+
+
+# src\pymetr\views\parameters\device_parameter.py
+class LEDIndicator(QLabel):
+    def __init__(size, parent)
+    def set_state(state: str)
+    def paintEvent(event)
+
+class DeviceInfoWidget(ParameterWidget):
+    def __init__(param, parent)
+    def cleanup()
+
+class DeviceParameter(ModelParameter):
+    def __init__(**opts)
+    def setupParameters(device)
+    def handle_property_update(prop: str, value: Any)
 
 
 # src\pymetr\views\parameters\marker_parameter.py
-class MarkerStatusWidget(QWidget):
+class MarkerPreviewWidget(ParameterWidget):
+    def __init__(param, parent)
+
+class MarkerSymbolPreview(QWidget):
     def __init__(parent)
-    def update_status(x: float, y: float, label: str)
+    def update_style(color: str, symbol: str, size: int, uncertainty: Tuple[<ast.Tuple object at 0x00000195123F9710>])
+    def paintEvent(event)
+
+class MarkerInfoWidget(ParameterWidget):
+    def __init__(param, parent)
 
 class MarkerParameterItem(ModelParameterItem):
-    def __init__(param, depth)
-    def makeWidget()
-    def update_status()
-    def treeWidgetChanged()
+    def makeWidget() -> Optional[QWidget]
+    def updateWidget(**kwargs)
+    def addCustomContextActions(menu: QMenu)
 
 class MarkerParameter(ModelParameter):
     def __init__(**opts)
-    def handle_property_update(name: str, value: Any)
-    def add_context_actions(menu: QMenu) -> <ast.Constant object at 0x00000284B8102650>
+    def setupParameters(model: Optional[Marker])
+    def handle_property_update(prop: str, value: Any)
 
 
 # src\pymetr\views\parameters\plot_parameter.py
-class PlotStatusWidget(QWidget):
-    def __init__(parent)
-    def update_info(trace_count: int)
+class ItemCountIcon(QWidget):
+    def __init__(icon_path: str, badge_color: str, text_color: str, parent)
+    def setCount(count: int)
+    def paintEvent(event)
+
+class PlotInfoWidget(ParameterWidget):
+    def __init__(param, parent)
+    def cleanup()
 
 class PlotParameterItem(ModelParameterItem):
-    def __init__(param, depth)
-    def makeWidget()
-    def update_trace_count()
-    def treeWidgetChanged()
+    def makeWidget() -> Optional[QWidget]
+    def updateWidget(**kwargs)
+    def addCustomContextActions(menu: QMenu)
 
 class PlotParameter(ModelParameter):
     def __init__(**opts)
-    def handle_property_update(name: str, value: Any)
+    def setupParameters(model: Optional[Plot])
+    def handle_property_update(prop: str, value: Any)
 
 
 # src\pymetr\views\parameters\test_result_parameter.py
-class ResultStatus: pass
-
-class TestResultStatusWidget(QWidget):
-    def __init__(parent)
-    def update_status(status: str)
+class ResultStatusWidget(ParameterWidget):
+    def __init__(param, parent)
+    def queue_update(**kwargs)
+    def contextMenuEvent(event)
 
 class TestResultParameterItem(ModelParameterItem):
-    def __init__(param, depth)
-    def makeWidget()
-    def valueChanged(param, val)
-    def optsChanged(param, opts)
-    def treeWidgetChanged()
-    def cleanup()
+    def makeWidget() -> Optional[QWidget]
+    def updateWidget(**kwargs)
+    def addCustomContextActions(menu: QMenu)
 
 class TestResultParameter(ModelParameter):
     def __init__(**opts)
-    def status() -> str
-    def setStatus(status: str)
-    def add_context_actions(menu: QMenu) -> <ast.Constant object at 0x00000284B81013D0>
+    def setupParameters(model: Optional[TestResult])
+    def handle_property_update(prop: str, value: Any)
 
 
 # src\pymetr\views\parameters\test_script_parameter.py
-class TestStatus: pass
-
-class TestStatusWidget(QWidget):
-    def __init__(parent)
-    def update_status(status: str, progress: float)
+class TestProgressWidget(ParameterWidget):
+    def __init__(param, parent)
     def contextMenuEvent(event)
 
 class TestScriptParameterItem(ModelParameterItem):
-    def __init__(param, depth)
-    def makeWidget()
-    def valueChanged(param, val)
-    def optsChanged(param, opts)
-    def treeWidgetChanged()
-    def add_context_menu_actions(menu)
+    def makeWidget() -> Optional[QWidget]
+    def updateWidget(**kwargs)
+    def addCustomContextActions(menu: QMenu)
 
 class TestScriptParameter(ModelParameter):
     def __init__(**opts)
-    def status() -> str
-    def value()
-    def setValue(value)
-    def setStatus(status: str)
-    def add_context_actions(menu: QMenu) -> <ast.Constant object at 0x00000284B811BF90>
+    def setupParameters(model: Optional[TestScript])
+    def handle_property_update(prop: str, value: Any)
+
+
+# src\pymetr\views\parameters\test_suite_parameter.py
+class TestSuiteStatusWidget(ParameterWidget):
+    def __init__(param, parent)
+
+class TestSuiteParameterItem(ModelParameterItem):
+    def makeWidget() -> Optional[QWidget]
+    def updateWidget(**kwargs)
+    def addCustomContextActions(menu: QMenu)
+
+class TestSuiteParameter(ModelParameter):
+    def __init__(**opts)
+    def setupParameters(model: Optional[TestSuite])
+    def handle_property_update(prop: str, value: Any)
 
 
 # src\pymetr\views\parameters\trace_parameter.py
+class TraceStylePreview(QWidget):
+    def __init__(parent)
+    def update_style(color: str, style: str, width: int)
+    def set_length(length: int)
+    def paintEvent(event)
+
+class TraceInfoWidget(ParameterWidget):
+    def __init__(param, parent)
+    def cleanup()
+
 class TraceParameterItem(ModelParameterItem):
-    def __init__(param, depth)
-    def treeWidgetChanged()
+    def makeWidget() -> Optional[QWidget]
+    def updateWidget(**kwargs)
+    def addCustomContextActions(menu: QMenu)
 
 class TraceParameter(ModelParameter):
     def __init__(**opts)
-    def handle_property_update(name: str, value: Any)
+    def setupParameters(model: Optional[Trace])
+    def handle_property_update(prop: str, value: Any)
 
 
 # src\pymetr\views\ribbon\components.py
@@ -797,10 +1014,19 @@ class BaseTab(BaseWidget):
     def get_title() -> str
 
 
+# src\pymetr\views\tabs\device_tab.py
+class DeviceTab(BaseTab):
+    def __init__(state, model_id: str, parent)
+    def cleanup()
+
+
 # src\pymetr\views\tabs\plot_tab.py
 class PlotTab(BaseTab):
     def __init__(state, model_id: str, parent)
-    def set_model(model_id: str)
+
+class MarkerDialog(QDialog):
+    def __init__(traces, parent)
+    def get_values()
 
 
 # src\pymetr\views\tabs\result_tab.py
@@ -838,8 +1064,17 @@ class BaseWidget(QWidget):
     def closeEvent(event)
 
 
-# src\pymetr\views\widgets\device_view.py
-class DeviceView(BaseWidget):
+# src\pymetr\views\widgets\cursor_handler.py
+class CursorHandler(QObject):
+    def __init__(plot_item: pg.PlotItem, state)
+    def handle_property_change(model_id: str, model_type: str, prop: str, value: Any) -> <ast.Constant object at 0x000001951224EDD0>
+    def add_cursor(cursor_model) -> <ast.Constant object at 0x00000195123A2C90>
+    def remove_cursor(cursor_id: str) -> <ast.Constant object at 0x00000195122DB550>
+    def clear_all() -> <ast.Constant object at 0x00000195122D8490>
+
+
+# src\pymetr\views\widgets\device_tree_view.py
+class DeviceTreeView(BaseWidget):
     def __init__(state, model_id: Optional[str], parent)
     def update_from_model(model: Device)
 
@@ -847,7 +1082,7 @@ class DeviceView(BaseWidget):
 # src\pymetr\views\widgets\discovery_view.py
 class InstrumentTable(QTableWidget):
     def __init__(parent)
-    def update_instruments(instruments: Dict[<ast.Tuple object at 0x00000284B808EF50>])
+    def update_instruments(instruments: Dict[<ast.Tuple object at 0x000001951223AE10>])
     def get_selected_instrument() -> Optional[Dict]
 
 class DiscoveryDialog(QDialog):
@@ -857,15 +1092,43 @@ class DiscoveryView(BaseWidget):
     def __init__(state, parent)
 
 
-# src\pymetr\views\widgets\plot_view.py
-class PlotView(BaseWidget):
+# src\pymetr\views\widgets\group_view.py
+class MeasurementWidget(QFrame):
+    def __init__(parent)
+    def update_measurement(measurement: Measurement)
+
+class LayoutMode(Enum): pass
+
+class GroupView(BaseWidget):
     def __init__(state, model_id: str, parent)
     def set_model(model_id: str)
     def resizeEvent(event)
-    def showEvent(event)
-    def clear()
-    def closeEvent(event)
-    def autoRange()
+    def set_layout_mode(mode: LayoutMode)
+    def cleanup()
+
+
+# src\pymetr\views\widgets\marker_handler.py
+class MarkerHandler(QObject):
+    def __init__(plot_item: pg.PlotItem, state)
+    def begin_update() -> <ast.Constant object at 0x000001951234CA10>
+    def end_update() -> <ast.Constant object at 0x000001951234D110>
+    def add_marker(marker_model) -> <ast.Constant object at 0x00000195122B4A90>
+    def update_marker(marker_id: str, prop: str, value: Any) -> <ast.Constant object at 0x0000019512243410>
+    def remove_marker(marker_id: str) -> <ast.Constant object at 0x000001951223A910>
+    def clear_all() -> <ast.Constant object at 0x000001951223B450>
+    def update_label_positions() -> <ast.Constant object at 0x00000195122EF750>
+    def get_marker_at_pos(pos) -> Optional[str]
+    def handle_property_change(model_id: str, model_type: str, prop: str, value: Any) -> <ast.Constant object at 0x000001951224EB10>
+
+
+# src\pymetr\views\widgets\plot_view.py
+class PlotView(BaseWidget):
+    def __init__(state, model_id: str, parent)
+    def handle_mouse_clicked(event)
+    def set_model(model_id: str) -> <ast.Constant object at 0x00000195122B11D0>
+    def resizeEvent(event) -> <ast.Constant object at 0x00000195122879D0>
+    def showEvent(event) -> <ast.Constant object at 0x00000195122877D0>
+    def clear() -> <ast.Constant object at 0x00000195122E6D90>
 
 
 # src\pymetr\views\widgets\result_view.py
@@ -886,6 +1149,12 @@ class ResultView(BaseWidget):
     def resizeEvent(event)
     def set_layout_mode(mode: LayoutMode)
     def cleanup()
+
+
+# src\pymetr\views\widgets\scpi_console.py
+class SCPIConsole(QWidget):
+    def __init__(state, model_id, parent)
+    def eventFilter(obj, event)
 
 
 # src\pymetr\views\widgets\script_view.py
@@ -933,10 +1202,10 @@ class TableView(BaseWidget):
     def get_selected_data() -> pd.DataFrame
 
 
-# src\pymetr\views\widgets\test_view.py
+# src\pymetr\views\widgets\test_tree_view.py
 class ModelTreeView(BaseWidget):
     def __init__(state, parent)
-    def select_model(model_id: str)
+    def cleanup()
 
 
 # src\pymetr\views\widgets\toolbar.py
@@ -949,10 +1218,21 @@ class ToolBarSeparator(QFrame):
 class TabToolbar(QToolBar):
     def __init__(parent)
     def addButton(text, icon, callback)
+    def addToggleButton(text, icon, checked, callback)
     def addDropdown(text, icon)
     def addWidget(widget)
     def addSeparator()
     def addStretch()
+
+
+# src\pymetr\views\widgets\trace_handler.py
+class TraceHandler(QObject):
+    def __init__(plot_item: pg.PlotItem, plot_layout: pg.GraphicsLayoutWidget)
+    def add_trace(trace_model) -> <ast.Constant object at 0x000001951237ECD0>
+    def handle_property_change(model_id: str, model_type: str, prop: str, value: Any)
+    def remove_trace(trace_id: str) -> <ast.Constant object at 0x00000195122A1950>
+    def clear_all() -> <ast.Constant object at 0x00000195122A0150>
+    def update_geometry(main_rect) -> <ast.Constant object at 0x00000195123565D0>
 
 
 # tests\conftest.py
@@ -975,7 +1255,7 @@ def failed_result()
 
 # tests\test_actions.py
 class SetNameCommand(ModelCommand):
-    def __init__(state: <ast.Constant object at 0x00000284B809B090>, model_id: str, name: str)
+    def __init__(state: <ast.Constant object at 0x000001951224DBD0>, model_id: str, name: str)
     def execute() -> Result
     def undo() -> bool
 

@@ -1,0 +1,79 @@
+instruments.HP8563A:
+  module: pymetr.drivers.instruments.hp8563a
+  class: HP8563A
+
+HP8564E:
+  module: pymetr.drivers.instruments.hp8564e
+  class: HP8564E
+
+HP8657B:
+  module: pymetr.drivers.instruments.hp8657b
+  class: HP8657B
+
+HP437B:
+  module: pymetr.drivers.instruments.hp437b
+  class: HP437B
+
+HS9001B:
+  module: pymetr.drivers.instruments.hs9000
+  class: HS9000
+
+HS9002B:
+  module: pymetr.drivers.instruments.hs9000
+  class: HS9000
+
+HS9003B:
+  module: pymetr.drivers.instruments.hs9000
+  class: HS9000
+
+HS9004B:
+  module: pymetr.drivers.instruments.hs9000
+  class: HS9000
+
+HS9005B:
+  module: pymetr.drivers.instruments.hs9000
+  class: HS9000
+
+HS9006B:
+  module: pymetr.drivers.instruments.hs9000
+  class: HS9000
+
+HS9007B:
+  module: pymetr.drivers.instruments.hs9000
+  class: HS9000
+
+HS9008B:
+  module: pymetr.drivers.instruments.hs9000
+  class: HS9000
+
+HS9009B:
+  module: pymetr.drivers.instruments.hs9000
+  class: HS9000
+
+HS9010B:
+  module: pymetr.drivers.instruments.hs9000
+  class: HS9000
+
+HS9011B:
+  module: pymetr.drivers.instruments.hs9000
+  class: HS9000
+
+HS9012B:
+  module: pymetr.drivers.instruments.hs9000
+  class: HS9000
+
+HS9013B:
+  module: pymetr.drivers.instruments.hs9000
+  class: HS9000
+
+HS9014B:
+  module: pymetr.drivers.instruments.hs9000
+  class: HS9000
+
+HS9015B:
+  module: pymetr.drivers.instruments.hs9000
+  class: HS9000
+
+HS9016B:
+  module: pymetr.drivers.instruments.hs9000
+  class: HS9000
