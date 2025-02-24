@@ -1,22 +1,61 @@
+.. code-block:: text
 
+pymetr/
+│   ├── LICENSE
+│   ├── make.bat
+│   ├── Makefile
+│   ├── pyproject.toml
+│   ├── README.md
+│   ├── setup.py
+├── docs/
+│   │   ├── api.rst
+│   │   ├── bible.rst
+│   │   ├── conf.py
+│   │   ├── design.rst
+│   │   ├── doc-build.rst
+│   │   ├── index.rst
+│   │   ├── instruments.rst
+│   │   ├── instrument_gui.rst
+│   │   ├── logging.rst
+│   │   ├── oscilloscope.rst
+│   │   ├── packaging.rst
+│   │   ├── quickstart.rst
+│   │   ├── requirements.txt
+│   │   ├── sphinx.rst
+│   │   ├── subsystem_example.rst
+│   │   ├── subsystem_theory.rst
+│   │   ├── unit-test.rst
+│   ├── diagrams/
+│   │   ├── out/
+│   │   │   ├── signals/
+│   │   │   │   │   ├── continuous_fetch.png
+│   │   │   │   │   ├── fetch_trace.png
+│   │   ├── src/
+│   │   │   │   ├── signals.wsd
+├── logs/
+│   │   ├── scpi_20250205_145858.log
+├── PyMetr.egg-info/
+│   │   ├── dependency_links.txt
+│   │   ├── PKG-INFO
+│   │   ├── SOURCES.txt
+│   │   ├── top_level.txt
 ├── src/
 │   ├── pymetr/
 │   │   ├── core/
 │   │   │   │   ├── actions.py
 │   │   │   │   ├── context.py
 │   │   │   │   ├── engine.py
-│   │   │   │   ├── factory.py
 │   │   │   │   ├── logging.py
 │   │   │   │   ├── registry.py
 │   │   │   │   ├── state.py
 │   │   │   │   ├── styles.qss
-│   │   │   │   ├── visitor.py
 │   │   ├── drivers/
 │   │   │   ├── base/
 │   │   │   │   │   ├── connections.py
 │   │   │   │   │   ├── instrument.py
 │   │   │   │   │   ├── properties.py
 │   │   │   │   │   ├── sources.py
+│   │   │   │   │   ├── visitor.py
 │   │   │   ├── instruments/
 │   │   │   │   │   ├── driver_registry.yaml
 │   │   │   │   │   ├── dsox1204g.py
@@ -25,6 +64,8 @@
 │   │   │   │   │   ├── plugin.py
 │   │   │   │   │   ├── registry.py
 │   │   ├── models/
+│   │   │   │   ├── analysis_dual_model.py
+│   │   │   │   ├── analysis_model.py
 │   │   │   │   ├── base.py
 │   │   │   │   ├── cursor.py
 │   │   │   │   ├── device.py
@@ -35,157 +76,79 @@
 │   │   │   │   ├── test.py
 │   │   │   │   ├── trace.py
 │   │   ├── scripts/
-│   │   │   │   ├── a_good_test_example.py
-│   │   │   │   ├── celestial.py
-│   │   │   │   ├── context_test.py
-│   │   │   │   ├── context_test_complete.py
-│   │   │   │   ├── evolution.py
-│   │   │   │   ├── finale.py
-│   │   │   │   ├── Frame_Rate.py
-│   │   │   │   ├── Frame_Rate_Plus.py
-│   │   │   │   ├── gpt_symphony.py
-│   │   │   │   ├── metatronic.py
-│   │   │   │   ├── Model_Link_Analysis.py
-│   │   │   │   ├── plot_link_test.py
-│   │   │   │   ├── Plot_Test_Script.py
-│   │   │   │   ├── Power_Meter_Check.py
-│   │   │   │   ├── quantum.py
-│   │   │   │   ├── Real_Time_Plots.py
-│   │   │   │   ├── Simple_Context.py
-│   │   │   │   ├── Simple_Context_2.py
-│   │   │   │   ├── Simple_Context_3.py
-│   │   │   │   ├── Simple_Cursor_test.py
-│   │   │   │   ├── Simple_Test.py
-│   │   │   │   ├── Speed.py
-│   │   │   │   ├── Speed_With_Cursors.py
-│   │   │   │   ├── Super_Simple.py
-│   │   │   │   ├── symphony.py
-│   │   │   │   ├── Test1.py
-│   │   │   │   ├── Test10.py
-│   │   │   │   ├── Test11.py
-│   │   │   │   ├── Test12.py
-│   │   │   │   ├── Test2.py
-│   │   │   │   ├── Test3.py
-│   │   │   │   ├── Test4.py
-│   │   │   │   ├── Test5.py
-│   │   │   │   ├── Test6.py
-│   │   │   │   ├── Test7.py
+│   │   │   │   ├── A1 - Simple Plot.py
+│   │   │   │   ├── A2 - Real Time Plot.py
+│   │   │   │   ├── A3 - Test Results.py
+│   │   │   │   ├── A4 - Multiple Plots.py
+│   │   │   │   ├── A5 - Multiple Results.py
+│   │   │   │   ├── A6 - Advanced.py
+│   │   │   ├── bak/
+│   │   │   │   │   ├── context_test.py
+│   │   │   │   │   ├── context_test_complete.py
+│   │   │   │   │   ├── Frame_Rate_Plus.py
+│   │   │   │   │   ├── Simple_Context_2.py
+│   │   │   │   │   ├── Simple_Context_3.py
+│   │   │   ├── fun/
+│   │   │   │   │   ├── celestial.py
+│   │   │   │   │   ├── evolution.py
+│   │   │   │   │   ├── quantum.py
+│   │   │   │   │   ├── symphony.py
 │   │   ├── services/
 │   │   │   │   ├── file_services.py
 │   │   │   │   ├── script.py
-│   │   ├── views/
+│   │   ├── ui/
 │   │   │   │   ├── main_window.py
-│   │   │   │   ├── manager.py
-│   │   │   │   ├── tab_manager.py
+│   │   │   │   ├── status_bar.py
 │   │   │   │   ├── title_bar.py
+│   │   │   ├── dialogs/
+│   │   │   │   │   ├── discovery.py
+│   │   │   │   │   ├── settings.py
+│   │   │   ├── docks/
+│   │   │   │   │   ├── device_tree_view.py
+│   │   │   │   │   ├── test_tree_view.py
+│   │   │   ├── factories/
+│   │   │   │   │   ├── instrument.py
 │   │   │   ├── icons/
 │   │   │   │   │   ├── analytics.png
 │   │   │   │   │   ├── analytics_g.png
 │   │   │   │   │   ├── arrow_drop_down.png
 │   │   │   │   │   ├── calculations.png
-│   │   │   │   │   ├── camera.png
-│   │   │   │   │   ├── capture.png
-│   │   │   │   │   ├── capture_g.png
-│   │   │   │   │   ├── chart.png
-│   │   │   │   │   ├── checked.png
-│   │   │   │   │   ├── clear.png
-│   │   │   │   │   ├── close.png
-│   │   │   │   │   ├── console.png
-│   │   │   │   │   ├── console_g.png
-│   │   │   │   │   ├── cursor.png
-│   │   │   │   │   ├── cursors.png
-│   │   │   │   │   ├── cursors_g.png
-│   │   │   │   │   ├── delete.png
-│   │   │   │   │   ├── delete_sweep.png
-│   │   │   │   │   ├── display.png
-│   │   │   │   │   ├── display_g.png
-│   │   │   │   │   ├── file_open.png
-│   │   │   │   │   ├── folder.png
-│   │   │   │   │   ├── grid_settings.png
-│   │   │   │   │   ├── group.png
-│   │   │   │   │   ├── help.png
-│   │   │   │   │   ├── insights.png
-│   │   │   │   │   ├── insights_g.png
-│   │   │   │   │   ├── instruments.png
-│   │   │   │   │   ├── instruments_g.png
-│   │   │   │   │   ├── isolate.png
-│   │   │   │   │   ├── lab.png
-│   │   │   │   │   ├── label.png
-│   │   │   │   │   ├── lab_g.png
-│   │   │   │   │   ├── library_add.png
-│   │   │   │   │   ├── line_style.png
-│   │   │   │   │   ├── markers.png
-│   │   │   │   │   ├── markers_g.png
-│   │   │   │   │   ├── maximize.png
-│   │   │   │   │   ├── measure.png
-│   │   │   │   │   ├── measurements.png
-│   │   │   │   │   ├── measure_g.png
-│   │   │   │   │   ├── minimize.png
-│   │   │   │   │   ├── new.png
-│   │   │   │   │   ├── new_script.png
-│   │   │   │   │   ├── new_suite.png
-│   │   │   │   │   ├── open.png
-│   │   │   │   │   ├── open_script.png
-│   │   │   │   │   ├── options.png
-│   │   │   │   │   ├── plot.png
-│   │   │   │   │   ├── prompt.png
-│   │   │   │   │   ├── publish.png
-│   │   │   │   │   ├── region.png
-│   │   │   │   │   ├── region_g.png
-│   │   │   │   │   ├── report.png
-│   │   │   │   │   ├── result.png
-│   │   │   │   │   ├── run.png
-│   │   │   │   │   ├── save.png
-│   │   │   │   │   ├── script.png
-│   │   │   │   │   ├── settings.png
-│   │   │   │   │   ├── settings_g.png
-│   │   │   │   │   ├── stack.png
-│   │   │   │   │   ├── stop.png
-│   │   │   │   │   ├── table.png
-│   │   │   │   │   ├── test_suite.png
-│   │   │   │   │   ├── toggle_off.png
-│   │   │   │   │   ├── toggle_on.png
-│   │   │   │   │   ├── traces.png
-│   │   │   │   │   ├── traces_g.png
-│   │   │   │   │   ├── unchecked.png
-│   │   │   │   │   ├── visibility_off.png
-│   │   │   │   │   ├── visibility_on.png
-│   │   │   │   │   ├── waves.png
-│   │   │   │   │   ├── zoom_in.png
-│   │   │   │   │   ├── zoom_in_g.png
+....
 │   │   │   ├── parameters/
+│   │   │   │   │   ├── analysis_dual_parameter.py
+│   │   │   │   │   ├── analysis_parameter.py
 │   │   │   │   │   ├── base.py
 │   │   │   │   │   ├── cursor_parameter.py
 │   │   │   │   │   ├── data_table_parameter.py
+│   │   │   │   │   ├── device_parameter.py
 │   │   │   │   │   ├── marker_parameter.py
 │   │   │   │   │   ├── plot_parameter.py
 │   │   │   │   │   ├── test_result_parameter.py
 │   │   │   │   │   ├── test_script_parameter.py
 │   │   │   │   │   ├── test_suite_parameter.py
 │   │   │   │   │   ├── trace_parameter.py
-│   │   │   ├── ribbon/
-│   │   │   │   │   ├── components.py
-│   │   │   │   │   ├── manager.py
 │   │   │   ├── tabs/
 │   │   │   │   │   ├── base.py
+│   │   │   │   │   ├── device_tab.py
 │   │   │   │   │   ├── plot_tab.py
 │   │   │   │   │   ├── result_tab.py
 │   │   │   │   │   ├── script_tab.py
 │   │   │   │   │   ├── table_tab.py
-│   │   │   ├── widgets/
-│   │   │   │   │   ├── base.py
-│   │   │   │   │   ├── cursor_handler.py
-│   │   │   │   │   ├── device_tree_view.py
-│   │   │   │   │   ├── discovery_view.py
-│   │   │   │   │   ├── marker_handler.py
-│   │   │   │   │   ├── plot_view.py
-│   │   │   │   │   ├── result_view.py
-│   │   │   │   │   ├── script_view.py
-│   │   │   │   │   ├── status_bar.py
-│   │   │   │   │   ├── table_view.py
-│   │   │   │   │   ├── test_tree_view.py
+│   │   │   │   │   ├── tab_manager.py
 │   │   │   │   │   ├── toolbar.py
-│   │   │   │   │   ├── trace_handler.py
+│   │   │   ├── views/
+│   │   │   │   │   ├── base.py
+│   │   │   │   │   ├── discovery_view.py
+│   │   │   │   │   ├── group_view.py
+│   │   │   │   │   ├── result_view.py
+│   │   │   │   │   ├── scpi_console.py
+│   │   │   │   │   ├── script_view.py
+│   │   │   │   │   ├── table_view.py
+│   │   │   │   ├── plot/
+│   │   │   │   │   │   ├── cursor_handler.py
+│   │   │   │   │   │   ├── marker_handler.py
+│   │   │   │   │   │   ├── plot_view.py
+│   │   │   │   │   │   ├── trace_handler.py
 ├── tests/
 │   │   ├── conftest.py
 │   │   ├── test_actions.py

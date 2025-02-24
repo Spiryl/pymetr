@@ -4,7 +4,7 @@ from pathlib import Path
 from PySide6.QtWidgets import QApplication
 from PySide6.QtCore import Qt, QCoreApplication, QFile, QTextStream
 
-from pymetr.views.main_window import MainWindow
+from pymetr.ui.main_window import MainWindow
 from pymetr.core.state import ApplicationState
 from pymetr.core.logging import setup_logging
 

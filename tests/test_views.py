@@ -1,6 +1,6 @@
 # tests/test_views.py
 import pytest
-from pymetr.views.manager import ViewManager, ViewType, ViewState
+from pymetr.ui.views.manager import ViewManager, ViewType, ViewState
 
 def test_view_registration(state, test_script):  # Added test_script fixture
     view_manager = ViewManager(state)

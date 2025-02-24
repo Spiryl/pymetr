@@ -3,7 +3,7 @@ import pytest
 from PySide6.QtWidgets import QApplication
 from pymetr.state import ApplicationState
 from pymetr.models.base import BaseModel
-from pymetr.views.manager import ViewType  # Add this import
+from pymetr.ui.views.manager import ViewType  # Add this import
 from pymetr.actions.commands import Result
 
 # Base test models that can be used across all tests

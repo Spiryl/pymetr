@@ -7,7 +7,7 @@ from pymetr.models.trace import Trace
 from pymetr.models.marker import Marker
 from pymetr.models.cursor import Cursor
 from pymetr.models.table import DataTable
-from pymetr.core.visitor import InstrumentVisitor
+from pymetr.drivers.base.visitor import InstrumentVisitor
     
 class TestContext:
     """

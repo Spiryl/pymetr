@@ -8,8 +8,8 @@ from pathlib import Path
 from PySide6.QtWidgets import QMessageBox
 
 from pymetr.models.test import TestSuite
-from pymetr.services.script import ScriptService
-from pymetr.services.file_services import FileService
+from pymetr.services.script_service import ScriptService
+from pymetr.services.file_service import FileService
 from pymetr.core.logging import logger
 
 class ActionCategory(Enum):
@@ -256,7 +256,7 @@ class InstrumentActions:
                 state.discover_instruments()
                 return
                 
-            from pymetr.views.widgets.discovery_view import DiscoveryDialog
+            from pymetr.ui.views.discovery_view import DiscoveryDialog
             dialog = DiscoveryDialog(state, parent)
             
             if dialog.exec_():

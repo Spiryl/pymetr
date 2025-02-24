@@ -279,7 +279,7 @@ class Device(BaseModel):
             logger.debug(f"Device._load_driver_info: Driver class '{class_name}' retrieved successfully")
             
             # Use InstrumentFactory to build the UI-friendly configuration.
-            from pymetr.core.factory import InstrumentFactory
+            from pymetr.ui.factories.instrument_factory import InstrumentFactory
             factory = InstrumentFactory()
             logger.debug("Device._load_driver_info: Retrieving driver source code")
             driver_source = inspect.getsource(driver_class)

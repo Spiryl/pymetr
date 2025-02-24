@@ -1,10 +1,10 @@
 # tests/test_ribbon.py
 import pytest
-from pymetr.views.ribbon.context import (
+from pymetr.ui.views.ribbon.context import (
     RibbonContext, DefaultContext, ScriptContext, PlotContext,
     ActionCategory, RibbonAction
 )
-from pymetr.views.ribbon.manager import RibbonManager
+from pymetr.ui.views.ribbon.manager import RibbonManager
 
 def test_default_context(state, qapp):
     ribbon_manager = RibbonManager(state)

@@ -2,7 +2,7 @@
 import pytest
 from PySide6.QtWidgets import QDockWidget, QMessageBox
 from PySide6.QtCore import Qt
-from pymetr.views.windows.main_window import MainWindow
+from pymetr.ui.views.windows.main_window import MainWindow
 from pymetr.actions.commands import Result  # Add this import
 
 def test_window_creation(state, qapp, qtbot):
