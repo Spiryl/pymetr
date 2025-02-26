@@ -42,7 +42,7 @@ def run_test(test):
         return 0.5 * (1 - np.cos(np.pi * progress))
 
     # Animation loop with continuous transitions
-    total_frames = 1500  # Extended for more elaborate patterns
+    total_frames = 300  # Extended for more elaborate patterns
     
     # Add first movement to table immediately
     table.add_row([
@@ -140,7 +140,7 @@ def run_test(test):
 
             plot.set_trace(f"Voice{idx+1}", x_points, y_data, color=col)
             
-        test.wait(20) 
+        test.wait(50) 
         result.progress = int((frame + 1) / total_frames * 100)
 
     result.progress = 100

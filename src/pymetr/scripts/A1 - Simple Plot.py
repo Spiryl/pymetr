@@ -1,3 +1,4 @@
+#Basic visualization with a single sine wave trace
 import numpy as np
 def run_test(test):
     """

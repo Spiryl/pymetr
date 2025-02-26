@@ -5,7 +5,7 @@ from PySide6.QtWidgets import (
 )
 
 from pymetr.ui.views.base import BaseWidget
-from pymetr.ui.tabs.toolbar import TabToolbar
+from pymetr.ui.components.toolbar import TabToolbar
 from pymetr.core.logging import logger
 
 class BaseTab(BaseWidget):

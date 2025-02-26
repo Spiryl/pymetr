@@ -136,3 +136,68 @@ class Trace(BaseModel):
         self._x_data = x_data
         self._y_data = y_data
         self.set_property("data", (x_data, y_data))  # Will emit for you
+
+    def create_marker(self, x: float, y: Optional[float] = None, name: str = "", **kwargs) -> 'Marker':
+        """
+        Create a marker that is bound to this trace.
+        
+        Args:
+            x: X-coordinate for the marker
+            y: Y-coordinate (optional, will be interpolated from trace if None)
+            name: Display name for the marker
+            **kwargs: Additional marker properties
+            
+        Returns:
+            The created marker instance
+        """
+        from pymetr.models import Marker
+        
+        # Generate default name if not provided
+        if not name:
+            name = f"Marker {len(self.get_children())}"
+        
+        # If y is not provided, interpolate from the trace data
+        if y is None:
+            # Get y-value from trace at x position
+            x_data, y_data = self.data
+            if len(x_data) > 0:
+                try:
+                    # Find closest or interpolated value
+                    if len(x_data) > 1:
+                        # Simple linear interpolation
+                        idx = np.searchsorted(x_data, x)
+                        if idx == 0:
+                            y = y_data[0]
+                        elif idx >= len(x_data):
+                            y = y_data[-1]
+                        else:
+                            # Interpolate between points
+                            x0, x1 = x_data[idx-1], x_data[idx]
+                            y0, y1 = y_data[idx-1], y_data[idx]
+                            if x1 == x0:  # Avoid division by zero
+                                y = y0
+                            else:
+                                ratio = (x - x0) / (x1 - x0)
+                                y = y0 + ratio * (y1 - y0)
+                    else:
+                        # Only one data point
+                        y = y_data[0]
+                except Exception as e:
+                    logger.error(f"Error interpolating y value for marker: {e}")
+                    # Default y if interpolation fails
+                    y = 0
+        
+        # Create the marker
+        marker = self.state.create_model(
+            Marker,
+            x=x,
+            y=y,
+            name=name,
+            **kwargs
+        )
+        
+        # Add marker as child of this trace
+        self.add_child(marker)
+        logger.debug(f"Created trace-bound marker {marker.id} at x={x}, y={y}")
+        
+        return marker

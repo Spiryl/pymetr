@@ -433,3 +433,82 @@ class ApplicationState(QObject):
         except Exception as e:
             logger.error(f"ApplicationState.connect_instrument error: {e}", exc_info=True)
             raise
+
+    def set_theme(self, theme_name: str) -> bool:
+        """
+        Set the application theme.
+        
+        Args:
+            theme_name: Name of the theme to set
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        from pymetr.services.theme_service import ThemeService
+        
+        # Get theme service
+        theme_service = ThemeService.get_instance()
+        
+        # Set theme
+        success = theme_service.set_theme(theme_name)
+        
+        # Add status message
+        if success:
+            self.set_info(f"Theme changed to {theme_name}")
+        
+        return success
+
+    def set_accent_color(self, color) -> bool:
+        """
+        Set the accent color.
+        
+        Args:
+            color: QColor or color string
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        from pymetr.services.theme_service import ThemeService
+        from PySide6.QtGui import QColor
+        
+        # Get theme service
+        theme_service = ThemeService.get_instance()
+        
+        # Convert to QColor if needed
+        if not isinstance(color, QColor):
+            color = QColor(color)
+        
+        # Set accent color
+        success = theme_service.set_accent_color(color)
+        
+        # Add status message
+        if success:
+            self.set_info(f"Accent color changed to {color.name()}")
+        
+        return success
+
+    def get_resource(self, resource_type: str, name: str, **kwargs):
+        """
+        Get a resource (icon, image, etc.) from the resource service.
+        
+        Args:
+            resource_type: Type of resource (icon, pixmap, etc.)
+            name: Resource name
+            **kwargs: Additional parameters for resource loading
+            
+        Returns:
+            Requested resource or None if not found
+        """
+        from pymetr.services.resource_service import ResourceService
+        
+        # Get resource service
+        resource_service = ResourceService.get_instance()
+        
+        # Get resource
+        if resource_type == "icon":
+            return resource_service.get_icon(name, **kwargs)
+        elif resource_type == "pixmap":
+            return resource_service.get_pixmap(name, **kwargs)
+        else:
+            logger.warning(f"Unknown resource type: {resource_type}")
+            return None

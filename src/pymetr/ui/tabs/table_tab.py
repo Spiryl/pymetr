@@ -12,7 +12,7 @@ from typing import Any
 from pymetr.ui.tabs.base import BaseTab
 from pymetr.ui.views.table_view import TableView
 from pymetr.core.logging import logger
-from pymetr.ui.tabs.toolbar import TabToolbar
+from pymetr.ui.components.toolbar import TabToolbar
 
 class FilterDialog(QDialog):
     """Dialog for creating column filters."""

@@ -1,42 +1,27 @@
-from PySide6.QtCore import QObject, Qt
+from PySide6.QtCore import QObject, Qt, Signal
 import pyqtgraph as pg
 from pymetr.core.logging import logger
-from typing import Dict, Any
 
 class CursorHandler(QObject):
-    """
-    CursorHandler for managing cursors on a plot.
-    """
-    # Add a style mapping dictionary
+    # CursorHandler manages cursors on a plot.
+    # It emits a cursor_updated signal when a cursor is dragged.
+    cursor_updated = Signal(str, str, object)  # model_id, property, new value
+
     _style_map = {
         'solid': Qt.SolidLine,
         'dash': Qt.DashLine,
         'dot': Qt.DotLine,
         'dashdot': Qt.DashDotLine
     }
-
+    
     def __init__(self, plot_item: pg.PlotItem, state):
-        """
-        Initialize the CursorHandler.
-
-        Args:
-            plot_item: Main plot for cursor overlays.
-            state: The ApplicationState instance.
-        """
         super().__init__()
         self.plot_item = plot_item
-        self.state = state  # Save state for lookups
-        self.cursors: Dict[str, pg.InfiniteLine] = {}
-
+        self.state = state  # For model lookups
+        self.cursors = {}  # Maps cursor id to InfiniteLine instances
         logger.debug("CursorHandler initialized")
-
-        # Connect to plot item signals as needed.
-        # For example, if you have a mechanism to detect cursor movement,
-        # you might connect a lambda to call _handle_cursor_moved.
-
-    @staticmethod
-    def _get_qt_line_style(style_str: str) -> Qt.PenStyle:
-        """Convert string style to Qt PenStyle."""
+    
+    def _get_qt_line_style(self, style_str: str) -> Qt.PenStyle:
         styles = {
             'solid': Qt.SolidLine,
             'dash': Qt.DashLine,
@@ -45,107 +30,10 @@ class CursorHandler(QObject):
         }
         return styles.get(style_str.lower(), Qt.SolidLine)
     
-    def handle_property_change(self, model_id: str, model_type: str, prop: str, value: Any) -> None:
-        """Handle cursor property changes."""
-        if model_id not in self.cursors:
-            logger.debug(f"[CursorHandler] Cursor {model_id} not found.")
-            return
-
-        logger.debug(f"[CursorHandler] Updating cursor {model_id}: prop={prop}, value={value}")
-        try:
-            cursor_line = self.cursors[model_id]
-            
-            # Check if cursor still exists
-            if not cursor_line.scene():
-                logger.debug(f"[CursorHandler] Cursor {model_id} already deleted")
-                return
-            
-            if prop == "position":
-                cursor_line.setValue(value)
-            elif prop == "axis":
-                try:
-                    # Handle axis change - recreate cursor with new angle
-                    angle = 90 if value == "x" else 0
-                    pos = cursor_line.value()
-                    current_pen = cursor_line.pen
-                    is_visible = cursor_line.isVisible()
-                    is_movable = cursor_line.movable
-                    
-                    # Remove old cursor
-                    if cursor_line.scene():
-                        self.plot_item.removeItem(cursor_line)
-                    
-                    # Create new cursor with updated angle
-                    new_cursor = pg.InfiniteLine(
-                        pos=pos, 
-                        angle=angle,
-                        pen=current_pen,
-                        movable=is_movable
-                    )
-                    # Set visibility after creation
-                    new_cursor.setVisible(is_visible)
-                    
-                    self.plot_item.addItem(new_cursor)
-                    self.cursors[model_id] = new_cursor
-                except Exception as e:
-                    logger.error(f"Error recreating cursor: {e}")
-                    
-            elif prop == "color":
-                try:
-                    current_pen = cursor_line.pen
-                    pen = pg.mkPen(
-                        color=value,
-                        width=current_pen.width(),
-                        style=current_pen.style()
-                    )
-                    cursor_line.setPen(pen)
-                except Exception as e:
-                    logger.error(f"Error updating cursor color: {e}")
-                    
-            elif prop == "style":
-                try:
-                    style_map = {
-                        'solid': Qt.SolidLine,
-                        'dash': Qt.DashLine,
-                        'dot': Qt.DotLine,
-                        'dashdot': Qt.DashDotLine
-                    }
-                    current_pen = cursor_line.pen
-                    qt_style = style_map.get(value, Qt.SolidLine)
-                    pen = pg.mkPen(
-                        color=current_pen.color(),
-                        width=current_pen.width(),
-                        style=qt_style
-                    )
-                    cursor_line.setPen(pen)
-                except Exception as e:
-                    logger.error(f"Error updating cursor style: {e}")
-                    
-            elif prop == "width":
-                try:
-                    current_pen = cursor_line.pen
-                    pen = pg.mkPen(
-                        color=current_pen.color(),
-                        width=int(value),
-                        style=current_pen.style()
-                    )
-                    cursor_line.setPen(pen)
-                except Exception as e:
-                    logger.error(f"Error updating cursor width: {e}")
-                    
-            elif prop == "visible":
-                if cursor_line.scene():  # Only set if cursor still exists
-                    cursor_line.setVisible(bool(value))
-            else:
-                logger.warning(f"Unhandled cursor property: {prop}")
-                
-        except Exception as e:
-            logger.error(f"Error updating cursor {model_id}.{prop}: {e}")
-
-    def add_cursor(self, cursor_model) -> None:
-        """Add a new cursor from a model."""
+    def register_cursor(self, cursor_model) -> None:
         cursor_id = cursor_model.id
         if cursor_id in self.cursors:
+            logger.warning(f"Cursor {cursor_id} is already registered.")
             return
         try:
             position = cursor_model.get_property('position', 0.0)
@@ -154,61 +42,116 @@ class CursorHandler(QObject):
             style = cursor_model.get_property('style', 'solid')
             width = cursor_model.get_property('width', 1)
             visible = cursor_model.get_property('visible', True)
-
-            # Create pen with proper style
+            
             pen = pg.mkPen(
                 color=color,
                 width=width,
                 style=self._get_qt_line_style(style)
             )
-
-            # Create cursor with proper angle based on axis
-            angle = 90 if axis == "x" else 0
+            angle = 90 if axis.lower() == "x" else 0
             cursor_line = pg.InfiniteLine(
                 pos=position,
                 angle=angle,
                 pen=pen,
                 movable=True
             )
-            
             cursor_line.setVisible(visible)
             self.plot_item.addItem(cursor_line)
             self.cursors[cursor_id] = cursor_line
-
-            logger.debug(f"Added cursor {cursor_id} at position {position}")
+            logger.debug(f"Registered cursor {cursor_id} at position {position} with axis {axis}")
+            # Connect the cursor's position-changed signal to our handler
+            cursor_line.sigPositionChanged.connect(lambda pos, cid=cursor_id: self._cursor_dragged(cid, pos))
         except Exception as e:
-            logger.error(f"Error adding cursor {cursor_id}: {e}")
+            logger.error(f"Error registering cursor {cursor_id}: {e}", exc_info=True)
+    
+    def _cursor_dragged(self, cursor_id: str, pos) -> None:
+        logger.debug(f"Cursor {cursor_id} dragged to position {pos}")
+        # Emit the cursor_updated signal with model_id, property "position", and the new value
+        self.cursor_updated.emit(cursor_id, "position", pos)
+    
+    def change_cursor(self, cursor_id: str, prop: str, value) -> None:
+        if cursor_id not in self.cursors:
+            logger.debug(f"Cursor {cursor_id} not found for update.")
+            return
+        logger.debug(f"Changing cursor {cursor_id}: property '{prop}' to {value}")
+        try:
+            cursor_line = self.cursors[cursor_id]
+            if not cursor_line.scene():
+                logger.debug(f"Cursor {cursor_id} scene not available; skipping update.")
+                return
+            
+            if prop == "position":
+                cursor_line.setValue(value)
+                logger.debug(f"Cursor {cursor_id} position set to {value}")
+            elif prop == "axis":
+                angle = 90 if value.lower() == "x" else 0
+                pos = cursor_line.value()
+                current_pen = cursor_line.pen
+                is_visible = cursor_line.isVisible()
+                is_movable = cursor_line.movable
+                self.plot_item.removeItem(cursor_line)
+                new_cursor = pg.InfiniteLine(
+                    pos=pos,
+                    angle=angle,
+                    pen=current_pen,
+                    movable=is_movable
+                )
+                new_cursor.setVisible(is_visible)
+                self.plot_item.addItem(new_cursor)
+                self.cursors[cursor_id] = new_cursor
+                # Reconnect the dragged signal on the new cursor
+                new_cursor.sigPositionChanged.connect(lambda pos, cid=cursor_id: self._cursor_dragged(cid, pos))
+                logger.debug(f"Cursor {cursor_id} axis changed; new angle set to {angle}")
+            elif prop == "color":
+                current_pen = cursor_line.pen
+                pen = pg.mkPen(
+                    color=value,
+                    width=current_pen.width(),
+                    style=current_pen.style()
+                )
+                cursor_line.setPen(pen)
+                logger.debug(f"Cursor {cursor_id} color changed to {value}")
+            elif prop == "style":
+                current_pen = cursor_line.pen
+                qt_style = self._get_qt_line_style(value)
+                pen = pg.mkPen(
+                    color=current_pen.color(),
+                    width=current_pen.width(),
+                    style=qt_style
+                )
+                cursor_line.setPen(pen)
+                logger.debug(f"Cursor {cursor_id} style changed to {value}")
+            elif prop == "width":
+                current_pen = cursor_line.pen
+                pen = pg.mkPen(
+                    color=current_pen.color(),
+                    width=int(value),
+                    style=current_pen.style()
+                )
+                cursor_line.setPen(pen)
+                logger.debug(f"Cursor {cursor_id} width changed to {value}")
+            elif prop == "visible":
+                cursor_line.setVisible(bool(value))
+                logger.debug(f"Cursor {cursor_id} visibility set to {value}")
+            else:
+                logger.warning(f"Unhandled cursor property: {prop}")
+        except Exception as e:
+            logger.error(f"Error changing cursor {cursor_id} property {prop}: {e}", exc_info=True)
+
+    def link_cursor(self, cursor_model) -> None:
+        logger.debug(f"Linking cursor {cursor_model.id}; no special handling implemented.")
+        # For now, no additional processing is needed.
+        pass
 
     def remove_cursor(self, cursor_id: str) -> None:
-        """Remove a cursor."""
         if cursor_id not in self.cursors:
+            logger.debug(f"Cursor {cursor_id} not found for removal.")
             return
         try:
             cursor_line = self.cursors[cursor_id]
-            if cursor_line.scene():  # Check if cursor still exists
+            if cursor_line.scene():
                 self.plot_item.removeItem(cursor_line)
             del self.cursors[cursor_id]
             logger.debug(f"Removed cursor {cursor_id}")
         except Exception as e:
-            logger.error(f"Error removing cursor {cursor_id}: {e}")
-
-    def clear_all(self) -> None:
-        """Remove all cursors."""
-        for cursor_id in list(self.cursors.keys()):
-            self.remove_cursor(cursor_id)
-
-    def _handle_cursor_moved(self, cursor_id: str) -> None:
-        """
-        Called when a cursor is moved interactively.
-        Use the stored state to look up the cursor model.
-        """
-        try:
-            cursor_model = self.state.get_model(cursor_id)
-            if cursor_model is None:
-                return
-            # Here you can update the model based on the new cursor position.
-            # For example, if the cursor is movable:
-            new_pos = self.cursors[cursor_id].value()
-            cursor_model.set_property('position', new_pos)
-        except Exception as e:
-            logger.error(f"Error handling cursor move for {cursor_id}: {e}")
+            logger.error(f"Error removing cursor {cursor_id}: {e}", exc_info=True)

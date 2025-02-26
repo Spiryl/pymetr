@@ -1,15 +1,11 @@
 /* -------------------------------------------------
-   COMMON COLORS & FONTS
+   THEME VARIABLES
    ------------------------------------------------- */
-   
-/* 
-   Base Colors:
-   Background        = #1E1E1E
-   Secondary         = #2A2A2A
-   Text              = #F5F5F5
-   Accent (Primary)  = #FF8400
-   Accent (Hover)    = #E07800 
-*/
+/* The :root section has been removed since Qt doesn't fully support CSS variables */
+
+/* -------------------------------------------------
+   COMMON WIDGETS
+   ------------------------------------------------- */
 
 /* Global defaults */
 QWidget {
@@ -17,12 +13,11 @@ QWidget {
     color: #f5f5f5;
     font-family: "Segoe UI", "Helvetica Neue", sans-serif;
     font-size: 10pt;
-    border: none; /* Generally keep borders off for a minimal look */
+    border: none;
 }
 
 QToolBar QWidget {
     background-color: transparent;
-    /* border: none; etc. if needed */
 }
 
 /* -------------------------------------------------
@@ -61,20 +56,27 @@ QTreeView {
     background: #1e1e1e;
     border: none;
     show-decoration-selected: 1;
+    selection-background-color: transparent;
 }
 
 QTreeView::item {
-    padding: 4px;
-    border: none;
+    padding: 5px;
+    border-radius: 3px;
+    margin: 1px;
 }
 
 QTreeView::item:selected {
-    background: #ff8400;
-    color: #000000;
+    background: rgba(255, 151, 5, 0.3);
+    border-left: 3px solid #ff9705;
+    color: #ffffff;
 }
 
-QTreeView::item:hover {
-    background: rgba(255, 132, 0, 0.2);
+QTreeView::item:selected:active {
+    background: rgba(255, 151, 5, 0.5);
+}
+
+QTreeView::item:hover:!selected {
+    background: rgba(255, 255, 255, 0.05);
 }
 
 /* -------------------------------------------------
@@ -95,13 +97,12 @@ QToolButton {
     color: #f5f5f5;
 }
 
-/* Tool button hover stays the same */
 QToolButton:hover {
-    background: rgba(255, 132, 0, 0.2);
+    background: rgba(255, 151, 5, 0.2);
 }
 
 QToolButton:pressed {
-    background: #ff8400;
+    background: #ff9705;
     color: #000000;
 }
 
@@ -112,18 +113,17 @@ QTableView {
     background: #1e1e1e;
     border: none;
     gridline-color: #2a2a2a;
-    selection-background-color: #ff8400; /* Just to be explicit */
+    selection-background-color: #ff9705;
     selection-color: #000000;
 }
 
 QTableView::item:selected {
-    background: #ff8400;
+    background: #ff9705;
     color: #000000;
 }
 
-/* (Already matching tool button hover) */
 QTableView::item:hover {
-    background: rgba(255, 132, 0, 0.2);
+    background: rgba(255, 151, 5, 0.2);
 }
 
 QHeaderView::section {
@@ -151,14 +151,13 @@ QScrollBar:vertical {
 }
 
 QScrollBar::handle:vertical {
-    background: #ff8400;
+    background: #ff9705;
     min-height: 20px;
     border-radius: 5px;
 }
 
-/* --- Updated hover state --- */
 QScrollBar::handle:vertical:hover {
-    background: rgba(255, 132, 0, 0.2);
+    background: #d47e04;
 }
 
 QScrollBar::add-line:vertical,
@@ -176,14 +175,13 @@ QScrollBar:horizontal {
 }
 
 QScrollBar::handle:horizontal {
-    background: #ff8400;
+    background: #ff9705;
     min-width: 20px;
     border-radius: 5px;
 }
 
-/* --- Updated hover state --- */
 QScrollBar::handle:horizontal:hover {
-    background: rgba(255, 132, 0, 0.2);
+    background: #d47e04;
 }
 
 QScrollBar::add-line:horizontal,
@@ -201,9 +199,8 @@ QSplitter::handle {
     width: 2px;
 }
 
-/* --- Updated hover state --- */
 QSplitter::handle:hover {
-    background-color: rgba(255, 132, 0, 0.2);
+    background-color: rgba(255, 151, 5, 0.2);
 }
 
 /* -------------------------------------------------
@@ -218,9 +215,8 @@ QMenuBar::item {
     padding: 4px 12px;
 }
 
-/* --- Updated selected (hover-like) state --- */
 QMenuBar::item:selected {
-    background: rgba(255, 132, 0, 0.2);
+    background: rgba(255, 151, 5, 0.2);
 }
 
 QMenu {
@@ -233,9 +229,8 @@ QMenu::item {
     border: 1px solid #2a2a2a;
 }
 
-/* --- Updated selected (hover-like) state --- */
 QMenu::item:selected {
-    background: rgba(255, 132, 0, 0.2);
+    background: rgba(255, 151, 5, 0.2);
 }
 
 /* -------------------------------------------------
@@ -250,11 +245,11 @@ QPushButton {
 }
 
 QPushButton:hover {
-    background: rgba(255, 132, 0, 0.2);
+    background: rgba(255, 151, 5, 0.2);
 }
 
 QPushButton:pressed {
-    background: #ff8400;
+    background: #ff9705;
     color: #000000;
 }
 
@@ -267,7 +262,7 @@ QPushButton:disabled {
 
 /* Checkable (toggle) buttons */
 QPushButton:checked {
-    background: #ff8400;
+    background: #ff9705;
     color: #000000;
 }
 
@@ -276,19 +271,19 @@ QPushButton:checked {
    ------------------------------------------------- */
 QCheckBox, QRadioButton {
     spacing: 6px;
-    color: white;
+    color: #ffffff;
 }
 
 QCheckBox::indicator,
 QRadioButton::indicator {
     width: 14px;
     height: 14px;
-    background-color: white;
+    background-color: #ffffff;
     border: 1px solid #666666;
 }
 
 QCheckBox::indicator:checked {
-    background-color: #ff8400;  /* A nice blue when checked */
+    background-color: #ff9705;
     border: 1px solid #FFFFFF;
 }
 
@@ -297,15 +292,15 @@ QCheckBox::indicator:unchecked {
 }
 
 QCheckBox::indicator:hover {
-    border: 1px solid #ff8400;
+    border: 1px solid #ff9705;
 }
 
 QRadioButton::indicator {
-    border-radius: 7px;  /* Make it round */
+    border-radius: 7px;
 }
 
 QRadioButton::indicator:checked {
-    background-color: #ff8400;
+    background-color: #ff9705;
     border: 1px solid #FFFFFF;
 }
 
@@ -314,7 +309,7 @@ QRadioButton::indicator:unchecked {
 }
 
 QRadioButton::indicator:hover {
-    border: 1px solid #ff8400;
+    border: 1px solid #ff9705;
 }
 
 /* -------------------------------------------------
@@ -325,12 +320,12 @@ QLineEdit {
     border: 1px solid #2a2a2a;
     border-radius: 2px;
     padding: 4px;
-    selection-background-color: #ff8400;
+    selection-background-color: #ff9705;
     selection-color: #000000;
 }
 
 QLineEdit:focus {
-    border: 1px solid #ff8400;
+    border: 1px solid #ff9705;
     background-color: #1e1e1e;
 }
 
@@ -353,7 +348,7 @@ QComboBox {
 }
 
 QComboBox:hover {
-    background-color: rgba(255, 132, 0, 0.2);
+    background-color: rgba(255, 151, 5, 0.2);
 }
 
 QComboBox::drop-down {
@@ -367,12 +362,12 @@ QComboBox::drop-down {
 QComboBox QAbstractItemView {
     background-color: #2a2a2a;
     border: 1px solid #1e1e1e;
-    selection-background-color: #ff8400;
+    selection-background-color: #ff9705;
     selection-color: #000000;
 }
 
 QComboBox:focus {
-    border: 1px solid #ff8400;
+    border: 1px solid #ff9705;
 }
 
 /* -------------------------------------------------
@@ -381,7 +376,71 @@ QComboBox:focus {
 QToolTip {
     background-color: #2a2a2a;
     color: #f5f5f5;
-    border: 1px solid #ff8400;
+    border: 1px solid #ff9705;
     padding: 4px;
     opacity: 190;
+}
+
+/* -------------------------------------------------
+   TABS
+   ------------------------------------------------- */
+QTabWidget::pane {
+    border: none;
+    background: #1e1e1e;
+}
+
+QTabBar::tab {
+    background: #2a2a2a;
+    padding: 6px 12px;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    margin-right: 2px;
+    color: #ffffff;
+}
+
+/* Remove full background color change and add underline effect */
+QTabBar::tab:selected {
+    background: #2a2a2a; /* Keep the background same */
+    color: #ff9705; /* Change text color */
+    border-bottom: 3px solid #ff9705; /* Highlight bar under tab */
+}
+
+/* Ensure non-selected tabs do not have the highlight */
+QTabBar::tab:!selected {
+    background: #2a2a2a;
+    color: #ffffff;
+    border-bottom: 3px solid transparent; /* No highlight */
+}
+
+QTabBar::tab:!selected:hover {
+    background: rgba(255, 151, 5, 0.2);
+}
+
+/* -------------------------------------------------
+   COLOR PICKER
+   ------------------------------------------------- */
+ColorPicker {
+    border: none;
+    background: transparent;
+}
+
+ColorButton {
+    border: 1px solid #aaaaaa;
+    border-radius: 3px;
+    background: #2a2a2a;
+}
+
+/* -------------------------------------------------
+   PROGRESS BAR
+   ------------------------------------------------- */
+QProgressBar {
+    border: 1px solid #2a2a2a;
+    border-radius: 3px;
+    text-align: center;
+    background-color: #1e1e1e;
+}
+
+QProgressBar::chunk {
+    background-color: #ff9705;
+    width: 1px;
 }

@@ -27,12 +27,12 @@ class TestProgressWidget(ParameterWidget):
         
         # Define styles for test statuses.
         self.status_styles = {
-            TestStatus.READY: {'border': '#95A5A6', 'chunk': '#95A5A6', 'background': '#1e1e1e'},
-            TestStatus.RUNNING: {'border': '#3498DB', 'chunk': '#3498DB', 'background': '#1e1e1e'},
-            TestStatus.PASS: {'border': '#2ECC71', 'chunk': '#2ECC71', 'background': '#1e1e1e'},
-            TestStatus.FAIL: {'border': '#E74C3C', 'chunk': '#E74C3C', 'background': '#1e1e1e'},
-            TestStatus.ERROR: {'border': '#F1C40F', 'chunk': '#F1C40F', 'background': '#1e1e1e'},
-            TestStatus.COMPLETE: {'border': '#2ECC71', 'chunk': '#2ECC71', 'background': '#1e1e1e'},
+            TestStatus.READY: {'border': '#02FEE4', 'chunk': '#1e1e1e', 'background': '#1e1e1e'},
+            TestStatus.RUNNING: {'border': '#5E57FF', 'chunk': '#5E57FF', 'background': '#1e1e1e'},
+            TestStatus.PASS: {'border': '#4BFF36', 'chunk': '#1e1e1e', 'background': '#1e1e1e'},
+            TestStatus.FAIL: {'border': '#F23CA6', 'chunk': '#1e1e1e', 'background': '#1e1e1e'},
+            TestStatus.ERROR: {'border': '#F23CA6', 'chunk': '#1e1e1e', 'background': '#1e1e1e'},
+            TestStatus.COMPLETE: {'border': '#4BFF36', 'chunk': '#1e1e1e', 'background': '#1e1e1e'},
         }
         
         # Initially show "Not Reported" if no progress is set.

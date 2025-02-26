@@ -28,10 +28,10 @@ class ResultStatusWidget(ParameterWidget):
         
         # Define styles for statuses
         self.status_styles = {
-            ResultStatus.PASS: {'border': '#2ECC71', 'chunk': '#2ECC71', 'background': '#1e1e1e'},
-            ResultStatus.FAIL: {'border': '#E74C3C', 'chunk': '#E74C3C', 'background': '#1e1e1e'},
-            ResultStatus.ERROR: {'border': '#F1C40F', 'chunk': '#F1C40F', 'background': '#1e1e1e'},
-            None:             {'border': '#0000FF', 'chunk': '#0000FF', 'background': '#1e1e1e'}  # Blue for not reported
+            ResultStatus.PASS: {'border': '#4BFF36', 'chunk': '#1e1e1e', 'background': '#1e1e1e'},
+            ResultStatus.FAIL: {'border': '#E74C3C', 'chunk': '#1e1e1e', 'background': '#1e1e1e'},
+            ResultStatus.ERROR: {'border': '#F23CA6', 'chunk': '#1e1e1e', 'background': '#1e1e1e'},
+            None:             {'border': '#5E57FF', 'chunk': '#5E57FF', 'background': '#1e1e1e'}  # Blue for not reported
         }
         
         # Set initial style (none reported)

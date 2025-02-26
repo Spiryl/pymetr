@@ -1,0 +1,398 @@
+/* -------------------------------------------------
+   COMMON COLORS & FONTS
+   ------------------------------------------------- */
+   
+/* 
+   Base Colors:
+   Background        = #1E1E1E
+   Secondary         = #2A2A2A
+   Text              = #F5F5F5
+   Accent (Primary)  = #FF8400
+   Accent (Hover)    = #E07800 
+*/
+
+/* Global defaults */
+QWidget {
+    background-color: #1e1e1e;
+    color: #f5f5f5;
+    font-family: "Segoe UI", "Helvetica Neue", sans-serif;
+    font-size: 10pt;
+    border: none; /* Generally keep borders off for a minimal look */
+}
+
+QToolBar QWidget {
+    background-color: transparent;
+    /* border: none; etc. if needed */
+}
+
+/* -------------------------------------------------
+   MAIN WINDOW / CENTRAL WIDGET
+   ------------------------------------------------- */
+QMainWindow {
+    background-color: #1e1e1e;
+}
+
+QMainWindow::centralWidget {
+    margin: 0;
+    padding: 0;
+    border: none;
+}
+
+/* -------------------------------------------------
+   DOCK WIDGETS
+   ------------------------------------------------- */
+QDockWidget {
+    background: transparent;
+    border: none;
+    color: #f5f5f5;
+}
+
+QDockWidget::title {
+    text-align: left;
+    background: #2a2a2a;
+    padding: 8px;
+    border-bottom: none;
+}
+
+/* -------------------------------------------------
+   TREE VIEWS
+   ------------------------------------------------- */
+QTreeView {
+    background: #1e1e1e;
+    border: none;
+    show-decoration-selected: 1;
+    selection-background-color: transparent; /* Let us handle selection coloring */
+}
+
+QTreeView::item {
+    padding: 5px;
+    border-radius: 3px;
+    margin: 1px;
+}
+
+QTreeView::item:selected {
+    background: rgba(255, 132, 0, 0.3); /* Transparent orange */
+    border-left: 3px solid #ff8400; /* Solid orange left border */
+    color: #ffffff; /* Keep text white for better readability */
+}
+
+QTreeView::item:selected:active {
+    background: rgba(255, 132, 0, 0.5); /* Slightly more opaque when active */
+}
+
+QTreeView::item:hover:!selected {
+    background: rgba(255, 255, 255, 0.05); /* Very subtle hover effect */
+}
+
+
+
+/* -------------------------------------------------
+   TOOLBARS
+   ------------------------------------------------- */
+QToolBar {
+    background: #2a2a2a;
+    border: none;
+    spacing: 8px;
+    padding: 4px;
+}
+
+QToolButton {
+    background: #2a2a2a;
+    border: none;
+    border-radius: 4px;
+    padding: 6px;
+    color: #f5f5f5;
+}
+
+/* Tool button hover stays the same */
+QToolButton:hover {
+    background: rgba(255, 132, 0, 0.2);
+}
+
+QToolButton:pressed {
+    background: #ff8400;
+    color: #000000;
+}
+
+/* -------------------------------------------------
+   TABLE VIEWS
+   ------------------------------------------------- */
+QTableView {
+    background: #1e1e1e;
+    border: none;
+    gridline-color: #2a2a2a;
+    selection-background-color: #ff8400; /* Just to be explicit */
+    selection-color: #000000;
+}
+
+QTableView::item:selected {
+    background: #ff8400;
+    color: #000000;
+}
+
+/* (Already matching tool button hover) */
+QTableView::item:hover {
+    background: rgba(255, 132, 0, 0.2);
+}
+
+QHeaderView::section {
+    background: #2a2a2a;
+    border: none;
+    padding: 4px;
+}
+
+/* -------------------------------------------------
+   STATUS BAR
+   ------------------------------------------------- */
+QStatusBar {
+    background: #1e1e1e;
+    border-top: 1px solid #2a2a2a;
+}
+
+/* -------------------------------------------------
+   SCROLLBARS
+   ------------------------------------------------- */
+/* Vertical */
+QScrollBar:vertical {
+    background: #1e1e1e;
+    width: 10px;
+    margin: 0;
+}
+
+QScrollBar::handle:vertical {
+    background: #ff8400;
+    min-height: 20px;
+    border-radius: 5px;
+}
+
+/* --- Updated hover state --- */
+QScrollBar::handle:vertical:hover {
+    background: rgba(255, 132, 0, 0.2);
+}
+
+QScrollBar::add-line:vertical,
+QScrollBar::sub-line:vertical {
+    border: none;
+    background: none;
+    height: 0px;
+}
+
+/* Horizontal */
+QScrollBar:horizontal {
+    background: #1e1e1e;
+    height: 10px;
+    margin: 0;
+}
+
+QScrollBar::handle:horizontal {
+    background: #ff8400;
+    min-width: 20px;
+    border-radius: 5px;
+}
+
+/* --- Updated hover state --- */
+QScrollBar::handle:horizontal:hover {
+    background: rgba(255, 132, 0, 0.2);
+}
+
+QScrollBar::add-line:horizontal,
+QScrollBar::sub-line:horizontal {
+    border: none;
+    background: none;
+    width: 0px;
+}
+
+/* -------------------------------------------------
+   SPLITTERS
+   ------------------------------------------------- */
+QSplitter::handle {
+    background-color: #2a2a2a;
+    width: 2px;
+}
+
+/* --- Updated hover state --- */
+QSplitter::handle:hover {
+    background-color: rgba(255, 132, 0, 0.2);
+}
+
+/* -------------------------------------------------
+   MENU BAR & MENUS
+   ------------------------------------------------- */
+QMenuBar {
+    background: #2a2a2a;
+}
+
+QMenuBar::item {
+    background: #2a2a2a;
+    padding: 4px 12px;
+}
+
+/* --- Updated selected (hover-like) state --- */
+QMenuBar::item:selected {
+    background: rgba(255, 132, 0, 0.2);
+}
+
+QMenu {
+    background: #2a2a2a;
+    border: 1px solid #2a2a2a;
+}
+
+QMenu::item {
+    padding: 4px 20px;
+    border: 1px solid #2a2a2a;
+}
+
+/* --- Updated selected (hover-like) state --- */
+QMenu::item:selected {
+    background: rgba(255, 132, 0, 0.2);
+}
+
+/* -------------------------------------------------
+   PUSH BUTTONS
+   ------------------------------------------------- */
+QPushButton {
+    background: #2a2a2a;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    color: #f5f5f5;
+}
+
+QPushButton:hover {
+    background: rgba(255, 132, 0, 0.2);
+}
+
+QPushButton:pressed {
+    background: #ff8400;
+    color: #000000;
+}
+
+/* Disabled */
+QPushButton:disabled {
+    color: #777777;
+    background: #2a2a2a;
+    opacity: 0.5;
+}
+
+/* Checkable (toggle) buttons */
+QPushButton:checked {
+    background: #ff8400;
+    color: #000000;
+}
+
+/* -------------------------------------------------
+   CHECKBOXES & RADIO BUTTONS
+   ------------------------------------------------- */
+QCheckBox, QRadioButton {
+    spacing: 6px;
+    color: white;
+}
+
+QCheckBox::indicator,
+QRadioButton::indicator {
+    width: 14px;
+    height: 14px;
+    background-color: white;
+    border: 1px solid #666666;
+}
+
+QCheckBox::indicator:checked {
+    background-color: #ff8400;  /* A nice blue when checked */
+    border: 1px solid #FFFFFF;
+}
+
+QCheckBox::indicator:unchecked {
+    background-color: #FFFFFF;
+}
+
+QCheckBox::indicator:hover {
+    border: 1px solid #ff8400;
+}
+
+QRadioButton::indicator {
+    border-radius: 7px;  /* Make it round */
+}
+
+QRadioButton::indicator:checked {
+    background-color: #ff8400;
+    border: 1px solid #FFFFFF;
+}
+
+QRadioButton::indicator:unchecked {
+    background-color: #FFFFFF;
+}
+
+QRadioButton::indicator:hover {
+    border: 1px solid #ff8400;
+}
+
+/* -------------------------------------------------
+   LINE EDITS
+   ------------------------------------------------- */
+QLineEdit {
+    background-color: #2a2a2a;
+    border: 1px solid #2a2a2a;
+    border-radius: 2px;
+    padding: 4px;
+    selection-background-color: #ff8400;
+    selection-color: #000000;
+}
+
+QLineEdit:focus {
+    border: 1px solid #ff8400;
+    background-color: #1e1e1e;
+}
+
+QLineEdit:disabled {
+    color: #777777;
+    background-color: #2a2a2a;
+    border: 1px solid #2a2a2a;
+    opacity: 0.5;
+}
+
+/* -------------------------------------------------
+   COMBO BOXES
+   ------------------------------------------------- */
+QComboBox {
+    background-color: #2a2a2a;
+    border-radius: 2px;
+    padding: 4px;
+    border: 1px solid #2a2a2a;
+    color: #f5f5f5;
+}
+
+QComboBox:hover {
+    background-color: rgba(255, 132, 0, 0.2);
+}
+
+QComboBox::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 20px;
+    border-left: 1px solid #1e1e1e;
+    background: transparent;
+}
+
+QComboBox QAbstractItemView {
+    background-color: #2a2a2a;
+    border: 1px solid #1e1e1e;
+    selection-background-color: #ff8400;
+    selection-color: #000000;
+}
+
+QComboBox:focus {
+    border: 1px solid #ff8400;
+}
+
+/* -------------------------------------------------
+   TOOLTIP
+   ------------------------------------------------- */
+QToolTip {
+    background-color: #2a2a2a;
+    color: #f5f5f5;
+    border: 1px solid #ff8400;
+    padding: 4px;
+    opacity: 190;
+}
+
+

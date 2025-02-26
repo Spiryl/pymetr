@@ -51,7 +51,7 @@ def run_test(test):
                   f"{np.random.uniform(0,1):.2f}"]
         table.add_row(row)
         result.progress = int((frame+1)/200)*100
-        test.wait(20)  
+        test.wait(25)  
 
     
     # Final progress update and set test status

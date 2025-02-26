@@ -1,9 +1,10 @@
+import os
 from typing import Optional, Dict
 from pathlib import Path
 
 from PySide6.QtCore import Qt, QSettings, QSize, QTimer
-from PySide6.QtGui import QPainter, QPainterPath, QColor
-from PySide6.QtWidgets import QMainWindow, QWidget, QDockWidget
+from PySide6.QtGui import QPainter, QPainterPath, QColor, QIcon
+from PySide6.QtWidgets import QMainWindow, QWidget, QDockWidget, QApplication
 
 # Toolbars and UI Components
 from pymetr.ui.title_bar import TitleBar
@@ -18,7 +19,10 @@ from pymetr.ui.factories.tab_factory import TabFactory
 from pymetr.ui.docks.model_tree_view import ModelTreeView
 from pymetr.ui.docks.device_tree_view import DeviceTreeView
 
+# Theme Management
+from pymetr.services.theme_service import ThemeService
 from pymetr.core.logging import logger
+
 
 class MainWindow(QMainWindow):
     """
@@ -29,12 +33,21 @@ class MainWindow(QMainWindow):
     - Hosts the TabManager for content display
     - Synchronizes state between UI components
     - Maintains window state between sessions
+    - Handles theme and appearance settings
     """
     def __init__(self, state):
         logger.debug("Initializing MainWindow")
         super().__init__()
         self.state = state
         self.state.set_parent(self)
+        
+        # Initialize theme service
+        self.theme_service = ThemeService.get_instance()
+        
+        # Apply theme to application
+        app = QApplication.instance()
+        if app:
+            self.theme_service.apply_theme(app)
         
         # Configure window appearance
         self._setup_window()
@@ -46,10 +59,6 @@ class MainWindow(QMainWindow):
         self._setup_tab_manager()  # Then tab manager
         self._setup_status_bar()   # Finally status bar
         
-        # Connect the instrument dock to the toolbar after both are created
-        if hasattr(self, 'quick_tools') and hasattr(self, 'instrument_dock'):
-            self.quick_tools.set_instruments_dock(self.instrument_dock)
-        
         # Connect signals
         self._connect_signals()
         
@@ -60,12 +69,12 @@ class MainWindow(QMainWindow):
         """Configure main window properties."""
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowSystemMenuHint)
         self.setAttribute(Qt.WA_TranslucentBackground, True)
-        self.resize(1200, 800)
-        self.setDockOptions(
-            QMainWindow.AnimatedDocks |
-            QMainWindow.AllowNestedDocks |
-            QMainWindow.AllowTabbedDocks
-        )
+        self.resize(1000, 618)
+        # self.setDockOptions(
+        #     QMainWindow.AnimatedDocks |
+        #     QMainWindow.AllowNestedDocks |
+        #     QMainWindow.AllowTabbedDocks
+        # )
 
     def _setup_title_bar(self):
         """Set up custom frameless window title bar."""
@@ -112,10 +121,6 @@ class MainWindow(QMainWindow):
         self.device_view = DeviceTreeView(self.state, None, parent=self.instrument_dock)
         self.instrument_dock.setWidget(self.device_view)
         self.addDockWidget(Qt.RightDockWidgetArea, self.instrument_dock)
-        
-        # Connect dock to QuickToolBar for toggling
-        if hasattr(self, 'quick_tools'):
-            self.quick_tools.set_instruments_dock(self.instrument_dock)
 
     def _setup_status_bar(self):
         """Set up status bar for application messages."""
@@ -127,6 +132,10 @@ class MainWindow(QMainWindow):
         # Connect signals for model management
         self.state.model_registered.connect(self._handle_model_registered)
         self.state.model_removed.connect(self._handle_model_removed)
+        
+        # Connect to theme service signals
+        self.theme_service.theme_changed.connect(self._on_theme_changed)
+        self.theme_service.accent_color_changed.connect(self._on_accent_color_changed)
         
     def _handle_model_registered(self, model_id: str):
         """Handle new model registration."""
@@ -144,8 +153,30 @@ class MainWindow(QMainWindow):
             self.showNormal()
         else:
             self.showMaximized()
-
-    # Action-related methods have been moved to QuickToolBar class
+    
+    def _on_theme_changed(self, theme_name):
+        """Handle theme changes."""
+        logger.debug(f"MainWindow: Theme changed to {theme_name}")
+        
+        # Apply to application
+        app = QApplication.instance()
+        if app:
+            self.theme_service.apply_theme(app)
+        
+        # Notify state
+        self.state.set_info(f"Theme changed to {theme_name}")
+    
+    def _on_accent_color_changed(self, color):
+        """Handle accent color changes."""
+        logger.debug(f"MainWindow: Accent color changed to {color.name()}")
+        
+        # Apply to application
+        app = QApplication.instance()
+        if app:
+            self.theme_service.apply_theme(app)
+        
+        # Notify state
+        self.state.set_info(f"Theme updated: {color.name()}")
 
     def _restore_state(self):
         """Restore window geometry and dock states from settings."""
@@ -171,13 +202,17 @@ class MainWindow(QMainWindow):
         path.addRoundedRect(self.rect(), 10, 10)
         
         # Clip to path and fill
-        painter.setClipPath(path)
-        painter.fillRect(self.rect(), QColor("#2A2A2A"))
-
-    def closeEvent(self, event):
-        """Save window state before closing."""
-        settings = QSettings("PyMetr", "PyMetr")
-        settings.setValue("geometry", self.saveGeometry())
-        settings.setValue("windowState", self.saveState())
+        bg_color = QColor("#2A2A2A")  # Default color
         
-        super().closeEvent(event)
+        # Try to get color from theme
+        try:
+            theme_css = self.theme_service.get_stylesheet()
+            if "--bg-primary:" in theme_css:
+                bg_color_str = theme_css.split("--bg-primary:")[1].split(";")[0].strip()
+                if bg_color_str and QColor(bg_color_str).isValid():
+                    bg_color = QColor(bg_color_str)
+        except Exception as e:
+            logger.warning(f"Failed to parse background color from theme: {e}")
+        
+        painter.setClipPath(path)
+        painter.fillRect(self.rect(), bg_color)

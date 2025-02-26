@@ -7,6 +7,7 @@ pymetr/
 │   ├── pyproject.toml
 │   ├── README.md
 │   ├── setup.py
+│   ├── stylesheet_debug.qss
 ├── docs/
 │   │   ├── api.rst
 │   │   ├── bible.rst
@@ -48,7 +49,6 @@ pymetr/
 │   │   │   │   ├── logging.py
 │   │   │   │   ├── registry.py
 │   │   │   │   ├── state.py
-│   │   │   │   ├── styles.qss
 │   │   ├── drivers/
 │   │   │   ├── base/
 │   │   │   │   │   ├── connections.py
@@ -64,8 +64,8 @@ pymetr/
 │   │   │   │   │   ├── plugin.py
 │   │   │   │   │   ├── registry.py
 │   │   ├── models/
-│   │   │   │   ├── analysis_dual_model.py
-│   │   │   │   ├── analysis_model.py
+│   │   │   │   ├── analysis.py
+│   │   │   │   ├── analysis_dual.py
 │   │   │   │   ├── base.py
 │   │   │   │   ├── cursor.py
 │   │   │   │   ├── device.py
@@ -86,6 +86,7 @@ pymetr/
 │   │   │   │   │   ├── context_test.py
 │   │   │   │   │   ├── context_test_complete.py
 │   │   │   │   │   ├── Frame_Rate_Plus.py
+│   │   │   │   │   ├── power_sweep.py
 │   │   │   │   │   ├── Simple_Context_2.py
 │   │   │   │   │   ├── Simple_Context_3.py
 │   │   │   ├── fun/
@@ -94,26 +95,107 @@ pymetr/
 │   │   │   │   │   ├── quantum.py
 │   │   │   │   │   ├── symphony.py
 │   │   ├── services/
-│   │   │   │   ├── file_services.py
-│   │   │   │   ├── script.py
+│   │   │   │   ├── file_service.py
+│   │   │   │   ├── resource_service.py
+│   │   │   │   ├── script_service.py
+│   │   │   │   ├── theme_service.py
 │   │   ├── ui/
 │   │   │   │   ├── main_window.py
+│   │   │   │   ├── quick_toolbar.py
 │   │   │   │   ├── status_bar.py
+│   │   │   │   ├── tab_manager.py
 │   │   │   │   ├── title_bar.py
+│   │   │   ├── components/
+│   │   │   │   │   ├── color_picker.py
+│   │   │   │   │   ├── log_level_selector.py
+│   │   │   │   │   ├── toolbar.py
 │   │   │   ├── dialogs/
 │   │   │   │   │   ├── discovery.py
 │   │   │   │   │   ├── settings.py
 │   │   │   ├── docks/
+│   │   │   │   │   ├── console_dock.py
 │   │   │   │   │   ├── device_tree_view.py
-│   │   │   │   │   ├── test_tree_view.py
+│   │   │   │   │   ├── model_tree_view.py
 │   │   │   ├── factories/
-│   │   │   │   │   ├── instrument.py
+│   │   │   │   │   ├── instrument_factory.py
+│   │   │   │   │   ├── parameter_factory.py
+│   │   │   │   │   ├── tab_factory.py
 │   │   │   ├── icons/
 │   │   │   │   │   ├── analytics.png
 │   │   │   │   │   ├── analytics_g.png
 │   │   │   │   │   ├── arrow_drop_down.png
 │   │   │   │   │   ├── calculations.png
-....
+│   │   │   │   │   ├── camera.png
+│   │   │   │   │   ├── capture.png
+│   │   │   │   │   ├── capture_g.png
+│   │   │   │   │   ├── chart.png
+│   │   │   │   │   ├── checked.png
+│   │   │   │   │   ├── clear.png
+│   │   │   │   │   ├── close.png
+│   │   │   │   │   ├── console.png
+│   │   │   │   │   ├── console_g.png
+│   │   │   │   │   ├── cursor.png
+│   │   │   │   │   ├── cursors.png
+│   │   │   │   │   ├── cursors_g.png
+│   │   │   │   │   ├── delete.png
+│   │   │   │   │   ├── delete_sweep.png
+│   │   │   │   │   ├── display.png
+│   │   │   │   │   ├── display_g.png
+│   │   │   │   │   ├── file_open.png
+│   │   │   │   │   ├── folder.png
+│   │   │   │   │   ├── grid_settings.png
+│   │   │   │   │   ├── group.png
+│   │   │   │   │   ├── help.png
+│   │   │   │   │   ├── insights.png
+│   │   │   │   │   ├── insights_g.png
+│   │   │   │   │   ├── instruments.png
+│   │   │   │   │   ├── instruments_g.png
+│   │   │   │   │   ├── isolate.png
+│   │   │   │   │   ├── lab.png
+│   │   │   │   │   ├── label.png
+│   │   │   │   │   ├── lab_g.png
+│   │   │   │   │   ├── library_add.png
+│   │   │   │   │   ├── line_style.png
+│   │   │   │   │   ├── markers.png
+│   │   │   │   │   ├── markers_g.png
+│   │   │   │   │   ├── maximize.png
+│   │   │   │   │   ├── measure.png
+│   │   │   │   │   ├── measurements.png
+│   │   │   │   │   ├── measure_g.png
+│   │   │   │   │   ├── minimize.png
+│   │   │   │   │   ├── new.png
+│   │   │   │   │   ├── new_script.png
+│   │   │   │   │   ├── new_suite.png
+│   │   │   │   │   ├── open.png
+│   │   │   │   │   ├── open_script.png
+│   │   │   │   │   ├── open_suite.png
+│   │   │   │   │   ├── options.png
+│   │   │   │   │   ├── plot.png
+│   │   │   │   │   ├── prompt.png
+│   │   │   │   │   ├── publish.png
+│   │   │   │   │   ├── region.png
+│   │   │   │   │   ├── region_g.png
+│   │   │   │   │   ├── report.png
+│   │   │   │   │   ├── result.png
+│   │   │   │   │   ├── run.png
+│   │   │   │   │   ├── save.png
+│   │   │   │   │   ├── script.png
+│   │   │   │   │   ├── settings.png
+│   │   │   │   │   ├── settings_g.png
+│   │   │   │   │   ├── stack.png
+│   │   │   │   │   ├── stop.png
+│   │   │   │   │   ├── table.png
+│   │   │   │   │   ├── test_suite.png
+│   │   │   │   │   ├── toggle_off.png
+│   │   │   │   │   ├── toggle_on.png
+│   │   │   │   │   ├── traces.png
+│   │   │   │   │   ├── traces_g.png
+│   │   │   │   │   ├── unchecked.png
+│   │   │   │   │   ├── visibility_off.png
+│   │   │   │   │   ├── visibility_on.png
+│   │   │   │   │   ├── waves.png
+│   │   │   │   │   ├── zoom_in.png
+│   │   │   │   │   ├── zoom_in_g.png
 │   │   │   ├── parameters/
 │   │   │   │   │   ├── analysis_dual_parameter.py
 │   │   │   │   │   ├── analysis_parameter.py
@@ -127,6 +209,10 @@ pymetr/
 │   │   │   │   │   ├── test_script_parameter.py
 │   │   │   │   │   ├── test_suite_parameter.py
 │   │   │   │   │   ├── trace_parameter.py
+│   │   │   ├── styles/
+│   │   │   │   │   ├── main.qss
+│   │   │   │   │   ├── og_style.qss
+│   │   │   │   │   ├── test.qss
 │   │   │   ├── tabs/
 │   │   │   │   │   ├── base.py
 │   │   │   │   │   ├── device_tab.py
@@ -134,8 +220,7 @@ pymetr/
 │   │   │   │   │   ├── result_tab.py
 │   │   │   │   │   ├── script_tab.py
 │   │   │   │   │   ├── table_tab.py
-│   │   │   │   │   ├── tab_manager.py
-│   │   │   │   │   ├── toolbar.py
+│   │   │   │   │   ├── welcome_tab.py
 │   │   │   ├── views/
 │   │   │   │   │   ├── base.py
 │   │   │   │   │   ├── discovery_view.py

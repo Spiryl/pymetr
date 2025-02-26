@@ -57,7 +57,7 @@ class QuickToolBar(QToolBar):
         
         # Open Script
         self.open_script_action = QAction(
-            QIcon(str(icons_path / 'open.png')),
+            QIcon(str(icons_path / 'open_script.png')),
             "Open Script",
             self
         )
@@ -108,7 +108,6 @@ class QuickToolBar(QToolBar):
         self.addAction(self.new_script_action)
         self.addAction(self.open_script_action)
         
-        self.addSeparator()
         
         # Middle group - Test operations
         self.addAction(self.run_test_action)
@@ -169,31 +168,6 @@ class QuickToolBar(QToolBar):
             self._trigger_action('discover_instruments')
         except Exception as e:
             self._show_error(f"Failed to start instrument discovery: {str(e)}")
-            
-    def set_instruments_dock(self, dock):
-        """Set reference to instruments dock for toggling."""
-        self.instruments_dock = dock
-        
-        # Add a toggle action if we have a dock
-        if hasattr(self, 'instruments_dock'):
-            # Create toggle action
-            icons_path = Path(__file__).parent / 'icons'
-            self.toggle_instruments_action = QAction(
-                QIcon(str(icons_path / 'dock.png')),
-                "Toggle Instruments Panel",
-                self
-            )
-            self.toggle_instruments_action.setShortcut(QKeySequence("Ctrl+Alt+I"))
-            self.toggle_instruments_action.triggered.connect(self._on_toggle_instruments_panel)
-            
-            # Add after the discover action
-            index = self.actions().index(self.discover_instruments_action)
-            self.insertAction(self.actions()[index + 1], self.toggle_instruments_action)
-            
-    def _on_toggle_instruments_panel(self):
-        """Toggle instrument panel visibility."""
-        if hasattr(self, 'instruments_dock'):
-            self.instruments_dock.setVisible(not self.instruments_dock.isVisible())
             
     def _on_clear_all(self):
         """Clear all models from the state."""

@@ -2,11 +2,12 @@ import sys
 import logging
 from pathlib import Path
 from PySide6.QtWidgets import QApplication
-from PySide6.QtCore import Qt, QCoreApplication, QFile, QTextStream
+from PySide6.QtCore import Qt, QCoreApplication
 
 from pymetr.ui.main_window import MainWindow
 from pymetr.core.state import ApplicationState
-from pymetr.core.logging import setup_logging
+from pymetr.core.logging import setup_logging, setup_status_logging
+from pymetr.services.theme_service import ThemeService
 
 def main():
     """Application entry point."""
@@ -16,8 +17,10 @@ def main():
     logger.info("Starting PyMetr")
     
     # Create application
-    # QCoreApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
-    # QCoreApplication.setAttribute(Qt.AA_UseHighDpiPixmaps)
+    # Enable high DPI support
+    QCoreApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
+    QCoreApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
+    
     app = QApplication(sys.argv)
     app.setApplicationName("PyMetr")
     app.setOrganizationName("PyMetr")
@@ -25,18 +28,21 @@ def main():
     # Set application style
     app.setStyle("Fusion")
 
-    style_path = Path(__file__).parent / "core" / "styles.qss"
-    styleSheetFile = QFile(str(style_path))
-    if styleSheetFile.open(QFile.ReadOnly | QFile.Text):
-        textStream = QTextStream(styleSheetFile)
-        app.setStyleSheet(textStream.readAll())
-
     try:
         # Create state and set it as the global state.
         state = ApplicationState()
         
+        # Initialize theme service (will be used by MainWindow)
+        theme_service = ThemeService.get_instance()
+        
         # Create and show main window
         window = MainWindow(state)
+        
+        # Set up status bar logging AFTER window is created
+        # This ensures the status bar exists to receive log messages
+        status_logger = setup_status_logging(state)
+        
+        # Show the window
         window.show()
         
         # Handle command line arguments

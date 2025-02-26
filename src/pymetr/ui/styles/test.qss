@@ -1,0 +1,12 @@
+/* Minimal test stylesheet */
+QWidget {
+    background-color: #1e1e1e;
+    color: #f5f5f5;
+}
+
+QPushButton {
+    background-color: #2a2a2a;
+    color: white;
+    padding: 5px;
+    border-radius: 3px;
+}
