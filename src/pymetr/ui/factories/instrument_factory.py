@@ -259,7 +259,7 @@ if __name__ == "__main__":
     factory = InstrumentFactory()
     # Construct the path relative to this file.
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    path = os.path.join(current_dir, '..', 'drivers', 'instruments', 'hs9000.py')
+    path = os.path.join(current_dir, '../..', 'drivers', 'instruments', 'hs9000.py')
     path = os.path.abspath(path)
     instrument_data = factory.create_instrument_data_from_driver(path)
     print(json.dumps(instrument_data, indent=2))

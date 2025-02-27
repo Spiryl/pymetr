@@ -110,10 +110,10 @@ class MarkerHandler(QObject):
             point['symbol'] = value
             update_scatter = True
 
-        elif prop == 'visible':
-            point['visible'] = bool(value)
-            label.setVisible(bool(value) and bool(label.text))
-            update_scatter = True
+        # elif prop == 'visible':
+        #     point['visible'] = bool(value)
+        #     label.setVisible(bool(value) and bool(label.text))
+        #     update_scatter = True
 
         elif prop == 'label':
             label.setText(value)
@@ -183,7 +183,18 @@ class MarkerHandler(QObject):
         return 0.0
 
     def _update_scatter(self) -> None:
-        points = [data['point'] for data in self.markers.values()]
+        points = []
+        for data in self.markers.values():
+            point = data['point']
+            # Check if the marker is visible; if not, skip it
+            if not point.get('visible', True):
+                continue
+            # Create a shallow copy to avoid modifying the original marker data
+            point_copy = point.copy()
+            # Remove keys not supported by ScatterPlotItem
+            point_copy.pop('visible', None)
+            point_copy.pop('bound_to_trace', None)
+            points.append(point_copy)
         self.scatter_plot.setData(points)
 
     def update_label_positions(self) -> None:

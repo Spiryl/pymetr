@@ -414,7 +414,7 @@ class ApplicationState(QObject):
             logger.debug(f"ApplicationState: Creating device from discovery info: {info}")
             
             # Create device with state reference
-            device = Device.from_discovery_info(info)
+            device = Device.from_discovery_info(info, state=self)  # Pass self as state
             logger.debug(f"ApplicationState: Created device with ID: {device.id}")
             
             # Register with state BEFORE connecting

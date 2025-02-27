@@ -29,7 +29,6 @@ class DataTableDisplayWidget(ParameterWidget):
             QLabel {
                 color: white;
                 padding: 2px 4px;
-                font-weight: bold;
             }
         """)
         layout.addWidget(self.size_label)
@@ -61,7 +60,7 @@ class DataTableDisplayWidget(ParameterWidget):
         # Only update the label if counts have changed
         if (row_count != self._current_counts['rows'] or 
             col_count != self._current_counts['cols']):
-            self.size_label.setText(f"[{row_count}:{col_count}]")
+            self.size_label.setText(f"[Rows: {row_count}, Cols: {col_count}]")
             self._current_counts['rows'] = row_count
             self._current_counts['cols'] = col_count
             logger.debug("DataTableDisplayWidget label updated")

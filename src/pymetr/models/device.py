@@ -29,14 +29,18 @@ class Device(BaseModel):
     error_occurred = Signal(str)
     
     def __init__(self, 
-                 manufacturer: Optional[str] = None,
-                 model: Optional[str] = None,
-                 serial_number: Optional[str] = None,
-                 firmware: Optional[str] = None,
-                 resource: Optional[str] = None,
-                 model_id: Optional[str] = None):
+                manufacturer: Optional[str] = None,
+                model: Optional[str] = None,
+                serial_number: Optional[str] = None,
+                firmware: Optional[str] = None,
+                resource: Optional[str] = None,
+                model_id: Optional[str] = None,
+                state=None):  # Add state parameter
         """Initialize device model with discovery information."""
-        super().__init__(model_type="Device", model_id=model_id)
+        # Generate a proper name using model and serial number
+        name = f"{model}-{serial_number}" if model and serial_number else "Unnamed Device"
+        
+        super().__init__(model_type="Device", model_id=model_id, state=state, name=name)
         
         # Internal state
         self.instrument = None  # Will hold driver instance
@@ -72,15 +76,18 @@ class Device(BaseModel):
         self._create_default_plot()
 
     @classmethod
-    def from_discovery_info(cls, info: Dict[str, str]) -> 'Device':
+    def from_discovery_info(cls, info: Dict[str, str], state=None) -> 'Device':
         """Create Device instance from discovery information."""
+        logger.debug(f"Device.from_discovery_info: Creating device from {info}")
         device = cls(
             manufacturer=info.get('manufacturer'),
             model=info.get('model'),
             serial_number=info.get('serial'),
             firmware=info.get('firmware'),
-            resource=info.get('resource')
+            resource=info.get('resource'),
+            state=state  # Pass state explicitly
         )
+        logger.debug(f"Device.from_discovery_info: Created device {device.id}")
         return device
 
     def _create_default_plot(self):
@@ -240,20 +247,6 @@ class Device(BaseModel):
         """Stop any ongoing acquisition."""
         self._acquisition_timer.stop()
         self.set_property('is_acquiring', False)
-            
-    @classmethod
-    def from_discovery_info(cls, info: Dict[str, str]) -> 'Device':
-        """Create Device instance from discovery information."""
-        logger.debug(f"Device.from_discovery_info: Creating device from {info}")
-        device = cls(
-            manufacturer=info.get('manufacturer'),
-            model=info.get('model'),
-            serial_number=info.get('serial'),
-            firmware=info.get('firmware'),
-            resource=info.get('resource')
-        )
-        logger.debug(f"Device.from_discovery_info: Created device {device.id}")
-        return device
 
     def _load_driver_info(self) -> None:
         """Load driver information and build parameter tree."""
@@ -278,14 +271,24 @@ class Device(BaseModel):
             driver_class = getattr(module, class_name)
             logger.debug(f"Device._load_driver_info: Driver class '{class_name}' retrieved successfully")
             
-            # Use InstrumentFactory to build the UI-friendly configuration.
-            from pymetr.ui.factories.instrument_factory import InstrumentFactory
-            factory = InstrumentFactory()
-            logger.debug("Device._load_driver_info: Retrieving driver source code")
-            driver_source = inspect.getsource(driver_class)
-            logger.debug("Device._load_driver_info: Creating UI configuration from driver source")
-            ui_config = factory.create_ui_configuration_from_source(driver_source)
-            logger.debug(f"Device._load_driver_info: UI configuration: {ui_config}")
+            # Find the actual path to the driver file
+            try:
+                driver_file_path = inspect.getfile(driver_class)
+                logger.debug(f"Device._load_driver_info: Found driver file at: {driver_file_path}")
+                
+                # Use InstrumentFactory to build the UI-friendly configuration.
+                from pymetr.ui.factories.instrument_factory import InstrumentFactory
+                factory = InstrumentFactory()
+                logger.debug("Device._load_driver_info: Creating UI configuration from driver file")
+                ui_config = factory.create_instrument_data_from_driver(driver_file_path)
+                logger.debug(f"Device._load_driver_info: UI configuration: {ui_config}")
+            except (TypeError, ValueError) as e:
+                # Fall back to getsource if getfile fails
+                logger.warning(f"Could not get file path for driver class: {e}, falling back to getsource")
+                driver_source = inspect.getsource(driver_class)
+                from pymetr.ui.factories.instrument_factory import InstrumentFactory
+                factory = InstrumentFactory()
+                ui_config = factory.create_ui_configuration_from_source(driver_source)
             
             # We expect ui_config to contain a 'parameter_tree' key which is a list.
             self._parameter_tree = ui_config.get('parameter_tree', [])
@@ -295,7 +298,7 @@ class Device(BaseModel):
             logger.debug("Device._load_driver_info: Parameter tree set as property")
             
         except Exception as e:
-            logger.error(f"Device._load_driver_info: Error loading driver info: {e}")
+            logger.error(f"Device._load_driver_info: Error loading driver info: {e}", exc_info=True)
             self.error_message = f"Failed to load driver: {str(e)}"
 
     def connect_device(self):
@@ -372,19 +375,46 @@ class Device(BaseModel):
     def update_parameter(self, path: str, value: Any) -> None:
         """
         Update a parameter value in the device's state.
+        Handles indexed subsystems with format subsystem[index].property
         """
         try:
             logger.debug(f"Device.update_parameter: Updating parameter '{path}' with value '{value}'")
-            parts = path.split('.')
-            current = self._parameter_tree
-            for part in parts[:-1]:
-                if part not in current:
-                    current[part] = {}
-                    logger.debug(f"Device.update_parameter: Created intermediate node for '{part}'")
-                current = current[part]
-            current[parts[-1]] = value
-            logger.debug(f"Device.update_parameter: Parameter '{path}' updated to '{value}'")
+            
+            # Parse path with support for indexed subsystems: subsystem[index].property
+            import re
+            
+            # Match patterns like "channel[1].output" or "reference.source"
+            match = re.match(r'(\w+)(?:\[(\d+)\])?\.(\w+)', path)
+            if not match:
+                raise ValueError(f"Invalid property path format: {path}")
+                
+            subsystem_name, index_str, prop_name = match.groups()
+            
+            # Get the subsystem
+            if not hasattr(self.instrument, subsystem_name):
+                raise ValueError(f"Subsystem '{subsystem_name}' not found")
+                
+            subsystem = getattr(self.instrument, subsystem_name)
+            
+            # Handle indexed subsystems
+            if index_str is not None:
+                index = int(index_str)
+                if not isinstance(subsystem, (list, tuple)) or index >= len(subsystem):
+                    raise ValueError(f"Invalid index {index} for subsystem {subsystem_name}")
+                
+                # Access the indexed subsystem
+                subsystem = subsystem[index]
+            
+            # Set the property value on the subsystem
+            if not hasattr(subsystem, prop_name):
+                raise ValueError(f"Property '{prop_name}' not found in subsystem {subsystem_name}")
+                
+            setattr(subsystem, prop_name, value)
+            logger.debug(f"Device.update_parameter: Successfully updated {path} to {value}")
+            
+            # Emit property change signal
             self.property_changed.emit(self.id, self.model_type, path, value)
+            
         except Exception as e:
             logger.error(f"Device.update_parameter: Error updating parameter {path}: {e}")
             self.error_message = f"Failed to update {path}: {str(e)}"

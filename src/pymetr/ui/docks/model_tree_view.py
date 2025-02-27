@@ -82,7 +82,7 @@ class ModelTreeView(BaseWidget):
         self._update_timer = QTimer(self)
         self._update_timer.setSingleShot(True)
         self._update_timer.timeout.connect(self._process_pending_updates)
-        self._throttle_interval = 33  # ~30fps
+        self._throttle_interval = 200  # ~30fps
         
         # Set up UI and connect signals
         self._setup_ui()

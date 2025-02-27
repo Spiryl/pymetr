@@ -46,8 +46,10 @@ class Plot(BaseModel):
             y_lim (Tuple[float, float]): Y-axis limits (min, max)
     """
 
-    def __init__(self, title: str, model_id: Optional[str] = None):
-        super().__init__(model_type='Plot', model_id=model_id, name=title)
+    def __init__(self, title: str, model_id: Optional[str] = None, name: Optional[str] = None):
+        # If name is not provided, use title as the name
+        name_to_use = name if name is not None else title
+        super().__init__(model_type='Plot', model_id=model_id, name=name_to_use)
         self._init_properties(title)
 
     def _init_properties(self, title: str):

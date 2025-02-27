@@ -30,7 +30,7 @@ def run_test(test):
         plot.set_trace("Noise", x_points, y_points, color="#FF9535")
         
         # Update marker to peak
-        plot.set_marker("Peak", x=float(x_points[max_idx]), y=float(y_points[max_idx]))
+        plot.set_marker("Peak", x=float(x_points[max_idx]), y=float(y_points[max_idx]), color="#FF00FF")
 
         # Small wait to prevent overwhelming the UI
         test.wait(10)  # 1ms wait

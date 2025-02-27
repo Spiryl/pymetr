@@ -626,3 +626,55 @@ class PlotView(BaseWidget):
                         view_box.autoRange()
                         view_box.enableAutoRange()
             logger.debug("Auto-ranged plot on double click")
+
+    def clear(self) -> None:
+        """Clean up all items, disconnect signals, and remove the plot widget."""
+        try:
+            # Clean up handlers
+            if hasattr(self, 'trace_handler'):
+                self.trace_handler.clear_all()
+            if hasattr(self, 'cursor_handler'):
+                self.cursor_handler.clear_all()
+            if hasattr(self, 'marker_handler'):
+                self.marker_handler.clear_all()
+            
+            # Stop timers
+            self._geometry_update_timer.stop()
+            self._roi_update_timer.stop()
+            
+            # Disconnect state signals
+            try:
+                self.state.model_registered.disconnect(self._handle_model_registered)
+                self.state.model_changed.disconnect(self._handle_model_changed)
+                self.state.model_removed.disconnect(self._handle_model_removed)
+            except Exception:
+                pass
+            
+            # Remove ROI curves from the ROI plot item
+            for curve in self.roi_curves.values():
+                if curve.scene():
+                    self.roi_plot_item.removeItem(curve)
+            self.roi_curves.clear()
+
+            # Clear the main plot layout (removes all plot items)
+            if self.plot_layout is not None:
+                self.plot_layout.clear()
+
+            # Remove all widgets from the splitter container
+            if self.plot_container is not None:
+                for i in reversed(range(self.plot_container.count())):
+                    widget = self.plot_container.widget(i)
+                    if widget is not None:
+                        widget.setParent(None)
+            
+            # Finally, remove this PlotView from its parent and schedule for deletion
+            self.setParent(None)
+            self.deleteLater()
+
+            logger.debug("PlotView cleared and removed from its parent")
+        except Exception as e:
+            logger.error(f"Error clearing PlotView: {e}")
+
+    def closeEvent(self, event) -> None:
+        self.clear()
+        super().closeEvent(event)

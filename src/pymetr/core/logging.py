@@ -143,6 +143,10 @@ def setup_logging(log_to_file: bool = False):
         console.setFormatter(formatter)
         logger.addHandler(console)
 
+        logging.getLogger('pymetr.ui.views').setLevel(logging.CRITICAL)
+        logging.getLogger('pymetr.drivers').setLevel(logging.CRITICAL)
+        logging.getLogger('pymetr.ui.factories').setLevel(logging.CRITICAL)
+
         # File handler (optional)
         if log_to_file:
             log_dir = Path("logs")

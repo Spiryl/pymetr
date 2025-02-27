@@ -197,17 +197,36 @@ class SubsystemVisitor(ast.NodeVisitor):
 
     def visit_Assign(self, node):
         logger.debug(f"🔍 Visiting Assign Node: {ast.dump(node)} 🔍")
+        
+        # More detailed logging
+        if hasattr(node, 'targets') and len(node.targets) > 0:
+            for target in node.targets:
+                if hasattr(target, 'id'):
+                    logger.debug(f"Found assignment to: {target.id}")
+        
+        # Check for property class assignment
         if isinstance(node.value, ast.Call) and isinstance(node.value.func, ast.Name):
             prop_class_name = node.value.func.id
-            if prop_class_name in ['SelectProperty', 'ValueProperty', 'SwitchProperty', 'StringProperty', 'DataProperty']:
+            logger.debug(f"Found call to: {prop_class_name}")
+            
+            # Property class detection
+            property_classes = ['SelectProperty', 'ValueProperty', 'SwitchProperty', 
+                            'StringProperty', 'DataProperty', 'DataBlockProperty']
+            
+            if prop_class_name in property_classes:
                 logger.debug(f"✨ Found a property: {prop_class_name} ✨")
-                prop_name = node.targets[0].id
-                prop_details = self.parse_property_details(node.value, prop_class_name, prop_name)
-                if prop_details:
-                    if self.current_subsystem:
-                        prop_details['subsystem'] = self.current_subsystem
-                    self.properties_methods['properties'].append(prop_details)
-                    logger.debug(f"📝 Added property details for {prop_name}: {prop_details} 📝")
+                if hasattr(node.targets[0], 'id'):
+                    prop_name = node.targets[0].id
+                    logger.debug(f"Property name: {prop_name}")
+                    prop_details = self.parse_property_details(node.value, prop_class_name, prop_name)
+                    if prop_details:
+                        if self.current_subsystem:
+                            prop_details['subsystem'] = self.current_subsystem
+                        self.properties_methods['properties'].append(prop_details)
+                        logger.debug(f"📝 Added property details for {prop_name}: {prop_details} 📝")
+                else:
+                    logger.warning(f"Property target doesn't have 'id' attribute: {ast.dump(node.targets[0])}")
+        
         super().generic_visit(node)
 
     def parse_property_details(self, call_node, prop_class_name, prop_name):

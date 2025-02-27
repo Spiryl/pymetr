@@ -54,10 +54,11 @@ class MainWindow(QMainWindow):
         
         # Create main UI components
         self._setup_title_bar()
-        self._setup_quick_tools()  # Create toolbar first
-        self._setup_docks()        # Then create docks
-        self._setup_tab_manager()  # Then tab manager
-        self._setup_status_bar()   # Finally status bar
+        self._setup_quick_tools()
+        self._setup_docks()
+        self._setup_tab_manager()  
+        self._setup_status_bar()  
+        self._setup_console_area()
         
         # Connect signals
         self._connect_signals()
@@ -70,6 +71,8 @@ class MainWindow(QMainWindow):
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowSystemMenuHint)
         self.setAttribute(Qt.WA_TranslucentBackground, True)
         self.resize(1000, 618)
+        self.setCorner(Qt.BottomLeftCorner, Qt.LeftDockWidgetArea)
+        self.setCorner(Qt.BottomRightCorner, Qt.RightDockWidgetArea)
         # self.setDockOptions(
         #     QMainWindow.AnimatedDocks |
         #     QMainWindow.AllowNestedDocks |
@@ -126,6 +129,24 @@ class MainWindow(QMainWindow):
         """Set up status bar for application messages."""
         self.status_bar = StatusBar(self.state)
         self.setStatusBar(self.status_bar)
+
+    # Add this method to MainWindow class:
+    def _setup_console_area(self):
+        """Set up the console dock area."""
+        # Create main console dock
+        from pymetr.ui.docks.console_dock import ConsoleDock
+        self.console_dock = ConsoleDock(self)
+        self.console_dock.setObjectName("ConsoleDock")
+        self.addDockWidget(Qt.BottomDockWidgetArea, self.console_dock)
+        
+        # Hide by default
+        self.console_dock.setVisible(False)
+        
+        # Create dict to track instrument console docks
+        self.instrument_consoles = {}
+        
+        # Connect to instrument signals
+        self.state.instrument_connected.connect(self._on_instrument_connected)
 
     def _connect_signals(self):
         """Connect to ApplicationState signals."""
@@ -216,3 +237,50 @@ class MainWindow(QMainWindow):
         
         painter.setClipPath(path)
         painter.fillRect(self.rect(), bg_color)
+
+    def _on_instrument_connected(self, device_id):
+        """Handle instrument connection."""
+        # Create console for this instrument if it doesn't exist
+        if device_id not in self.instrument_consoles:
+            device = self.state.get_model(device_id)
+            if device:
+                # Create SCPI console
+                from pymetr.ui.views.scpi_console import SCPIConsole
+                console = SCPIConsole(self.state, device_id, parent=self)
+                
+                # Create dock for console
+                dock = QDockWidget(f"SCPI: {device.get_property('name', 'Instrument')}", self)
+                dock.setObjectName(f"InstrumentConsoleDock_{device_id}")
+                dock.setWidget(console)
+                
+                # Add to bottom dock area
+                self.addDockWidget(Qt.BottomDockWidgetArea, dock)
+                
+                # If main console exists, tabify with it
+                if hasattr(self, 'console_dock') and self.console_dock:
+                    self.tabifyDockWidget(self.console_dock, dock)
+                
+                # Show the new dock
+                dock.show()
+                dock.raise_()
+                
+                # Store reference
+                self.instrument_consoles[device_id] = dock
+                
+                # Connect to device disconnect signal if available
+                if hasattr(device, 'connection_changed'):
+                    device.connection_changed.connect(
+                        lambda connected: self._on_instrument_connection_changed(device_id, connected)
+                    )
+
+    def _on_instrument_connection_changed(self, device_id, connected):
+        """Handle instrument connection state changes."""
+        # If instrument disconnected, remove its console
+        if not connected and device_id in self.instrument_consoles:
+            dock = self.instrument_consoles[device_id]
+            # Remove dock
+            self.removeDockWidget(dock)
+            # Delete dock
+            dock.deleteLater()
+            # Remove reference
+            del self.instrument_consoles[device_id]

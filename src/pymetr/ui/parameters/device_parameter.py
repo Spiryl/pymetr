@@ -121,10 +121,54 @@ class DeviceInfoWidget(ParameterWidget):
             else:
                 self.setToolTip("")
 
+class DeviceParameterItem(ModelParameterItem):
+    """Parameter item for device control with status indicators."""
+    
+    def makeWidget(self) -> Optional[QWidget]:
+        """Create the device info widget."""
+        try:
+            self.widget = DeviceInfoWidget(self.param)
+            return self.widget
+        except Exception as e:
+            logger.error(f"Error creating device widget: {e}")
+            return None
+    
+    def updateWidget(self, **kwargs):
+        """Update the widget with new values."""
+        if self.widget:
+            self.widget.queue_update(**kwargs)
+    
+    def addCustomContextActions(self, menu: QMenu):
+        """Add device-specific context actions."""
+        try:
+            model = self.param.state.get_model(self.param.model_id)
+            if not model:
+                return
+                
+            # Add "Connect" action if not connected
+            if not model.get_property('is_connected', False):
+                connect_action = menu.addAction("Connect")
+                connect_action.triggered.connect(lambda: model.connect_device())
+            else:
+                # Add "Disconnect" action if connected
+                disconnect_action = menu.addAction("Disconnect")
+                disconnect_action.triggered.connect(lambda: model.disconnect())
+                
+                # Add "Start Acquisition" action
+                acquire_action = menu.addAction("Start Acquisition")
+                acquire_action.triggered.connect(lambda: model.start_acquisition())
+                
+                # Add "Stop Acquisition" action
+                stop_action = menu.addAction("Stop Acquisition")
+                stop_action.triggered.connect(lambda: model.stop_acquisition())
+            
+        except Exception as e:
+            logger.error(f"Error adding context actions: {e}")
+
 class DeviceParameter(ModelParameter):
     """Parameter for device control and monitoring."""
     
-    itemClass = ModelParameterItem
+    itemClass = DeviceParameterItem  # Set the custom item class
     
     def __init__(self, **opts):
         opts['type'] = 'device'

@@ -56,13 +56,15 @@ QTreeView {
     background: #1e1e1e;
     border: none;
     show-decoration-selected: 1;
+    padding: 5px;
+    margin: 5px;
     selection-background-color: transparent;
 }
 
 QTreeView::item {
-    padding: 5px;
+    padding: 0px;
     border-radius: 3px;
-    margin: 1px;
+    margin: 2px;
 }
 
 QTreeView::item:selected {

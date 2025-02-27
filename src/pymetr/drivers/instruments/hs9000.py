@@ -2,7 +2,7 @@ import logging
 from pymetr.drivers.base import SCPIInstrument
 from pymetr.drivers.base import Subsystem
 from pymetr.drivers.base.properties import (
-    ValueProperty, SelectProperty, SwitchProperty
+    ValueProperty, SelectProperty, SwitchProperty, DataProperty
 )
 
 logger = logging.getLogger(__name__)
@@ -26,8 +26,9 @@ class HS9000(SCPIInstrument):
         synth.diag.start()
     """
 
-    def __init__(self, connection, channels: int = 4):
-        super().__init__(connection)
+    def __init__(self, connection, **kwargs):
+        # Pass all remaining parameters to SCPIInstrument
+        super().__init__(connection, **kwargs)
         
         # Build subsystems
         self.channel = Channel.build(self, ":CH", indices=4)
@@ -47,8 +48,8 @@ class Channel(Subsystem):
     """
     # Frequency settings with unit suffixes
     frequency = ValueProperty(":FREQ", type="float", range=(10e6, 6e9), units="Hz", doc_str="Channel output frequency", join_char=":")
-    freq_min = ValueProperty(":FREQ:MIN", access='read', doc_str="Min freq for this channel", join_char=":")
-    freq_max = ValueProperty(":FREQ:MAX", access='read', doc_str="Max freq for this channel", join_char=":")
+    freq_min = DataProperty(":FREQ:MIN", access='read', doc_str="Min freq for this channel", join_char=":")
+    freq_max = DataProperty(":FREQ:MAX", access='read', doc_str="Max freq for this channel", join_char=":")
 
     # Power settings
     power = ValueProperty(":PWR", type="float", range=(-20, 20), units="dBm",doc_str="Channel output power", join_char=":")
@@ -57,11 +58,10 @@ class Channel(Subsystem):
 
     # Phase settings
     phase = ValueProperty(":PHASE", type="float", range=(0, 360), units="deg",doc_str="Phase offset", join_char=":")
-    phase_max = ValueProperty(":PHASE:MAX", access='read', doc_str="Max phase for current freq", join_char=":")
-    phase_res = ValueProperty(":PHASE:RES", access='read',doc_str="Phase resolution", join_char=":")
+    phase_max = DataProperty(":PHASE:MAX", access='read', doc_str="Max phase for current freq", join_char=":")
 
     # Temperature monitoring
-    temperature = ValueProperty(":TEMP", access='read', type="float", doc_str="Channel temperature in °C", join_char=":")
+    temperature = DataProperty(":TEMP", access='read', converter="float", doc_str="Channel temperature in °C", join_char=":")
 
 class Reference(Subsystem):
     """
