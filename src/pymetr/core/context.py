@@ -1,14 +1,19 @@
-from typing import Optional, List
+from typing import Optional, List, Any, Dict
 from datetime import datetime
+from PySide6.QtWidgets import QApplication
+
 from pymetr.core.logging import logger
-from pymetr.models.test import TestScript, TestStatus, TestResult,  ResultStatus, TestGroup
+from pymetr.models.test import TestScript, TestStatus, TestResult, ResultStatus, TestGroup
 from pymetr.models.plot import Plot
 from pymetr.models.trace import Trace
 from pymetr.models.marker import Marker
 from pymetr.models.cursor import Cursor
 from pymetr.models.table import DataTable
-from pymetr.drivers.base.visitor import InstrumentVisitor
-    
+from pymetr.models.device import Device
+from pymetr.drivers.base.connections import PyVisaConnection, RawSocketConnection
+from pymetr.ui.dialogs.discovery_dialog import DiscoveryDialog
+from pymetr.ui.dialogs.connection_dialog import ConnectionDialog
+
 class TestContext:
     """
     Context object provided to test scripts, encapsulating all allowed operations
@@ -204,19 +209,210 @@ class TestContext:
     
     # Add methods for the script engine context
     @classmethod
-    def get_instrument(cls, model: str, state=None):
+    def get_instrument(self, model_filter: str = None, resource: str = None) -> Device:
         """
-        Factory method to create and register a new instrument instance.
-        Used by the script engine context.
+        Get or create an instrument by model or resource.
+        
+        Args:
+            model_filter: String to match against instrument model names
+            resource: Specific resource string (e.g., "TCPIP::192.168.1.10::5025::SOCKET")
+        
+        Returns:
+            Device model with connected instrument driver
         """
-        # Create device instance
-        device = cls(model=model, state=state)
+        # Check if we already have a matching device
+        devices = self._state.get_models_by_type(Device)
         
-        # Load driver and build parameter tree
-        visitor = InstrumentVisitor()
-        driver_info = visitor.create_instrument_data_from_driver(f"drivers/{model}.py")
-        device.set_driver_info(driver_info)
+        # If resource is provided, look for exact match
+        if resource:
+            for device in devices:
+                if (device.get_property('resource') == resource and 
+                    device.get_property('is_connected')):
+                    return device
         
-        # Connect and return
-        device.connect()
-        return device
+        # If model filter is provided, look for matching model
+        elif model_filter:
+            for device in devices:
+                if (model_filter.lower() in device.get_property('model').lower() and 
+                    device.get_property('is_connected')):
+                    return device
+        
+        # No matching connected device, need to discover or create
+        if resource:
+            # Direct resource connection without discovery
+            return self._create_direct_connection(resource)
+        else:
+            # Show discovery dialog and let user select
+            return self._discover_and_connect(model_filter)
+    
+    def _create_direct_connection(self, resource: str) -> Device:
+        """Create a direct connection to a resource without discovery."""
+        # Parse resource to determine connection type
+        connection_type = "visa"  # Default
+        if "::SOCKET" in resource:
+            connection_type = "socket"
+        elif "ASRL" in resource:
+            connection_type = "serial"
+        
+        # Create device info
+        info = {
+            'resource': resource,
+            'model': f"Device at {resource}",
+            'manufacturer': 'Unknown',
+            'serial': 'N/A',
+            'firmware': 'N/A',
+            'connection_type': connection_type
+        }
+        
+        # Create and connect device
+        try:
+            device = self._state.connect_instrument(info)
+            return device
+        except Exception as e:
+            logger.error(f"Error connecting to {resource}: {e}")
+            raise RuntimeError(f"Failed to connect to {resource}: {e}")
+    
+    def _discover_and_connect(self, model_filter: str = None) -> Device:
+        """Show discovery dialog and connect to selected instrument."""
+        # Get parent window for dialog
+        parent = None
+        if QApplication.instance():
+            parent = QApplication.activeWindow()
+        
+        # Show discovery dialog
+        from pymetr.ui.dialogs.discovery_dialog import DiscoveryDialog
+        from PySide6.QtWidgets import QDialog
+        
+        dialog = DiscoveryDialog(self._state, model_filter, parent)
+        result = dialog.exec()
+        
+        if result == QDialog.Accepted and dialog.result_info:
+            # User selected an instrument, connect to it
+            try:
+                device = self._state.connect_instrument(dialog.result_info)
+                return device
+            except Exception as e:
+                logger.error(f"Error connecting to selected instrument: {e}")
+                raise RuntimeError(f"Failed to connect to instrument: {e}")
+        else:
+            # User canceled
+            raise RuntimeError("No instrument selected")
+    
+    def create_connection(self, connection_type: str, **kwargs) -> Any:
+        """
+        Create a raw connection of the specified type.
+        
+        Args:
+            connection_type: Type of connection ('visa', 'socket', 'serial', etc.)
+            **kwargs: Connection parameters (resource, host, port, etc.)
+        
+        Returns:
+            ConnectionInterface instance
+        """
+        if connection_type.lower() == 'visa':
+            if 'resource' not in kwargs:
+                raise ValueError("Resource string required for VISA connection")
+            return PyVisaConnection(kwargs['resource'])
+        
+        elif connection_type.lower() == 'socket':
+            if 'host' not in kwargs:
+                raise ValueError("Host required for socket connection")
+            
+            port = kwargs.get('port', 5025)
+            timeout = kwargs.get('timeout', 5.0)
+            
+            return RawSocketConnection(host=kwargs['host'], port=port, timeout=timeout)
+        
+        elif connection_type.lower() == 'serial':
+            # Placeholder for SerialConnection
+            # You'd need to implement SerialConnection in your connections.py file
+            raise NotImplementedError("Serial connection not implemented yet")
+        
+        else:
+            raise ValueError(f"Unsupported connection type: {connection_type}")
+    
+    def create_driver(self, driver_name: str, connection) -> Any:
+        """
+        Create a driver instance with the given connection.
+        
+        Args:
+            driver_name: Name of the driver class or model (e.g., 'Dsox1204g')
+            connection: ConnectionInterface instance
+        
+        Returns:
+            Driver instance
+        """
+        # Use registry to create driver
+        from pymetr.core.registry import get_registry
+        registry = get_registry()
+        
+        try:
+            # Create driver instance
+            # Pass the model name as a string - our updated registry will handle this
+            driver = registry.create_driver_instance(driver_name, connection)
+            
+            if not driver:
+                raise RuntimeError(f"Failed to create driver for '{driver_name}'")
+                
+            return driver
+        except Exception as e:
+            logger.error(f"Error creating driver '{driver_name}': {e}")
+            raise RuntimeError(f"Failed to create driver: {e}")
+    
+    def send_scpi_command(self, device: Device, command: str) -> str:
+        """
+        Send a raw SCPI command to a device.
+        
+        Args:
+            device: Device model
+            command: SCPI command string
+        
+        Returns:
+            Response string if command is a query, else empty string
+        """
+        if not device or not device.instrument:
+            raise ValueError("Device not connected")
+        
+        # Log the command
+        logger.debug(f"Sending SCPI command to {device.get_property('name')}: {command}")
+        
+        # Send command
+        if command.endswith('?'):
+            # It's a query
+            return device.instrument.query(command)
+        else:
+            # It's a write
+            device.instrument.write(command)
+            return ""
+    
+    def show_manual_connection_dialog(self) -> Device:
+        """
+        Show dialog for manual connection to an instrument.
+        
+        Returns:
+            Device model with connected instrument
+        """
+        # Get parent window for dialog
+        parent = None
+        if QApplication.instance():
+            parent = QApplication.activeWindow()
+        
+        # Show connection dialog
+        from pymetr.ui.dialogs.connection_dialog import ConnectionDialog
+        from PySide6.QtWidgets import QDialog
+        
+        dialog = ConnectionDialog(parent)
+        result = dialog.exec()
+        
+        if result == QDialog.Accepted and dialog.result_info:
+            # User provided connection info
+            try:
+                # Create device
+                device = self._state.connect_instrument(dialog.result_info)
+                return device
+            except Exception as e:
+                logger.error(f"Error connecting to instrument: {e}")
+                raise RuntimeError(f"Failed to connect to instrument: {e}")
+        else:
+            # User canceled
+            raise RuntimeError("Connection canceled")

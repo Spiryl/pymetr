@@ -1,6 +1,7 @@
 
 
 from typing import Dict, Optional, Type, TypeVar, List, Any
+import datetime
 from PySide6.QtCore import QObject, Signal, Slot, QThread, Qt, QMetaObject, Q_ARG, QTimer
 from pymetr.models.base import BaseModel
 from pymetr.models import Device
@@ -433,6 +434,36 @@ class ApplicationState(QObject):
         except Exception as e:
             logger.error(f"ApplicationState.connect_instrument error: {e}", exc_info=True)
             raise
+
+    def set_device_under_test(self, device_id: str):
+        """Set a device as the device under test (DUT)."""
+        # Verify it's a Device
+        device = self.get_model(device_id)
+        if not isinstance(device, Device):
+            raise ValueError(f"Model {device_id} is not a Device")
+            
+        self._dut_id = device_id
+        # Store additional DUT info
+        self._dut_info = {
+            'data_directory': f"./data/{device.get_property('model')}_{device.get_property('serial')}",
+            'created_time': datetime.now().isoformat()
+        }
+        # Create directory if needed
+        import os
+        os.makedirs(self._dut_info['data_directory'], exist_ok=True)
+        
+        # Emit signal
+        self.dut_changed.emit(device_id)
+        
+    def get_device_under_test(self) -> Optional[Device]:
+        """Get the current device under test."""
+        if hasattr(self, '_dut_id'):
+            return self.get_model(self._dut_id)
+        return None
+
+    def get_dut_info(self) -> Dict:
+        """Get additional info about the DUT."""
+        return getattr(self, '_dut_info', {}).copy()
 
     def set_theme(self, theme_name: str) -> bool:
         """

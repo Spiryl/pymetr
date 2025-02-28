@@ -129,7 +129,7 @@ class ConsoleLogHandler(QObject):
 def setup_logging(log_to_file: bool = False):
     """Configure application-wide logging with detailed formatting."""
     logger = logging.getLogger('pymetr')
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.ERROR)
 
     # Create custom formatter
     formatter = CustomFormatter(
@@ -146,6 +146,7 @@ def setup_logging(log_to_file: bool = False):
         logging.getLogger('pymetr.ui.views').setLevel(logging.CRITICAL)
         logging.getLogger('pymetr.drivers').setLevel(logging.CRITICAL)
         logging.getLogger('pymetr.ui.factories').setLevel(logging.CRITICAL)
+        # logging.getLogger('pymetr.ui.docks').setLevel(logging.CRITICAL)
 
         # File handler (optional)
         if log_to_file:

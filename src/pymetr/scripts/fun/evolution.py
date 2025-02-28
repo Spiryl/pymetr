@@ -140,7 +140,7 @@ def run_test(test):
 
             plot.set_trace(f"Voice{idx+1}", x_points, y_data, color=col)
             
-        test.wait(50) 
+        test.wait(20) 
         result.progress = int((frame + 1) / total_frames * 100)
 
     result.progress = 100

@@ -206,7 +206,8 @@ class InstrumentFactory:
             for subsystem_name, subsystem_info in class_info.get('subsystems', {}).items():
                 logger.debug(f"🛠 Creating subsystem group: {subsystem_name}")
                 subsystem_group = self.create_subsystem_group(subsystem_name, subsystem_info)
-                class_group['children'].append(subsystem_group)
+                if subsystem_group:  # Only add if not None
+                    class_group['children'].append(subsystem_group)
             tree_dict.append(class_group)
             logger.debug(f"🌲 Added class group: {class_name} to the tree 🌲")
         logger.debug(f"🚀 Generated parameter tree dictionary: {json.dumps(tree_dict, indent=2)} 🚀")
@@ -215,6 +216,16 @@ class InstrumentFactory:
 
     def create_subsystem_group(self, subsystem_name, subsystem_info: dict) -> dict:
         logger.debug(f"🔧 Starting to create subsystem group for: {subsystem_name}")
+        
+        # Check if this subsystem has any properties or children
+        # If not, return None to skip this subsystem
+        has_properties = bool(subsystem_info.get('properties', []))
+        has_instances = bool(subsystem_info.get('instances', {}))
+        
+        if not has_properties and not has_instances:
+            logger.debug(f"Skipping empty subsystem: {subsystem_name}")
+            return None  # Skip empty subsystems
+        
         if subsystem_info.get('needs_indexing', False):
             logger.debug(f"⚙️ {subsystem_name} requires indexing ⚙️")
             parent_group = {

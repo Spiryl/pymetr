@@ -25,6 +25,7 @@ class Device(BaseModel):
     """Device model representing a discovered instrument."""
     
     # Signals for UI updates
+    acquire_requested = Signal(str)  # device_id
     connection_changed = Signal(bool)
     error_occurred = Signal(str)
     
@@ -74,6 +75,14 @@ class Device(BaseModel):
         
         # Create default plot
         self._create_default_plot()
+
+
+    # Claude made me do it!
+    def __getattr__(self, name):
+        """Delegate to instrument driver if attribute not found."""
+        if self.instrument and hasattr(self.instrument, name):
+            return getattr(self.instrument, name)
+        raise AttributeError(f"'{self.__class__.__name__}' has no attribute '{name}'")
 
     @classmethod
     def from_discovery_info(cls, info: Dict[str, str], state=None) -> 'Device':
@@ -237,6 +246,9 @@ class Device(BaseModel):
             self._avg_data.clear()
 
         self.set_property('is_acquiring', True)
+        
+        # Emit signal for instrument to respond
+        self.acquire_requested.emit(self.id)
 
         if mode in [AcquisitionMode.SINGLE, AcquisitionMode.STACK]:
             self._acquire_single()
@@ -309,24 +321,53 @@ class Device(BaseModel):
             # Load driver info first
             self._load_driver_info()
             
-            if not self._driver_info:
-                raise ValueError("No driver info loaded")
-                
             # Create and connect instrument
             from pymetr.core.registry import get_registry
             registry = get_registry()
             
+            # Create connection
             connection = self._create_connection()
-            self.instrument = registry.create_driver_instance(
-                self,
-                connection
-            )
             
-            # Connect to instrument signals
+            # Explicitly open connection before passing to driver
+            try:
+                connection.open()
+                logger.debug("Device.connect_device: Connection opened successfully")
+            except Exception as e:
+                logger.error(f"Device.connect_device: Failed to open connection: {e}")
+                raise ConnectionError(f"Failed to open connection: {e}")
+            
+            # Try to create a driver instance
+            try:
+                # Pass self (the Device object) to the registry
+                self.instrument = registry.create_driver_instance(
+                    self,  # Using self as the Device object
+                    connection
+                )
+            except Exception as driver_error:
+                # If driver creation fails, fall back to generic SCPIInstrument
+                logger.warning(f"Failed to create specific driver: {driver_error}. Falling back to generic SCPIInstrument.")
+                from pymetr.drivers.base.instrument import SCPIInstrument
+                self.instrument = SCPIInstrument(connection)
+                # Set a flag to indicate we're using a generic driver
+                self.set_property('using_generic_driver', True)
+            
+            if not self.instrument:
+                connection.close()  # Clean up the connection
+                raise RuntimeError("Failed to create instrument driver")
+                
+            # Check connection by querying IDN
+            try:
+                # Try different IDN query methods
+                if hasattr(self.instrument, 'query'):
+                    idn = self.instrument.query("*IDN?")
+                    logger.debug(f"Connected to instrument: {idn}")
+                else:
+                    logger.warning("No query method found on instrument")
+            except Exception as e:
+                logger.warning(f"IDN check failed, but continuing: {e}")
+            
+            # Connect to instrument signals - with careful checking
             self._connect_instrument_signals()
-            
-            # Store parameter tree for UI
-            self.set_property('parameter_tree', self._parameter_tree)
             
             # Set connection state
             self.set_property('is_connected', True)
@@ -334,19 +375,38 @@ class Device(BaseModel):
             
         except Exception as e:
             self.error_message = str(e)
+            logger.error(f"Device.connect_device error: {e}")
             raise
 
     def disconnect(self):
-        """Disconnect instrument."""
+        """Disconnect instrument with improved cleanup."""
         try:
+            # First disconnect signals
+            self._disconnect_instrument_signals()
+            
+            # Then disconnect the instrument
             if self.instrument:
-                self._disconnect_instrument_signals()
-                self.instrument.close()
+                logger.debug("Device.disconnect: Closing instrument connection")
+                try:
+                    # Try to close the connection if supported
+                    if hasattr(self.instrument, 'close'):
+                        self.instrument.close()
+                    # Some drivers might have the connection directly accessible
+                    elif hasattr(self.instrument, 'connection') and hasattr(self.instrument.connection, 'close'):
+                        self.instrument.connection.close()
+                except Exception as e:
+                    logger.warning(f"Error during instrument close: {e}")
+                
+                # Clear the reference regardless of close success/failure
                 self.instrument = None
+                
+            # Update state
             self.set_property('is_connected', False)
             self.connection_changed.emit(False)
+            logger.info("Device disconnected successfully")
         except Exception as e:
             self.error_message = str(e)
+            logger.error(f"Error during disconnect: {e}")
             raise
 
     @property
@@ -372,18 +432,20 @@ class Device(BaseModel):
         if value:
             self.error_occurred.emit(value)
 
-    def update_parameter(self, path: str, value: Any) -> None:
+    def update_parameter(self, path: str, value: Any, validate: bool = True) -> None:
         """
-        Update a parameter value in the device's state.
-        Handles indexed subsystems with format subsystem[index].property
+        Update a parameter value in the device's state and optionally validate.
+        
+        Args:
+            path: Path in format "subsystem[index].property"
+            value: New value to set
+            validate: If True, query the device after setting to validate
         """
         try:
             logger.debug(f"Device.update_parameter: Updating parameter '{path}' with value '{value}'")
             
-            # Parse path with support for indexed subsystems: subsystem[index].property
+            # Parse path with support for indexed subsystems
             import re
-            
-            # Match patterns like "channel[1].output" or "reference.source"
             match = re.match(r'(\w+)(?:\[(\d+)\])?\.(\w+)', path)
             if not match:
                 raise ValueError(f"Invalid property path format: {path}")
@@ -401,19 +463,23 @@ class Device(BaseModel):
                 index = int(index_str)
                 if not isinstance(subsystem, (list, tuple)) or index >= len(subsystem):
                     raise ValueError(f"Invalid index {index} for subsystem {subsystem_name}")
-                
-                # Access the indexed subsystem
                 subsystem = subsystem[index]
             
-            # Set the property value on the subsystem
-            if not hasattr(subsystem, prop_name):
+            # Set the property value
+            if hasattr(subsystem, prop_name):
+                # This will use the property descriptor's __set__ method
+                setattr(subsystem, prop_name, value)
+                
+                # If validation is requested, read back the value
+                if validate:
+                    # Use the property descriptor's __get__ method (issues a query)
+                    updated_value = getattr(subsystem, prop_name)
+                    # Update UI with the actual device value
+                    self.property_changed.emit(self.id, self.model_type, path, updated_value)
+            else:
                 raise ValueError(f"Property '{prop_name}' not found in subsystem {subsystem_name}")
                 
-            setattr(subsystem, prop_name, value)
             logger.debug(f"Device.update_parameter: Successfully updated {path} to {value}")
-            
-            # Emit property change signal
-            self.property_changed.emit(self.id, self.model_type, path, value)
             
         except Exception as e:
             logger.error(f"Device.update_parameter: Error updating parameter {path}: {e}")
@@ -445,18 +511,41 @@ class Device(BaseModel):
         self.set_property('parameter_tree', self._parameter_tree)
 
     def _connect_instrument_signals(self):
-        """Connect to instrument property changes."""
+        """Connect to instrument signals with extra care for different implementations."""
         if self.instrument:
             # Clear any existing connections
             self._disconnect_instrument_signals()
             
-            # Connect property changes
-            self._instrument_connections.extend([
-                self.instrument.commandSent.connect(self._handle_command),
-                self.instrument.responseReceived.connect(self._handle_response),
-                self.instrument.exceptionOccured.connect(self._handle_error),
-                self.instrument.property_changed.connect(self._handle_instrument_property)
-            ])
+            try:
+                # Only try to connect signals that are actually available
+                if hasattr(self.instrument, 'commandSent'):
+                    signal = self.instrument.commandSent
+                    if hasattr(signal, 'connect'):
+                        self._instrument_connections.append(
+                            signal.connect(self._handle_command)
+                        )
+                        logger.debug("Connected to commandSent signal")
+
+                if hasattr(self.instrument, 'responseReceived'):
+                    signal = self.instrument.responseReceived
+                    if hasattr(signal, 'connect'):
+                        self._instrument_connections.append(
+                            signal.connect(self._handle_response)
+                        )
+                        logger.debug("Connected to responseReceived signal")
+
+                if hasattr(self.instrument, 'exceptionOccured'):
+                    signal = self.instrument.exceptionOccured
+                    if hasattr(signal, 'connect'):
+                        self._instrument_connections.append(
+                            signal.connect(self._handle_error)
+                        )
+                        logger.debug("Connected to exceptionOccured signal")
+                        
+                self.append_output("Connected to instrument signals", "response")
+            except Exception as e:
+                logger.error(f"Error connecting to instrument signals: {e}")
+                # Don't let signal connection problems prevent device creation
 
     def _disconnect_instrument_signals(self):
         """Clean up instrument signal connections."""

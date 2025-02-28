@@ -1,7 +1,7 @@
 from typing import Dict, Optional, List, Any
 from PySide6.QtWidgets import (
     QVBoxLayout, QHBoxLayout, QPushButton, QTableWidget,
-    QTableWidgetItem, QHeaderView, QDialog, QLabel,
+    QTableWidgetItem, QHeaderView, QLabel,
     QProgressBar, QFrame
 )
 from PySide6.QtCore import Qt, Signal, Slot
@@ -38,25 +38,6 @@ class InstrumentTable(QTableWidget):
         self.setSelectionBehavior(QTableWidget.SelectRows)
         self.setSelectionMode(QTableWidget.SingleSelection)
         
-        # Style
-        self.setStyleSheet("""
-            QTableWidget {
-                background-color: #1E1E1E;
-                alternate-background-color: #252525;
-                color: #D4D4D4;
-                gridline-color: #2D2D2D;
-                selection-background-color: #264F78;
-                selection-color: #FFFFFF;
-            }
-            QHeaderView::section {
-                background-color: #2D2D2D;
-                color: #FFFFFF;
-                padding: 4px;
-                border: none;
-                border-right: 1px solid #3D3D3D;
-            }
-        """)
-        
     def update_instruments(self, instruments: Dict[str, Dict]):
         """Update table with discovered instruments."""
         self.setRowCount(0)
@@ -83,84 +64,73 @@ class InstrumentTable(QTableWidget):
             return self._instrument_data[row]
         return None
 
-class DiscoveryDialog(QDialog):
-    """Dialog for instrument discovery and connection."""
+
+class DiscoveryView(BaseWidget):
+    """Reusable view for instrument discovery and management."""
+    
+    # Signals 
+    refresh_clicked = Signal()
+    connect_clicked = Signal(dict)  # Emits selected instrument info
     
     def __init__(self, state, parent=None):
-        super().__init__(parent)
-        self.state = state
-        self.result_info = None
-        
+        super().__init__(state, parent)
         self._setup_ui()
         self._connect_signals()
         
-        # Start discovery
-        self.state.discover_instruments()
-        
     def _setup_ui(self):
-        """Initialize dialog UI."""
-        self.setWindowTitle("Discover Instruments")
-        self.setMinimumSize(800, 400)
-        
+        """Initialize view UI."""
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
         
         # Status section
-        status_frame = QFrame()
-        status_frame.setStyleSheet("""
-            QFrame {
-                background-color: #2D2D2D;
-                border-bottom: 1px solid #3D3D3D;
-            }
-            QLabel {
-                color: #FFFFFF;
-            }
-        """)
-        status_layout = QHBoxLayout(status_frame)
-        
-        self.status_label = QLabel("Discovering instruments...")
-        self.progress_bar = QProgressBar()
-        self.progress_bar.setTextVisible(False)
-        self.progress_bar.setMinimum(0)
-        self.progress_bar.setMaximum(0)  # Indeterminate
-        
-        status_layout.addWidget(self.status_label)
-        status_layout.addWidget(self.progress_bar)
-        layout.addWidget(status_frame)
-        
-        # Instrument table
-        self.table = InstrumentTable()
-        layout.addWidget(self.table)
-        
-        # Buttons
-        button_layout = QHBoxLayout()
+        self.status_frame = QFrame()
+        status_layout = QHBoxLayout(self.status_frame)
         
         self.refresh_button = QPushButton("Refresh")
         self.refresh_button.clicked.connect(self._handle_refresh)
-        button_layout.addWidget(self.refresh_button)
+        status_layout.addWidget(self.refresh_button)
         
-        button_layout.addStretch()
+        self.status_label = QLabel("Ready")
+        status_layout.addWidget(self.status_label)
+        
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setTextVisible(False)
+        self.progress_bar.setMinimum(0)
+        self.progress_bar.setMaximum(100)
+        status_layout.addWidget(self.progress_bar)
+        
+        status_layout.addStretch()
         
         self.connect_button = QPushButton("Connect")
         self.connect_button.clicked.connect(self._handle_connect)
-        button_layout.addWidget(self.connect_button)
+        status_layout.addWidget(self.connect_button)
         
-        self.cancel_button = QPushButton("Cancel")
-        self.cancel_button.clicked.connect(self.reject)
-        button_layout.addWidget(self.cancel_button)
+        layout.addWidget(self.status_frame)
         
-        layout.addLayout(button_layout)
-        
+        # Instrument table
+        self.table = InstrumentTable()
+        layout.addWidget(self.table, 1)  # Give the table extra space
+    
     def _connect_signals(self):
-        """Connect to state signals."""
+        """Connect to state signals for discovery updates."""
         self.state.discovery_started.connect(self._handle_discovery_started)
         self.state.discovery_complete.connect(self._handle_discovery_complete)
         self.state.instrument_found.connect(self._handle_instrument_found)
+        
+    def update_instruments(self, instruments: Dict[str, Dict]):
+        """Update the instrument table."""
+        self.table.update_instruments(instruments)
+        
+    def get_selected_instrument(self) -> Optional[Dict]:
+        """Get the currently selected instrument."""
+        return self.table.get_selected_instrument()
         
     @Slot()
     def _handle_discovery_started(self):
         """Handle start of discovery."""
         self.status_label.setText("Discovering instruments...")
-        self.progress_bar.setMaximum(0)
+        self.progress_bar.setMaximum(0)  # Indeterminate
         self.refresh_button.setEnabled(False)
         self.connect_button.setEnabled(False)
         
@@ -179,76 +149,13 @@ class DiscoveryDialog(QDialog):
         """Handle individual instrument discovery."""
         self.status_label.setText(f"Found {info.get('model', 'Unknown')}")
         
-    def _handle_refresh(self):
-        """Handle refresh button."""
-        self.state.discover_instruments()
-        
-    def _handle_connect(self):
-        """Handle connect button."""
-        if info := self.table.get_selected_instrument():
-            self.result_info = info
-            self.accept()
-
-class DiscoveryView(BaseWidget):
-    """View for instrument discovery and management."""
-    
-    def __init__(self, state, parent=None):
-        super().__init__(state, parent)
-        self._setup_ui()
-        
-        # Start discovery
-        self.state.discover_instruments()
-        
-    def _setup_ui(self):
-        """Initialize view UI."""
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        
-        # Control section
-        control_frame = QFrame()
-        control_frame.setStyleSheet("""
-            QFrame {
-                background-color: #2D2D2D;
-                border-bottom: 1px solid #3D3D3D;
-            }
-            QLabel {
-                color: #FFFFFF;
-            }
-        """)
-        control_layout = QHBoxLayout(control_frame)
-        
-        self.refresh_button = QPushButton("Refresh")
-        self.refresh_button.clicked.connect(self._handle_refresh)
-        control_layout.addWidget(self.refresh_button)
-        
-        self.status_label = QLabel()
-        control_layout.addWidget(self.status_label)
-        
-        control_layout.addStretch()
-        
-        self.connect_button = QPushButton("Connect")
-        self.connect_button.clicked.connect(self._handle_connect)
-        control_layout.addWidget(self.connect_button)
-        
-        layout.addWidget(control_frame)
-        
-        # Instrument table
-        self.table = InstrumentTable()
-        layout.addWidget(self.table)
-        
-    def _handle_property_update(self, prop: str, value: Any):
-        """Handle model property updates."""
-        if prop == 'instruments':
-            self.table.update_instruments(value)
-            self.status_label.setText(f"Found {len(value)} instruments")
-            
     @Slot()
     def _handle_refresh(self):
-        """Handle refresh button."""
-        self.state.discover_instruments()
+        """Handle refresh button click."""
+        self.refresh_clicked.emit()
         
     @Slot()
     def _handle_connect(self):
-        """Handle connect button."""
+        """Handle connect button click."""
         if info := self.table.get_selected_instrument():
-            self.state.connect_instrument(info)
+            self.connect_clicked.emit(info)

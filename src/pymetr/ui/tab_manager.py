@@ -169,3 +169,11 @@ class TabManager(QTabWidget):
         """Get the currently active view."""
         widget = self.currentWidget()
         return widget if isinstance(widget, BaseWidget) else None
+    
+    def closeEvent(self, event):
+        # Iterate through all open tabs and call cleanup if available.
+        for widget in self._tabs.values():
+            if hasattr(widget, 'cleanup'):
+                widget.cleanup()
+        self._tabs.clear()  # Clear the dictionary to release references.
+        super().closeEvent(event)

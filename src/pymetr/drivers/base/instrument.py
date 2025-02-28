@@ -1,14 +1,26 @@
 # drivers/base/instrument.py
-import logging
+"""
+Base Instrument Classes
+
+This module provides the foundation for instrument communication with support for:
+1. Thread-safe asynchronous operation for GUI applications
+2. Synchronous operation for scripting contexts
+3. Command-response pairing to ensure proper sequencing
+4. Common SCPI command implementations
+5. Abstraction for different connection types
+6. Extensibility through subsystems
+"""
+
 import time
-from abc import ABCMeta, abstractmethod
-from typing import Optional, Any, Dict, List
-import concurrent.futures
+import uuid
+import threading
 import queue
+from abc import ABCMeta, abstractmethod
+from typing import Optional, Any, Dict, List, Union, Tuple
 
 # Third-party imports
 import numpy as np
-from PySide6.QtCore import QObject, Signal, QThread, Slot
+from PySide6.QtCore import QObject, Signal, QThread, Slot, QEventLoop, QTimer
 from PySide6.QtWidgets import QApplication
 
 # Local imports
@@ -20,67 +32,171 @@ from pymetr.drivers.base.connections import (
 )
 
 class ConnectionWorker(QObject):
-    """Worker object that handles instrument communication in a separate thread."""
-    command_finished = Signal(str)    # Response string
-    error_occurred = Signal(str)      # Error message
+    """
+    Worker object that handles instrument communication in a separate thread.
     
-    def __init__(self, connection):
+    This class manages the command queue, executes commands in sequence,
+    and ensures proper command-response pairing to prevent race conditions.
+    
+    Signals:
+        command_finished(str, str): Emitted when a command completes (command, response)
+        error_occurred(str): Emitted when an error occurs during processing
+    """
+    command_finished = Signal(str, str)    # Command, Response string
+    error_occurred = Signal(str)           # Error message
+    
+    def __init__(self, connection: ConnectionInterface):
+        """
+        Initialize the worker with a connection interface.
+        
+        Args:
+            connection: The ConnectionInterface instance to use for communication
+        """
         super().__init__()
         self.connection = connection
         self.command_queue = queue.Queue()
         self.running = True
+        self._last_command = None
         
     @Slot()
     def process_commands(self):
-        """Process raw SCPI commands."""
+        """
+        Main worker loop that processes commands from the queue.
+        
+        This method runs in a separate thread and handles commands
+        sequentially, ensuring proper command-response pairing.
+        """
+        logger.debug("ConnectionWorker: Starting command processing loop")
         while self.running:
             try:
-                # Get command with timeout
+                # Check for incoming commands
                 try:
-                    cmd_type, command = self.command_queue.get(timeout=0.1)
+                    cmd_type, command = self.command_queue.get(block=False)
+                    logger.debug(f"ConnectionWorker: Processing {cmd_type} command: {command}")
+                    self._handle_command(cmd_type, command)
                 except queue.Empty:
-                    continue
-                    
-                # Execute command
-                try:
-                    if cmd_type == "write":
-                        self.connection.write(command)
-                        self.command_finished.emit("")
-                    elif cmd_type == "read":
-                        response = self.connection.read()
-                        self.command_finished.emit(response)
-                    elif cmd_type == "query":
-                        response = self.connection.query(command)
-                        self.command_finished.emit(response)
-                except Exception as e:
-                    self.error_occurred.emit(str(e))
+                    # No commands to process, check for any incoming data
+                    self._check_for_data()
+                    time.sleep(0.001)  # Short sleep to prevent CPU hogging
                     
             except Exception as e:
-                self.error_occurred.emit(f"Worker error: {str(e)}")
-
-    def stop(self):
-        """Stop the worker thread."""
-        self.running = False
+                error_msg = f"Worker error: {str(e)}"
+                logger.error(error_msg)
+                self.error_occurred.emit(error_msg)
+    
+    def _handle_command(self, cmd_type: str, command: str):
+        """
+        Process a single command with appropriate handling based on type.
         
+        Args:
+            cmd_type: Type of command ('write', 'read', or 'query')
+            command: The SCPI command string to execute
+        """
+        try:
+            if cmd_type == "write":
+                # Execute write command
+                self.connection.write(command)
+                self._last_command = command
+                
+                # If the instrument always sends responses, wait for it
+                if getattr(self.connection, 'read_after_write', False):
+                    logger.debug(f"ConnectionWorker: Read-after-write enabled, reading response")
+                    response = self.connection.read()
+                    self.command_finished.emit(command, response)
+                else:
+                    # No response expected for write
+                    self.command_finished.emit(command, "")
+                    
+            elif cmd_type == "read":
+                # Execute read command (no write needed)
+                response = self.connection.read()
+                self.command_finished.emit("", response)
+                
+            elif cmd_type == "query":
+                # Execute query (write followed by read)
+                self.connection.write(command)
+                self._last_command = command
+                
+                # For queries, we must wait for the response
+                response = self.connection.read()
+                self.command_finished.emit(command, response)
+                
+        except Exception as e:
+            error_msg = f"Error executing {cmd_type} command '{command}': {str(e)}"
+            logger.error(error_msg)
+            self.error_occurred.emit(error_msg)
+    
+    def _check_for_data(self):
+        """
+        Check for any unsolicited data from the instrument.
+        
+        Some instruments send data without being specifically queried,
+        so we check for available data and process it.
+        """
+        if hasattr(self.connection, 'has_data') and self.connection.has_data():
+            try:
+                data = self.connection.read_available()
+                if data:
+                    # Decode the data and emit the signal
+                    response = data.decode(self.connection.encoding)
+                    logger.debug(f"ConnectionWorker: Received unsolicited data: {response}")
+                    self.command_finished.emit("", response)
+            except Exception as e:
+                error_msg = f"Error reading unsolicited data: {str(e)}"
+                logger.error(error_msg)
+                self.error_occurred.emit(error_msg)
+    
     def write(self, command: str):
-        """Queue a write command."""
+        """
+        Queue a write command.
+        
+        Args:
+            command: The SCPI command string to send
+        """
+        logger.debug(f"ConnectionWorker: Queueing write command: {command}")
         self.command_queue.put(("write", command))
         
     def read(self):
         """Queue a read command."""
+        logger.debug("ConnectionWorker: Queueing read command")
         self.command_queue.put(("read", ""))
         
     def query(self, command: str):
-        """Queue a query command."""
+        """
+        Queue a query command.
+        
+        Args:
+            command: The SCPI query command string to send
+        """
+        logger.debug(f"ConnectionWorker: Queueing query command: {command}")
         self.command_queue.put(("query", command))
+    
+    def stop(self):
+        """Stop the worker thread."""
+        logger.debug("ConnectionWorker: Stopping worker")
+        self.running = False
+
 
 class ABCQObjectMeta(type(QObject), ABCMeta):
     """Metaclass that combines QObject and ABC functionality."""
     pass
 
+
 class Instrument(QObject, metaclass=ABCQObjectMeta):
     """
     Base Instrument class supporting both threaded and direct communication modes.
+    
+    This class provides the foundation for instrument communication with:
+    - Thread-safe operation in GUI applications
+    - Synchronous operation in scripting contexts
+    - Signal-based communication for UI updates
+    - Common SCPI command implementations
+    
+    Signals:
+        commandSent(str): Emitted when a command is sent
+        responseReceived(str, str): Emitted when a response is received (command, response)
+        exceptionOccured(str): Emitted when an exception occurs
+        traceDataReady(np.ndarray, np.ndarray): Emitted when trace data is available (x_data, y_data)
     """
     commandSent = Signal(str)               
     responseReceived = Signal(str, str)     
@@ -92,6 +208,16 @@ class Instrument(QObject, metaclass=ABCQObjectMeta):
                  read_timeout: float = 1.5,
                  threaded_mode: bool = None,  # None = auto-detect based on GUI context
                  parent: Optional[QObject] = None):
+        """
+        Initialize the instrument with connection and communication parameters.
+        
+        Args:
+            connection: The connection interface to use
+            read_after_write: Whether the instrument sends data after every write
+            read_timeout: Timeout in seconds for read operations
+            threaded_mode: Whether to use threaded communication (None = auto-detect)
+            parent: Parent QObject for the Qt object hierarchy
+        """
         super().__init__(parent)
         self.connection = connection
         self.read_after_write = read_after_write
@@ -102,19 +228,35 @@ class Instrument(QObject, metaclass=ABCQObjectMeta):
         self._ready_for_data = True
         self.unique_id = None
 
+        # Response tracking
+        self._response_buffer = {}
+        self._response_lock = threading.RLock()
+
         # Determine communication mode
         self._has_gui = QApplication.instance() is not None
         self._threaded_mode = threaded_mode if threaded_mode is not None else self._has_gui
         self._worker = None
         self._worker_thread = None
 
+        logger.debug(f"Instrument initialized with threaded_mode={self._threaded_mode}")
+        
         if self._threaded_mode:
             self._setup_worker()
 
     def _setup_worker(self):
-        """Initialize connection worker and thread if needed."""
+        """
+        Initialize connection worker and thread.
+        
+        Creates a worker instance and moves it to a separate thread for
+        asynchronous command processing.
+        """
+        logger.debug("Instrument: Setting up worker thread")
+        
+        # Create worker and thread instances
         self._worker = ConnectionWorker(self.connection)
         self._worker_thread = QThread()
+        
+        # Move worker to thread
         self._worker.moveToThread(self._worker_thread)
         
         # Connect signals
@@ -122,19 +264,33 @@ class Instrument(QObject, metaclass=ABCQObjectMeta):
         self._worker.command_finished.connect(self._handle_worker_response)
         self._worker.error_occurred.connect(self._handle_worker_error)
         
+        # Start the thread
         self._worker_thread.start()
+        logger.debug("Instrument: Worker thread started")
 
     def _cleanup_worker(self):
-        """Clean up worker thread."""
+        """
+        Clean up worker thread.
+        
+        Stops the worker, quits the thread, and cleans up resources.
+        """
+        logger.debug("Instrument: Cleaning up worker thread")
         if self._worker:
             self._worker.stop()
-            self._worker_thread.quit()
-            self._worker_thread.wait()
+            if self._worker_thread:
+                self._worker_thread.quit()
+                self._worker_thread.wait(1000)  # Wait up to 1 second for thread to quit
+                
             self._worker = None
             self._worker_thread = None
+            logger.debug("Instrument: Worker thread cleaned up")
 
     def open(self):
-        """Opens the connection to the instrument."""
+        """
+        Open the connection to the instrument.
+        
+        Initializes the physical connection and prepares for communication.
+        """
         try:
             self.connection.open()
             logger.info("Instrument connection opened")
@@ -143,7 +299,11 @@ class Instrument(QObject, metaclass=ABCQObjectMeta):
             raise
 
     def close(self):
-        """Closes the connection to the instrument."""
+        """
+        Close the connection to the instrument.
+        
+        Cleans up resources and closes the physical connection.
+        """
         self._cleanup_worker()
         try:
             self.connection.close()
@@ -153,18 +313,33 @@ class Instrument(QObject, metaclass=ABCQObjectMeta):
             raise
 
     def write(self, command: str) -> None:
-        """Write a command to the instrument."""
+        """
+        Write a command to the instrument.
+        
+        Sends a command to the instrument without expecting a response.
+        If read_after_write is True, reads and returns the response.
+        
+        Args:
+            command: The SCPI command string to send
+            
+        Returns:
+            Optional response string if read_after_write is True
+        """
         desc = f"WRITE: {command}"
         logger.debug(desc)
 
         try:
             if self._threaded_mode:
+                # Send via worker thread
                 self._worker.write(command)
             else:
+                # Direct communication
                 self.connection.write(command)
                 
+            # Emit signal for UI components
             self.commandSent.emit(command)
 
+            # Read response if needed
             if self.read_after_write:
                 return self.read()
 
@@ -174,16 +349,31 @@ class Instrument(QObject, metaclass=ABCQObjectMeta):
             raise
 
     def read(self) -> str:
-        """Read from the instrument."""
+        """
+        Read from the instrument.
+        
+        Reads data from the instrument without sending a command.
+        
+        Returns:
+            The response string from the instrument
+        """
         desc = "READ"
         logger.debug(desc)
 
         try:
             if self._threaded_mode:
+                # Send read request to worker thread
                 self._worker.read()
-                # Response will come through _handle_worker_response
-                return None  # Or use a Future/Promise pattern if needed
+                
+                # For GUI context, we need to wait for the response
+                if QThread.currentThread() == QApplication.instance().thread():
+                    # Use event loop to wait without blocking UI
+                    return self._wait_for_response(None)
+                else:
+                    # For script context, use simpler blocking wait
+                    return self._blocking_wait_for_response(None)
             else:
+                # Direct communication
                 response = self.connection.read()
                 self.responseReceived.emit("READ", response)
                 return response
@@ -194,18 +384,44 @@ class Instrument(QObject, metaclass=ABCQObjectMeta):
             raise
 
     def query(self, command: str) -> str:
-        """Send a query and get the response."""
+        """
+        Send a query and get the response.
+        
+        Handles both threaded GUI and blocking script contexts appropriately.
+        
+        Args:
+            command: The SCPI query command string
+            
+        Returns:
+            The response string from the instrument
+            
+        Raises:
+            TimeoutError: If no response is received within the timeout period
+            Exception: For any other communication errors
+        """
         desc = f"QUERY: {command}"
         logger.debug(desc)
 
         try:
+            # Check if we're in the main GUI thread
+            in_main_thread = self._has_gui and QThread.currentThread() == QApplication.instance().thread()
+            
+            # In threaded mode and in the main thread, handle differently
             if self._threaded_mode:
+                # Send command to worker thread
                 self._worker.query(command)
-                # Response will come through _handle_worker_response
-                return None  # Or use a Future/Promise pattern if needed
+                self.commandSent.emit(command)
+                
+                if in_main_thread:
+                    # Use event loop for GUI context
+                    return self._wait_for_response(command)
+                else:
+                    # Use blocking wait for script context
+                    return self._blocking_wait_for_response(command)
             else:
+                # Direct communication (no worker)
                 self.write(command)
-                response = self.read()
+                response = self.connection.read()
                 self.responseReceived.emit(command, response)
                 return response
 
@@ -214,22 +430,159 @@ class Instrument(QObject, metaclass=ABCQObjectMeta):
             self.exceptionOccured.emit(f"{desc} -> {e}")
             raise
 
-    def _handle_worker_response(self, response: str):
-        """Handle responses from worker thread."""
-        self.responseReceived.emit("READ", response)
+    def _wait_for_response(self, command: Optional[str]) -> str:
+        """
+        Wait for a response using event loop (for GUI context).
+        
+        Uses Qt's event loop mechanism to wait for the response without
+        blocking the UI thread.
+        
+        Args:
+            command: The command that was sent, or None for read operations
+            
+        Returns:
+            The response string
+            
+        Raises:
+            TimeoutError: If no response is received within the timeout period
+        """
+        from concurrent.futures import Future
+        
+        result_future = Future()
+        
+        # One-time handler for this specific command
+        def handle_response(cmd, resp):
+            # Match if it's the exact command or if this is a read operation
+            if (command is None and not cmd) or cmd == command:
+                if not result_future.done():
+                    result_future.set_result(resp)
+        
+        # Connect signal temporarily
+        conn = self.responseReceived.connect(handle_response)
+        
+        # Create event loop and timer
+        loop = QEventLoop()
+        timer = QTimer()
+        timer.setSingleShot(True)
+        timer.timeout.connect(loop.quit)
+        result_future.add_done_callback(lambda f: loop.quit())
+        
+        # Start timeout timer
+        timeout_ms = int(self.read_timeout * 1000)  # Convert to ms
+        timer.start(timeout_ms)
+        
+        # Wait for response or timeout
+        loop.exec_()
+        
+        # Clean up
+        try:
+            self.responseReceived.disconnect(conn)
+        except Exception:
+            pass
+        
+        if result_future.done():
+            return result_future.result()
+        else:
+            raise TimeoutError(f"Timeout waiting for response to: {command}")
+
+    def _blocking_wait_for_response(self, command: Optional[str]) -> str:
+        """
+        Wait for a response using a blocking approach (for script context).
+        
+        This method is used when running in a script thread where it's
+        appropriate to block while waiting for the response.
+        
+        Args:
+            command: The command that was sent, or None for read operations
+            
+        Returns:
+            The response string
+            
+        Raises:
+            TimeoutError: If no response is received within the timeout period
+        """
+        from concurrent.futures import Future
+        
+        result_future = Future()
+        
+        # One-time handler for this specific command
+        def handle_response(cmd, resp):
+            # Match if it's the exact command or if this is a read operation
+            if (command is None and not cmd) or cmd == command:
+                if not result_future.done():
+                    result_future.set_result(resp)
+        
+        # Connect signal temporarily
+        conn = self.responseReceived.connect(handle_response)
+        
+        # Wait for response with timeout
+        timeout_s = self.read_timeout
+        start_time = time.time()
+        
+        while not result_future.done() and (time.time() - start_time < timeout_s):
+            # Give a chance for signals to be processed
+            if self._has_gui:
+                QApplication.processEvents()
+            time.sleep(0.001)  # Short sleep to prevent CPU hogging
+        
+        # Clean up
+        try:
+            self.responseReceived.disconnect(conn)
+        except Exception:
+            pass
+        
+        if result_future.done():
+            return result_future.result()
+        else:
+            raise TimeoutError(f"Timeout waiting for response to: {command}")
+
+    def _handle_worker_response(self, command: str, response: str):
+        """
+        Handle responses from worker thread.
+        
+        This method is called when the worker thread completes a command
+        and emits a command_finished signal.
+        
+        Args:
+            command: The command that was sent
+            response: The response from the instrument
+        """
+        # Store response in buffer for synchronization
+        with self._response_lock:
+            self._response_buffer[command if command else "READ"] = response
+        
+        # Emit the signal for any UI listeners
+        self.responseReceived.emit(command, response)
+        logger.debug(f"Response received for {command if command else 'READ'}: {response}")
 
     def _handle_worker_error(self, error: str):
-        """Handle errors from worker thread."""
+        """
+        Handle errors from worker thread.
+        
+        Args:
+            error: The error message
+        """
+        logger.error(f"Worker error: {error}")
         self.exceptionOccured.emit(error)
 
     def set_continuous_mode(self, mode: bool):
-        """Set continuous mode flag."""
+        """
+        Set continuous mode flag.
+        
+        Args:
+            mode: Whether to enable continuous mode
+        """
         logger.debug(f"Set continuous mode to {mode}")
         self.continuous_mode = mode
         self._ready_for_data = not mode
 
     def set_unique_id(self, uid: str):
-        """Set unique identifier for this instrument."""
+        """
+        Set unique identifier for this instrument.
+        
+        Args:
+            uid: Unique identifier string
+        """
         self.unique_id = uid
 
     @abstractmethod
@@ -242,7 +595,18 @@ class Instrument(QObject, metaclass=ABCQObjectMeta):
 
     @staticmethod
     def gui_command(func):
-        """Decorator for GUI-related commands."""
+        """
+        Decorator for GUI-related commands.
+        
+        This can be used to mark commands that should only be executed
+        in GUI context or that require special handling.
+        
+        Example:
+            @Instrument.gui_command
+            def update_display(self, data):
+                # This method will be marked as GUI-related
+                pass
+        """
         def wrapper(*args, **kwargs):
             return func(*args, **kwargs)
         return wrapper
@@ -357,6 +721,7 @@ class Instrument(QObject, metaclass=ABCQObjectMeta):
                     logger.debug(f"Could not query VISA device at {resource}: {e}")
 
             # Use thread pool for VISA discovery
+            import concurrent.futures
             with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
                 list(executor.map(query_visa_device, visa_resources.values()))
 
@@ -371,16 +736,17 @@ class SCPIInstrument(Instrument):
     """
     A specialized Instrument for SCPI-compatible devices.
     
+    Provides common IEEE 488.2 commands and utilities for SCPI instruments.
+    
     Args:
         connection (ConnectionInterface): The connection to use
-        async_mode (bool): Whether to use UI-responsive mode (default: True)
         read_after_write (bool): Whether to read after every write (default: False)
         timeout (int): Default timeout for operations in milliseconds (default: 5000)
         parent (QObject): Parent QObject (default: None)
     """
 
-    def __init__(self, connection, read_after_write=False, timeout=5000, parent=None):
-        super().__init__(connection, read_after_write=read_after_write, parent=parent)
+    def __init__(self, connection, read_after_write=False, timeout=5000, parent=None, **kwargs):
+        super().__init__(connection, read_after_write=read_after_write, parent=parent, **kwargs)
         self._data_mode = "ASCII"
         self._data_type = "B"  # Default data type for binary transfers
         self.timeout = timeout
@@ -422,7 +788,7 @@ class SCPIInstrument(Instrument):
             str: The identification string
         """
         logger.debug("Querying instrument identity (*IDN?)")
-        response = self._execute_command(self.connection.query, "*IDN?")
+        response = self.query("*IDN?")
         logger.debug(f"Received IDN response: {response}")
         return response
     
@@ -439,7 +805,12 @@ class SCPIInstrument(Instrument):
         return response
     
     def query_operation_complete(self):
-        """Waits for operation complete (*OPC?)."""
+        """
+        Waits for operation complete (*OPC?).
+        
+        Returns:
+            str: The operation complete response (typically "1")
+        """
         logger.info("Waiting for operation complete (*OPC?)")
         return self.query("*OPC?")
 
@@ -485,8 +856,14 @@ class SCPIInstrument(Instrument):
         Parses IEEE 488.2 binary block header.
         Format: '#' + num_of_length_digits + data_length + data
         
+        Args:
+            response: The binary response data
+            
         Returns:
             tuple: (data_bytes, header_length)
+            
+        Raises:
+            ValueError: If the binary header is invalid
         """
         if not response.startswith(b'#'):
             raise ValueError("Invalid binary block format")
@@ -522,7 +899,7 @@ class SCPIInstrument(Instrument):
         """
         binary_data = self._format_binary_data(data)
         full_command = command.encode() + b' ' + binary_data
-        self._execute_command(self.connection.write, full_command)
+        self.write(full_command)
 
     def read_binary_data(self) -> np.ndarray:
         """
@@ -531,15 +908,26 @@ class SCPIInstrument(Instrument):
         Returns:
             numpy.ndarray: Parsed data array
         """
-        response = self._execute_command(self.connection.read)
+        response = self.read()
         data, _ = self._parse_binary_header(response)
         return np.frombuffer(data, dtype=self._data_type)
-    
+
 
 class Subsystem:
     """
-    Base class for creating instrument subsystems, supporting both simple and indexed instantiation, 
-    and enabling nested subsystem command prefix cascading.
+    Base class for creating instrument subsystems.
+    
+    Subsystems encapsulate related instrument functionality and handle
+    command prefix cascading for nested subsystem hierarchies.
+    
+    Examples:
+        # Single subsystem instance
+        scope = SCPIInstrument(connection)
+        scope.timebase = Timebase(scope, "TIM")  # Creates a Timebase subsystem
+        
+        # Creating multiple indexed instances (e.g., channels)
+        scope.channels = Channel.build(scope, "CHAN", 4)  # Creates channels 1-4
+        # Now scope.channels[1] refers to channel 1
     """
 
     def __init__(self, instr, cmd_prefix="", index=None):
@@ -547,65 +935,59 @@ class Subsystem:
         Initializes a Subsystem instance.
 
         Args:
-            instr (Instrument or Subsystem): The parent instrument or subsystem this instance belongs to.
-            cmd_prefix (str): The command prefix specific to this subsystem.
-            index (int, optional): If provided, specifies the index for this instance.
+            instr (Instrument or Subsystem): The parent instrument or subsystem
+            cmd_prefix (str): The command prefix specific to this subsystem
+            index (int, optional): If provided, specifies the index for this instance
         """
         self.instr = instr
-        logger.debug(f"Initializing subsystem with instrument {instr}, prefix '{cmd_prefix}', and index {index}")
+        logger.debug(f"Initializing subsystem with prefix '{cmd_prefix}', and index {index}")
+        
         # Handle cascading of command prefixes for nested subsystems
-        self.cmd_prefix = f"{getattr(instr, 'cmd_prefix', '')}{cmd_prefix}"
+        parent_prefix = getattr(instr, 'cmd_prefix', '')
+        
+        # Build the command prefix without adding any colons
+        self.cmd_prefix = parent_prefix + cmd_prefix
+        
+        # Add index to prefix if provided
         if index is not None:
             self.cmd_prefix += str(index)
+            
         logger.debug(f"Subsystem command prefix set to '{self.cmd_prefix}'")
 
     def write(self, command: str) -> None:
         """
-        Forward write command to parent instrument.
+        Forward write command to parent instrument with proper prefix.
 
         Args:
-            command (str): The SCPI command string to send.
+            command (str): The SCPI command string to send
         """
-        logger.debug(f"Subsystem forwarding WRITE command: '{command}'")
-        return self.instr.write(command)
+        full_command = f"{self.cmd_prefix}{command}"
+        logger.debug(f"Subsystem forwarding WRITE command: '{full_command}'")
+        return self.instr.write(full_command)
 
     def read(self) -> str:
         """
         Forward read command to parent instrument.
 
         Returns:
-            str: The response string from the instrument.
+            str: The response string from the instrument
         """
         logger.debug("Subsystem forwarding READ command")
         return self.instr.read()
 
     def query(self, command: str) -> str:
         """
-        Forward query command to parent instrument.
+        Forward query command to parent instrument with proper prefix.
 
         Args:
-            command (str): The SCPI query command string.
+            command (str): The SCPI query command string
 
         Returns:
-            str: The response string from the instrument.
+            str: The response string from the instrument
         """
+        full_command = f"{self.cmd_prefix}{command}"
         logger.debug(f"Subsystem forwarding QUERY command: '{command}'")
-        return self.instr.query(command)
-
-    def _execute_command(self, func, *args, **kwargs):
-        """
-        Forward command execution to parent instrument.
-
-        Args:
-            func (callable): The function to execute (e.g., write, read, query).
-            *args: Positional arguments for the function.
-            **kwargs: Keyword arguments for the function.
-
-        Returns:
-            Any: The result of the executed function.
-        """
-        logger.debug(f"Subsystem executing command with function: '{func.__name__}'")
-        return self.instr._execute_command(func, *args, **kwargs)
+        return self.instr.query(full_command)
 
     @classmethod
     def build(cls, parent, cmd_prefix, indices=None):
@@ -613,12 +995,12 @@ class Subsystem:
         Class method to instantiate subsystems. Handles both single and indexed instances.
 
         Args:
-            parent (Instrument or Subsystem): The parent object for the new subsystem(s).
-            cmd_prefix (str): The SCPI command prefix.
-            indices (int, optional): Number of indexed instances to create.
+            parent (Instrument or Subsystem): The parent object for the new subsystem(s)
+            cmd_prefix (str): The SCPI command prefix
+            indices (int, optional): Number of indexed instances to create
 
         Returns:
-            Subsystem or list of Subsystem: Single instance or list of indexed instances.
+            Subsystem or list of Subsystem: Single instance or list of indexed instances
         """
         if indices is None:
             # Single instance (no indexing)
@@ -635,3 +1017,15 @@ class Subsystem:
         else:
             raise ValueError("Unsupported type or value for indices. Must be a positive integer or None.")
 
+    def fetch_trace(self) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Fetch a trace from this subsystem.
+        
+        Default implementation that can be overridden by subclasses.
+        
+        Returns:
+            tuple: (x_data, y_data) as numpy arrays
+        """
+        # Default implementation - subclasses should override this
+        logger.warning(f"Default fetch_trace implementation called for {self.__class__.__name__}")
+        return np.array([]), np.array([])

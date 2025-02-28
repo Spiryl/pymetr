@@ -181,14 +181,14 @@ class InstrumentRegistry(QObject):
             return None
 
     def create_driver_instance(self, 
-                           device: Device,
-                           connection: ConnectionInterface,
-                           threaded_mode: bool = True) -> Optional[object]:
+                            device_or_model,
+                            connection: ConnectionInterface,
+                            threaded_mode: bool = True) -> Optional[object]:
         """
         Create a driver instance for a device.
         
         Args:
-            device: Device model instance
+            device_or_model: Device model instance or model name string
             connection: Connection interface instance
             threaded_mode: Whether to use threaded communication
             
@@ -201,35 +201,49 @@ class InstrumentRegistry(QObject):
                 self,
                 "_create_driver_internal",
                 Qt.BlockingQueuedConnection,
-                Q_ARG(Device, device),
+                Q_ARG(object, device_or_model),  # Changed to object type
                 Q_ARG(object, connection),
                 Q_ARG(bool, threaded_mode),
                 Q_ARG(object, result)
             )
             return result
         else:
-            return self._create_driver_internal(device, connection, threaded_mode)
+            return self._create_driver_internal(device_or_model, connection, threaded_mode)
 
-    @Slot(Device, object, bool, object)
+    @Slot(object, object, bool, object)  # Changed first param to object
     def _create_driver_internal(self, 
-                            device: Device,
+                            device_or_model,
                             connection: ConnectionInterface,
                             threaded_mode: bool,
                             result: object = None) -> Optional[object]:
         """Internal driver creation that always runs in main thread."""
-        driver_class = self.get_driver_class(device.get_property('model'))
+        
+        # Handle both Device objects and string model names
+        if isinstance(device_or_model, Device):
+            device = device_or_model
+            model_name = device.get_property('model')
+            device_id = device.id
+        else:
+            # If a string was passed, use it as the model name
+            model_name = str(device_or_model)
+            device = None
+            device_id = f"temp_{id(connection)}"  # Generate a temporary ID
+        
+        driver_class = self.get_driver_class(model_name)
         if not driver_class:
+            logger.error(f"No driver class found for model: {model_name}")
             return None
             
         try:
             # Create driver instance
             instance = driver_class(connection, threaded_mode=threaded_mode)
             
-            # Store instance
-            self._driver_instances[device.id] = instance
-            
-            self.driver_created.emit(device.get_property('model'), instance)
-            logger.debug(f"Created driver instance for device {device.id}")
+            # Store instance if we have a device
+            if device:
+                self._driver_instances[device_id] = instance
+                
+            self.driver_created.emit(model_name, instance)
+            logger.debug(f"Created driver instance for model {model_name}")
             
             return instance
             

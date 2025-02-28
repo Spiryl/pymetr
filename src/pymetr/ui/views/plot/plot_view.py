@@ -73,7 +73,7 @@ class PlotView(BaseWidget):
 
         # Create main plot (renamed to main_plot_item for clarity)
         self.main_plot_item = self.plot_layout.addPlot(row=0, col=0)
-        self.main_plot_item.setTitle("", size="20pt", color='w')
+        self.main_plot_item.setTitle("", size="18pt", color='w')
         
         # Enable autorange by default for main plot
         self.main_plot_item.enableAutoRange()

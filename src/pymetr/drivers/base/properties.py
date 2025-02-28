@@ -1,10 +1,11 @@
-
 """
-SCPI Property System - Simplified Implementation
+SCPI Property System - Improved Implementation
 
 This module provides descriptor classes for handling SCPI instrument properties.
 Each property class implements specific behavior for different types of instrument
 settings while relying on the base Instrument class for communication handling.
+
+The implementation ensures proper synchronization in both GUI and script contexts.
 """
 
 from abc import ABC, abstractmethod
@@ -154,7 +155,14 @@ class ValueProperty(Property):
         """Get the current numeric value from the instrument."""
         logger.debug(f"Getting value for '{self.cmd_str}'")
         try:
+            # Use query which now handles both GUI and script contexts correctly
             response = instance.query(f"{self.cmd_str}?")
+            
+            # Proper response handling
+            if response is None or response.strip() == "":
+                logger.warning(f"No valid response received for '{self.cmd_str}?'")
+                return None
+                
             value = self._validate_value(response)
             self.last_response = PropertyResponse(
                 value=value,
@@ -176,10 +184,22 @@ class ValueProperty(Property):
             validated_value = self._validate_value(value)
             command = f"{self.cmd_str}{self.join_char}{validated_value}{self.units}"
             instance.write(command)
-            self.last_response = PropertyResponse(
-                value=validated_value,
-                raw_response=command
-            )
+            
+            # If read_after_write is enabled, read back the value to verify
+            if getattr(instance, 'read_after_write', False):
+                response = instance.query(f"{self.cmd_str}?")
+                read_value = self._validate_value(response)
+                self.last_response = PropertyResponse(
+                    value=read_value,
+                    raw_response=response
+                )
+                return read_value
+            else:
+                self.last_response = PropertyResponse(
+                    value=validated_value,
+                    raw_response=command
+                )
+                return validated_value
         except Exception as e:
             logger.error(f"Error in setter for '{self.cmd_str}': {e}")
             self.last_response = PropertyResponse(
@@ -243,7 +263,14 @@ class SwitchProperty(Property):
         """Get the current boolean state from the instrument."""
         logger.debug(f"Getting boolean value for '{self.cmd_str}'")
         try:
+            # Use query which now handles both GUI and script contexts correctly
             response = instance.query(f"{self.cmd_str}?")
+            
+            # Proper response handling
+            if response is None or response.strip() == "":
+                logger.warning(f"No valid response received for '{self.cmd_str}?'")
+                return None
+                
             value = self._convert_to_bool(response)
             self.last_response = PropertyResponse(
                 value=value,
@@ -266,10 +293,22 @@ class SwitchProperty(Property):
             formatted_value = self._format_bool(bool_value)
             command = f"{self.cmd_str}{self.join_char}{formatted_value}"
             instance.write(command)
-            self.last_response = PropertyResponse(
-                value=bool_value,
-                raw_response=command
-            )
+            
+            # If read_after_write is enabled, read back the value to verify
+            if getattr(instance, 'read_after_write', False):
+                response = instance.query(f"{self.cmd_str}?")
+                read_value = self._convert_to_bool(response)
+                self.last_response = PropertyResponse(
+                    value=read_value,
+                    raw_response=response
+                )
+                return read_value
+            else:
+                self.last_response = PropertyResponse(
+                    value=bool_value,
+                    raw_response=command
+                )
+                return bool_value
         except Exception as e:
             logger.error(f"Error in setter for '{self.cmd_str}': {e}")
             self.last_response = PropertyResponse(
@@ -348,7 +387,14 @@ class SelectProperty(Property):
         """Get the current selection from the instrument."""
         logger.debug(f"Getting selection for '{self.cmd_str}'")
         try:
+            # Use query which now handles both GUI and script contexts correctly
             response = instance.query(f"{self.cmd_str}?")
+            
+            # Proper response handling
+            if response is None or response.strip() == "":
+                logger.warning(f"No valid response received for '{self.cmd_str}?'")
+                return None
+                
             matched_value = self._find_match(response)
             
             # Convert to enum if applicable
@@ -379,10 +425,122 @@ class SelectProperty(Property):
             matched_value = self._find_match(value)
             command = f"{self.cmd_str}{self.join_char}{matched_value}"
             instance.write(command)
+            
+            # If read_after_write is enabled, read back the value to verify
+            if getattr(instance, 'read_after_write', False):
+                response = instance.query(f"{self.cmd_str}?")
+                read_value = self._find_match(response)
+                
+                # Convert to enum if applicable
+                if self.enum_class:
+                    read_value = self.enum_class(read_value)
+                    
+                self.last_response = PropertyResponse(
+                    value=read_value,
+                    raw_response=response
+                )
+                return read_value
+            else:
+                result_value = matched_value
+                if self.enum_class:
+                    result_value = self.enum_class(matched_value)
+                    
+                self.last_response = PropertyResponse(
+                    value=result_value,
+                    raw_response=command
+                )
+                return result_value
+        except Exception as e:
+            logger.error(f"Error in setter for '{self.cmd_str}': {e}")
             self.last_response = PropertyResponse(
-                value=matched_value,
-                raw_response=command
+                success=False,
+                error=str(e)
             )
+            raise
+
+class StringProperty(Property):
+    """
+    String property for text values.
+    
+    Args:
+        cmd_str: SCPI command string
+        max_length: Optional maximum string length
+        doc_str: Documentation string
+        access: Access mode ('read', 'write', or 'read-write')
+        join_char: Character used to join command and value
+    """
+
+    def __init__(self, cmd_str: str, max_length: Optional[int] = None,
+                 doc_str: str = "", access: str = "read-write", join_char: str = " "):
+        super().__init__(cmd_str, doc_str, access, join_char)
+        self.max_length = max_length
+        logger.debug(f"Initialized StringProperty with max_length={max_length}")
+
+    def _validate_string(self, value: str) -> str:
+        """Validate string according to length constraints."""
+        if not isinstance(value, str):
+            value = str(value)
+            
+        if self.max_length and len(value) > self.max_length:
+            msg = f"String exceeds maximum length {self.max_length}"
+            logger.error(msg)
+            raise ValueError(msg)
+            
+        return value
+
+    def getter(self, instance) -> str:
+        """Get the current string value from the instrument."""
+        logger.debug(f"Getting string for '{self.cmd_str}'")
+        try:
+            # Use query which now handles both GUI and script contexts
+            response = instance.query(f"{self.cmd_str}?")
+            
+            # Proper response handling
+            if response is None:
+                logger.warning(f"No response received for '{self.cmd_str}?'")
+                return ""
+                
+            # Just return the raw string
+            self.last_response = PropertyResponse(
+                value=response,
+                raw_response=response
+            )
+            return response
+        except Exception as e:
+            logger.error(f"Error in getter for '{self.cmd_str}': {e}")
+            self.last_response = PropertyResponse(
+                success=False,
+                error=str(e)
+            )
+            raise
+
+    def setter(self, instance, value):
+        """Set a string value on the instrument."""
+        logger.debug(f"Setting '{self.cmd_str}' to {value}")
+        try:
+            validated_value = self._validate_string(value)
+            
+            # If the string contains spaces, enclose in quotes
+            if ' ' in validated_value:
+                validated_value = f'"{validated_value}"'
+                
+            command = f"{self.cmd_str}{self.join_char}{validated_value}"
+            instance.write(command)
+            
+            # If read_after_write is enabled, read back the value to verify
+            if getattr(instance, 'read_after_write', False):
+                response = instance.query(f"{self.cmd_str}?")
+                self.last_response = PropertyResponse(
+                    value=response,
+                    raw_response=response
+                )
+                return response
+            else:
+                self.last_response = PropertyResponse(
+                    value=validated_value,
+                    raw_response=command
+                )
+                return validated_value
         except Exception as e:
             logger.error(f"Error in setter for '{self.cmd_str}': {e}")
             self.last_response = PropertyResponse(
@@ -426,6 +584,10 @@ class DataProperty(Property):
         """Convert a response string into an array of values."""
         logger.debug("Converting response to array")
         try:
+            # Handle empty response
+            if not response or response.strip() == "":
+                return self.container([])
+                
             # Split response and filter out empty strings
             values = [v.strip() for v in response.strip().split(self.separator)]
             values = [v for v in values if v]
@@ -459,7 +621,14 @@ class DataProperty(Property):
         """Get array data from the instrument."""
         logger.debug(f"Getting array data for '{self.cmd_str}'")
         try:
+            # Use query which now handles both GUI and script contexts correctly
             response = instance.query(f"{self.cmd_str}?")
+            
+            # Proper response handling
+            if response is None:
+                logger.warning(f"No response received for '{self.cmd_str}?'")
+                return self.container([])
+                
             array_data = self._convert_to_array(response)
             self.last_response = PropertyResponse(
                 value=array_data,
@@ -484,10 +653,22 @@ class DataProperty(Property):
             formatted_data = self._format_array(value)
             command = f"{self.cmd_str}{self.join_char}{formatted_data}"
             instance.write(command)
-            self.last_response = PropertyResponse(
-                value=value,
-                raw_response=command
-            )
+            
+            # If read_after_write is enabled, read back the value to verify
+            if getattr(instance, 'read_after_write', False):
+                response = instance.query(f"{self.cmd_str}?")
+                read_value = self._convert_to_array(response)
+                self.last_response = PropertyResponse(
+                    value=read_value,
+                    raw_response=response
+                )
+                return read_value
+            else:
+                self.last_response = PropertyResponse(
+                    value=value,
+                    raw_response=command
+                )
+                return value
         except Exception as e:
             logger.error(f"Error in setter for '{self.cmd_str}': {e}")
             self.last_response = PropertyResponse(
@@ -565,8 +746,14 @@ class DataBlockProperty(Property):
         """Get binary block data from the instrument."""
         logger.debug(f"Getting binary data for '{self.cmd_str}'")
         try:
+            # Use query which now handles both GUI and script contexts correctly
             response = instance.query(f"{self.cmd_str}?")
             
+            # Proper response handling
+            if response is None:
+                logger.warning(f"No response received for '{self.cmd_str}?'")
+                return None
+                
             # Handle binary response
             if isinstance(response, bytes):
                 if self.ieee_header:
@@ -579,6 +766,10 @@ class DataBlockProperty(Property):
                 
             # Handle ASCII response
             else:
+                if not response.strip():
+                    logger.warning(f"Empty response for '{self.cmd_str}?'")
+                    return None
+                    
                 values = [float(v) for v in response.strip().split(',')]
                 array_data = np.array(values, dtype=self.dtype)
             
@@ -615,10 +806,37 @@ class DataBlockProperty(Property):
                          ",".join(str(x) for x in value)
             
             instance.write(command)
+            
+            # If read_after_write is enabled, read back to verify (not always practical for large data)
+            if getattr(instance, 'read_after_write', False) and len(value) < 1000:
+                try:
+                    response = instance.query(f"{self.cmd_str}?")
+                    
+                    # Process response
+                    if isinstance(response, bytes):
+                        if self.ieee_header:
+                            data_bytes, _ = self._parse_ieee_header(response)
+                        else:
+                            data_bytes = response
+                            
+                        read_value = np.frombuffer(data_bytes, dtype=self.dtype)
+                    else:
+                        values = [float(v) for v in response.strip().split(',')]
+                        read_value = np.array(values, dtype=self.dtype)
+                        
+                    self.last_response = PropertyResponse(
+                        value=read_value,
+                        raw_response=response
+                    )
+                    return read_value
+                except Exception as read_error:
+                    logger.warning(f"Error reading back binary data: {read_error}")
+            
             self.last_response = PropertyResponse(
                 value=value,
                 raw_response=str(command)
             )
+            return value
         except Exception as e:
             logger.error(f"Error in setter for '{self.cmd_str}': {e}")
             self.last_response = PropertyResponse(

@@ -1,9 +1,8 @@
-# views/widgets/toolbar.py
 from typing import Optional, Callable, Any
 from PySide6.QtWidgets import (
     QToolBar, QWidget, QToolButton, 
     QMenu, QWidgetAction, QFrame,
-    QHBoxLayout, QLabel, QSizePolicy, 
+    QHBoxLayout, QLabel, QSizePolicy, QComboBox
 )
 from PySide6.QtGui import QIcon, QAction
 from PySide6.QtCore import Qt, Signal
@@ -18,22 +17,48 @@ class ToolBarButton(QToolButton):
             self.setIcon(icon)
         self.setText(text)
 
+
 class ToolBarSeparator(QFrame):
     """Vertical separator for toolbar."""
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setFrameStyle(QFrame.VLine)
 
+
 class TabToolbar(QToolBar):
     """Enhanced toolbar with modern styling and better widget handling."""
     
     def __init__(self, parent=None):
         super().__init__(parent)
-
         self.setFloatable(False)
         self.setMovable(False)
+        self.setStyleSheet("""
+            QToolBar {
+                background: transparent;
+                border: none;
+                spacing: 8px;
+                padding: 4px;
+            }
 
-    def addButton(self, text, icon=None, callback=None):
+            QToolButton {
+                background: transparent;
+                border: none;
+                border-radius: 4px;
+                padding: 6px;
+                color: #f5f5f5;
+            }
+
+            QToolButton:hover {
+                background: rgba(255, 132, 0, 0.2);
+            }
+
+            QToolButton:pressed {
+                background: #ff8400;
+                color: #000000;
+            }
+        """)
+
+    def addButton(self, text, icon=None, callback: Optional[Callable] = None):
         """Add a button with optional icon and callback."""
         button = ToolBarButton(icon, text, self)
         if callback:
@@ -41,26 +66,15 @@ class TabToolbar(QToolBar):
         self.addWidget(button)
         return button
 
-    def addToggleButton(self, text, icon=None, checked=False, callback=None):
+    def addToggleButton(self, text, icon=None, checked=False, callback: Optional[Callable] = None):
         """
         Add a toggle button with optional icon, initial state, and callback.
-        
-        Args:
-            text (str): Text to display on the button
-            icon (QIcon, optional): Icon for the button
-            checked (bool, optional): Initial checked state of the button
-            callback (Callable, optional): Function to call when button state changes
-        
-        Returns:
-            QToolButton: The created toggle button
         """
         button = ToolBarButton(icon, text, self)
         button.setCheckable(True)
         button.setChecked(checked)
-        
         if callback:
             button.toggled.connect(callback)
-        
         self.addWidget(button)
         return button
 
@@ -69,7 +83,6 @@ class TabToolbar(QToolBar):
         button = ToolBarButton(icon, text, self)
         button.setPopupMode(QToolButton.InstantPopup)
         menu = QMenu(button)
-
         button.setMenu(menu)
         self.addWidget(button)
         return menu
@@ -99,3 +112,28 @@ class TabToolbar(QToolBar):
         self.addWidget(spacer)
         return spacer
 
+    def addComboBox(self, label: str, items: list, callback: Optional[Callable] = None):
+        """
+        Add a combobox with an accompanying label to the toolbar.
+        
+        Args:
+            label (str): Label text for the combobox.
+            items (list): List of items to populate the combobox.
+            callback (Callable, optional): Function to call when the current text changes.
+            
+        Returns:
+            QComboBox: The created combobox widget.
+        """
+        container = QWidget()
+        layout = QHBoxLayout(container)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(2)
+        label_widget = QLabel(label)
+        layout.addWidget(label_widget)
+        combo = QComboBox()
+        combo.addItems(items)
+        if callback:
+            combo.currentTextChanged.connect(callback)
+        layout.addWidget(combo)
+        self.addWidget(container)
+        return combo

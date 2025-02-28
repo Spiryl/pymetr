@@ -246,34 +246,85 @@ class InstrumentActions:
     
     @staticmethod
     def discover_instruments(state) -> None:
-        """Open instrument discovery dialog or view."""
+        """Open instrument discovery dialog."""
         logger.debug("InstrumentActions: Initiating instrument discovery")
         parent = getattr(state, '_parent', None)
         
         try:
-            if not parent:
-                # No parent window - just do discovery
-                state.discover_instruments()
-                return
-                
-            from pymetr.ui.views.discovery_view import DiscoveryDialog
-            dialog = DiscoveryDialog(state, parent)
+            from pymetr.ui.dialogs.discovery_dialog import DiscoveryDialog
+            from PySide6.QtWidgets import QDialog  # Import QDialog to access standard return values
             
-            if dialog.exec_():
+            dialog = DiscoveryDialog(state, parent=parent)
+            
+            if dialog.exec() == QDialog.Accepted:  # Use QDialog.Accepted instead of dialog.Accepted
                 # User selected an instrument
                 info = dialog.result_info
                 if info:
-                    state.connect_instrument(info)
-                    
+                    device = state.connect_instrument(info)
+                    if device:
+                        logger.info(f"Successfully connected to {device.get_property('model')}")
+                        # Set as active model so it's shown in the UI
+                        state.set_active_model(device.id)
+                        
         except Exception as e:
             logger.error(f"Error in discover_instruments: {e}")
             if parent:
                 QMessageBox.critical(
                     parent,
                     "Discovery Error",
-                    f"Failed to start discovery: {str(e)}"
+                    f"Failed to discover instruments: {str(e)}"
                 )
 
+    @staticmethod
+    def connect_instrument(state) -> None:
+        """Open manual connection dialog."""
+        logger.debug("InstrumentActions: Opening manual connection dialog")
+        parent = getattr(state, '_parent', None)
+        
+        try:
+            from pymetr.ui.dialogs.connection_dialog import ConnectionDialog
+            from PySide6.QtWidgets import QDialog  # Import QDialog for standard return values
+            
+            dialog = ConnectionDialog(parent)
+            
+            if dialog.exec() == QDialog.Accepted:  # Use QDialog.Accepted
+                # User entered connection info
+                info = dialog.result_info
+                if info:
+                    device = state.connect_instrument(info)
+                    if device:
+                        logger.info(f"Successfully connected to {device.get_property('resource')}")
+                        # Set as active model so it's shown in the UI
+                        state.set_active_model(device.id)
+                        
+        except Exception as e:
+            logger.error(f"Error in manual connection: {e}")
+            if parent:
+                QMessageBox.critical(
+                    parent,
+                    "Connection Error",
+                    f"Failed to connect to instrument: {str(e)}"
+                )
+
+    @staticmethod
+    def disconnect_instrument(state) -> None:
+        """Disconnect the active instrument."""
+        logger.debug("InstrumentActions: Disconnecting instrument")
+        
+        model = state.get_active_model()
+        if model and hasattr(model, 'disconnect'):
+            try:
+                model.disconnect()
+                logger.info(f"Disconnected instrument {model.get_property('name')}")
+            except Exception as e:
+                logger.error(f"Error disconnecting instrument: {e}")
+                parent = getattr(state, '_parent', None)
+                if parent:
+                    QMessageBox.critical(
+                        parent,
+                        "Disconnection Error",
+                        f"Failed to disconnect instrument: {str(e)}"
+                    )
 # Define standard actions
 STANDARD_ACTIONS = {
     # File actions
@@ -348,10 +399,27 @@ STANDARD_ACTIONS = {
     # Instrument actions
     'discover_instruments': Action(
         id='discover_instruments',
+        name='Discover',
+        category=ActionCategory.INSTRUMENT,
+        icon='discover.png',
+        handler=InstrumentActions.discover_instruments,
+        tooltip="Discover available instruments"
+    ),
+    'connect_instrument': Action(
+        id='connect_instrument',
         name='Connect',
         category=ActionCategory.INSTRUMENT,
-        icon='instruments.png',
-        handler=InstrumentActions.discover_instruments
+        icon='connect.png',
+        handler=InstrumentActions.connect_instrument,
+        tooltip="Manually connect to an instrument"
+    ),
+    'disconnect_instrument': Action(
+        id='disconnect_instrument',
+        name='Disconnect',
+        category=ActionCategory.INSTRUMENT,
+        icon='disconnect.png',
+        handler=InstrumentActions.disconnect_instrument,
+        tooltip="Disconnect the current instrument"
     )
 }
 # End of C:/Users/rsmith/Documents/GitHub/pymetr/src/pymetr/core/actions.py

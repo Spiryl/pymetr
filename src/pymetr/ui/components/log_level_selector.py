@@ -29,7 +29,7 @@ class LogLevelSelector(QWidget):
         self.level_combo.addItem("INFO", logging.INFO)
         self.level_combo.addItem("WARNING", logging.WARNING)
         self.level_combo.addItem("ERROR", logging.ERROR)
-        self.level_combo.setCurrentIndex(1)  # Default to INFO
+        self.level_combo.setCurrentIndex(3)  # Default to WARNING
         self.level_combo.setToolTip("Select logging level")
         self.level_combo.currentIndexChanged.connect(self._on_level_changed)
         layout.addWidget(self.level_combo)

@@ -110,7 +110,8 @@ pymetr/
 │   │   │   │   │   ├── log_level_selector.py
 │   │   │   │   │   ├── toolbar.py
 │   │   │   ├── dialogs/
-│   │   │   │   │   ├── discovery.py
+│   │   │   │   │   ├── connection_dialog.py
+│   │   │   │   │   ├── discovery_dialog.py
 │   │   │   │   │   ├── settings.py
 │   │   │   ├── docks/
 │   │   │   │   │   ├── console_dock.py
@@ -223,6 +224,8 @@ pymetr/
 │   │   │   │   │   ├── welcome_tab.py
 │   │   │   ├── views/
 │   │   │   │   │   ├── base.py
+│   │   │   │   │   ├── device_control_view.py
+│   │   │   │   │   ├── device_view.py
 │   │   │   │   │   ├── discovery_view.py
 │   │   │   │   │   ├── group_view.py
 │   │   │   │   │   ├── result_view.py

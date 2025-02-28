@@ -8,6 +8,7 @@ from pymetr.ui.tabs.script_tab import ScriptTab
 from pymetr.ui.tabs.result_tab import ResultTab
 from pymetr.ui.tabs.plot_tab import PlotTab
 from pymetr.ui.tabs.table_tab import TableTab
+from pymetr.ui.tabs.device_tab import DeviceTab
 from pymetr.ui.tabs.welcome_tab import WelcomeTab
 from pymetr.core.state import ApplicationState
 from pymetr.core.logging import logger
@@ -23,7 +24,8 @@ class TabFactory:
         "TestScript": ScriptTab,
         "TestResult": ResultTab,
         "Plot": PlotTab,
-        "DataTable": TableTab
+        "DataTable": TableTab,
+        "Device": DeviceTab
     }
     
     @classmethod

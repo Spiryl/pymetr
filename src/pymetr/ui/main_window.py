@@ -2,7 +2,7 @@ import os
 from typing import Optional, Dict
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QSettings, QSize, QTimer
+from PySide6.QtCore import Qt, QSettings, QSize, QTimer, QPoint, QRect
 from PySide6.QtGui import QPainter, QPainterPath, QColor, QIcon
 from PySide6.QtWidgets import QMainWindow, QWidget, QDockWidget, QApplication
 
@@ -58,7 +58,6 @@ class MainWindow(QMainWindow):
         self._setup_docks()
         self._setup_tab_manager()  
         self._setup_status_bar()  
-        self._setup_console_area()
         
         # Connect signals
         self._connect_signals()
@@ -130,24 +129,6 @@ class MainWindow(QMainWindow):
         self.status_bar = StatusBar(self.state)
         self.setStatusBar(self.status_bar)
 
-    # Add this method to MainWindow class:
-    def _setup_console_area(self):
-        """Set up the console dock area."""
-        # Create main console dock
-        from pymetr.ui.docks.console_dock import ConsoleDock
-        self.console_dock = ConsoleDock(self)
-        self.console_dock.setObjectName("ConsoleDock")
-        self.addDockWidget(Qt.BottomDockWidgetArea, self.console_dock)
-        
-        # Hide by default
-        self.console_dock.setVisible(False)
-        
-        # Create dict to track instrument console docks
-        self.instrument_consoles = {}
-        
-        # Connect to instrument signals
-        self.state.instrument_connected.connect(self._on_instrument_connected)
-
     def _connect_signals(self):
         """Connect to ApplicationState signals."""
         # Connect signals for model management
@@ -214,29 +195,94 @@ class MainWindow(QMainWindow):
             self.restoreState(state)
 
     def paintEvent(self, event):
-        """Custom paint for rounded window corners."""
+        """Custom paint for rounded window corners and dual background colors."""
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
         
-        # Create rounded rect path
+        # Create a rounded rectangle path for the window border
         path = QPainterPath()
         path.addRoundedRect(self.rect(), 10, 10)
-        
-        # Clip to path and fill
-        bg_color = QColor("#2A2A2A")  # Default color
-        
-        # Try to get color from theme
-        try:
-            theme_css = self.theme_service.get_stylesheet()
-            if "--bg-primary:" in theme_css:
-                bg_color_str = theme_css.split("--bg-primary:")[1].split(";")[0].strip()
-                if bg_color_str and QColor(bg_color_str).isValid():
-                    bg_color = QColor(bg_color_str)
-        except Exception as e:
-            logger.warning(f"Failed to parse background color from theme: {e}")
-        
         painter.setClipPath(path)
-        painter.fillRect(self.rect(), bg_color)
+        
+        # Paint the entire background with the primary color
+        main_bg = QColor("#1e1e1e")
+        painter.fillRect(self.rect(), main_bg)
+        
+        # Over-paint the title bar region with a secondary color.
+        # Using the title_bar's geometry (which is relative to the MainWindow)
+        title_bar_rect = self.title_bar.geometry()
+        painter.fillRect(title_bar_rect, QColor("#2a2a2a"))
+
+    # --- Mouse Events for Resizing (Drag Handles) ---
+    
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self._dragPos = event.globalPos()
+            # Determine if we are in a resize zone
+            self._resizeRegion = self._getResizeRegion(event.pos())
+        super().mousePressEvent(event)
+    
+    def mouseMoveEvent(self, event):
+        if event.buttons() & Qt.LeftButton and self._resizeRegion:
+            self._resizeWindow(event.globalPos())
+        else:
+            # Update cursor shape if not dragging/resizing
+            self._updateCursor(event.pos())
+        super().mouseMoveEvent(event)
+    
+    def mouseReleaseEvent(self, event):
+        self._resizeRegion = None
+        self.unsetCursor()
+        super().mouseReleaseEvent(event)
+    
+    def _getResizeRegion(self, pos: QPoint):
+        """
+        Determine which edges (if any) the mouse is near.
+        Returns a bitmask:
+          1 = left, 2 = right, 4 = top, 8 = bottom.
+        """
+        region = 0
+        if pos.x() <= self.RESIZE_MARGIN:
+            region |= 1   # left
+        if pos.x() >= self.width() - self.RESIZE_MARGIN:
+            region |= 2   # right
+        if pos.y() <= self.RESIZE_MARGIN:
+            region |= 4   # top
+        if pos.y() >= self.height() - self.RESIZE_MARGIN:
+            region |= 8   # bottom
+        return region if region != 0 else None
+    
+    def _resizeWindow(self, globalPos: QPoint):
+        diff = globalPos - self._dragPos
+        geom: QRect = self.geometry()
+        new_geom = QRect(geom)
+        
+        if self._resizeRegion & 1:  # left edge
+            new_geom.setLeft(new_geom.left() + diff.x())
+        if self._resizeRegion & 2:  # right edge
+            new_geom.setRight(new_geom.right() + diff.x())
+        if self._resizeRegion & 4:  # top edge
+            new_geom.setTop(new_geom.top() + diff.y())
+        if self._resizeRegion & 8:  # bottom edge
+            new_geom.setBottom(new_geom.bottom() + diff.y())
+        
+        self.setGeometry(new_geom)
+        self._dragPos = globalPos
+    
+    def _updateCursor(self, pos: QPoint):
+        region = self._getResizeRegion(pos)
+        if region:
+            if region in (1, 2):
+                self.setCursor(Qt.SizeHorCursor)
+            elif region in (4, 8):
+                self.setCursor(Qt.SizeVerCursor)
+            elif region in (1 | 4, 2 | 8):
+                self.setCursor(Qt.SizeFDiagCursor)
+            elif region in (1 | 8, 2 | 4):
+                self.setCursor(Qt.SizeBDiagCursor)
+        else:
+            self.unsetCursor()
+
 
     def _on_instrument_connected(self, device_id):
         """Handle instrument connection."""
