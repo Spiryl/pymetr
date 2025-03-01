@@ -74,7 +74,29 @@ class PlotView(BaseWidget):
         # Create main plot (renamed to main_plot_item for clarity)
         self.main_plot_item = self.plot_layout.addPlot(row=0, col=0)
         self.main_plot_item.setTitle("", size="18pt", color='w')
-        
+
+
+        # Set the color and transparency of grid lines
+        axis_color = '#AAAAAA'  
+        self.main_plot_item.getAxis('left').setPen(pg.mkPen(color=axis_color))  
+        self.main_plot_item.getAxis('bottom').setPen(pg.mkPen(color=axis_color))  
+        self.main_plot_item.getAxis('left').setGrid(24)  
+        self.main_plot_item.getAxis('bottom').setGrid(24)  
+
+        # Set the color of plot labels and title
+        label_color = '#AAAAAA'
+        self.main_plot_item.setTitle("", color=label_color)
+        self.main_plot_item.setLabel("bottom", "X Axis", color=label_color)
+        self.main_plot_item.setLabel("left", "Y Axis", color=label_color)
+        self.main_plot_item.getAxis('bottom').showLabel(False)
+        self.main_plot_item.getAxis('left').showLabel(False)
+
+        self.legend = pg.LegendItem(offset=(70, 70))
+        self.legend.setParentItem(self.main_plot_item)
+        legend_color = (80, 80, 80, 80)  # Middle gray with half transparency (RGBA)
+        self.legend.setLabelTextColor(label_color)
+        self.legend.setBrush(pg.mkBrush(legend_color))
+
         # Enable autorange by default for main plot
         self.main_plot_item.enableAutoRange()
 
@@ -191,7 +213,7 @@ class PlotView(BaseWidget):
             for view_box in getattr(self.trace_handler, 'isolated_view_boxes', {}).values():
                 if view_box.scene():
                     view_box.enableAutoRange()
-                    view_box.autoRange()
+                    # view_box.autoRange()
             logger.debug("Initial auto-range complete")
         except Exception as e:
             logger.error(f"Error during initial auto-range: {e}")

@@ -24,6 +24,6 @@ def run_test(test):
         plot.set_trace("Noise", x_points, y_points, color="#FF9535")
         
         # Small wait to prevent overwhelming the UI
-        test.wait(1)  # 1ms wait
+        test.wait(5)  # 1ms wait
     
     return True

@@ -40,6 +40,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.state = state
         self.state.set_parent(self)
+        self.RESIZE_MARGIN = 5
         
         # Initialize theme service
         self.theme_service = ThemeService.get_instance()
